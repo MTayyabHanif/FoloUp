@@ -69,7 +69,7 @@ Supabase is used for storing the data. It's really simple to set up and the free
 3. Run the SQL code to confirm the tables are created.
 4. Copy the supabase url and anon key from the project settings and paste it in the `.env` file in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-## Retell AI Setup ([Retell AI](https://retell.ai/))
+## Retell AI Setup ([Retell AI](https://retellai.com/))
 
 We use Retell AI to manage all the voice calls. They manage storage of recordings and provide a simple SDK to integrate with. They provide free credits to start with and will have to pay as you go.
 
