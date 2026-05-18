@@ -1,14 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/dashboard",
-        permanent: true,
-      },
-    ];
-  },
+  // Root path is now handled by src/app/page.tsx (smart redirect based on
+  // Clerk auth state). The previous `/` → `/dashboard` permanent redirect
+  // would bounce signed-out users through a Clerk-protected route only to
+  // immediately redirect them to /sign-in — wasteful.
   images: {
     remotePatterns: [
       {
