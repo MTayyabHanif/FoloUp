@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Plus, SaveIcon, TrashIcon } from "lucide-react";
 import { useInterviewers } from "@/contexts/interviewers.context";
-import QuestionCard from "@/components/dashboard/interview/create-popup/questionCard";
+import QuestionCard from "@/components/dashboard/interview/create-popup/QuestionCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -160,7 +160,7 @@ function EditInterview({ interview }: EditInterviewProps) {
       <div className="flex flex-col bg-gray-200 rounded-md min-h-[120px] p-2 pl-4">
         <div>
           <div
-            className="mt-2 ml-1 pr-2 inline-flex items-center text-indigo-600 hover:cursor-pointer"
+            className="mt-2 ml-1 pr-2 inline-flex items-center text-brand-bold hover:cursor-pointer"
             onClick={() => {
               router.push(`/interviews/${interview?.id}`);
             }}
@@ -179,7 +179,7 @@ function EditInterview({ interview }: EditInterviewProps) {
           <div className="flex flex-row gap-3">
             <Button
               disabled={isClicked}
-              className="bg-indigo-600 hover:bg-indigo-800 mt-2"
+              className="bg-brand-bold hover:bg-brand-bolder mt-2"
               onClick={() => {
                 setIsClicked(true);
                 onSave();
@@ -207,7 +207,7 @@ function EditInterview({ interview }: EditInterviewProps) {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    className="bg-indigo-600 hover:bg-indigo-800"
+                    className="bg-brand-bold hover:bg-brand-bolder"
                     onClick={async () => {
                       await onDeleteInterviewClick();
                     }}
@@ -256,7 +256,7 @@ function EditInterview({ interview }: EditInterviewProps) {
                     <div
                       className={`w-[96px] overflow-hidden rounded-full ${
                         selectedInterviewer === item.id
-                          ? "border-4 border-indigo-600"
+                          ? "border-4 border-brand-bold"
                           : ""
                       }`}
                       onClick={() => {
@@ -288,7 +288,7 @@ function EditInterview({ interview }: EditInterviewProps) {
             <Switch
               checked={isAnonymous}
               className={`ml-4 mt-1 border-2 border-gray-300 ${
-                isAnonymous ? "bg-indigo-600" : "bg-white"
+                isAnonymous ? "bg-brand-bold" : "bg-white"
               }`}
               onCheckedChange={(checked) => setIsAnonymous(checked)}
             />
@@ -363,13 +363,13 @@ function EditInterview({ interview }: EditInterviewProps) {
           <div ref={endOfListRef} />
           {questions.length < numQuestions ? (
             <div
-              className="border-indigo-600 opacity-75 hover:opacity-100 w-fit text-center rounded-full mx-auto"
+              className="border-brand-bold opacity-75 hover:opacity-100 w-fit text-center rounded-full mx-auto"
               onClick={handleAddQuestion}
             >
               <Plus
                 size={45}
                 strokeWidth={2.2}
-                className="text-indigo-600 text-center cursor-pointer"
+                className="text-brand-bold text-center cursor-pointer"
               />
             </div>
           ) : (

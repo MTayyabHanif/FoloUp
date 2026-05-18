@@ -12,7 +12,7 @@ import { ClientProvider } from "@/contexts/clients.context";
 
 const queryClient = new QueryClient();
 
-const providers = ({ children }: ThemeProviderProps) => {
+const Providers = ({ children }: ThemeProviderProps) => {
   const Provider = compose([
     InterviewProvider,
     InterviewerProvider,
@@ -29,4 +29,4 @@ const providers = ({ children }: ThemeProviderProps) => {
   );
 };
 
-export default providers;
+export default Providers;

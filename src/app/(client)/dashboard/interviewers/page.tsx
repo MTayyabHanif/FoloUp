@@ -4,7 +4,7 @@ import { useInterviewers } from "@/contexts/interviewers.context";
 import React from "react";
 import { ChevronLeft } from "lucide-react";
 import { ChevronRight } from "lucide-react";
-import InterviewerCard from "@/components/dashboard/interviewer/interviewerCard";
+import InterviewerCard from "@/components/dashboard/interviewer/InterviewerCard";
 import CreateInterviewerButton from "@/components/dashboard/interviewer/createInterviewerButton";
 
 function Interviewers() {

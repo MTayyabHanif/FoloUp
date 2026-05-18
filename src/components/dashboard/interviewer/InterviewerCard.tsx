@@ -9,7 +9,7 @@ interface Props {
   interviewer: Interviewer;
 }
 
-const interviewerCard = ({ interviewer }: Props) => {
+const InterviewerCard = ({ interviewer }: Props) => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const [open, setOpen] = useState(false);
 
@@ -47,4 +47,4 @@ const interviewerCard = ({ interviewer }: Props) => {
   );
 };
 
-export default interviewerCard;
+export default InterviewerCard;

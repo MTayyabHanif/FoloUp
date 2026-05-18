@@ -16,7 +16,7 @@ function SideMenu() {
             className={`flex flex-row p-3 rounded-md hover:bg-slate-200 cursor-pointer ${
               pathname.endsWith("/dashboard") ||
               pathname.includes("/interviews")
-                ? "bg-indigo-200"
+                ? "bg-brand-subtle"
                 : "bg-slate-100"
             }`}
             onClick={() => router.push("/dashboard")}
@@ -27,7 +27,7 @@ function SideMenu() {
           <div
             className={`flex flex-row p-3 rounded-md hover:bg-slate-200 cursor-pointer ${
               pathname.endsWith("/interviewers")
-                ? "bg-indigo-200"
+                ? "bg-brand-subtle"
                 : "bg-slate-100"
             }`}
             onClick={() => router.push("/dashboard/interviewers")}

@@ -6,7 +6,86 @@ import { Response } from "@/types/response";
 import React, { useEffect, useState } from "react";
 import { UserCircleIcon, SmileIcon, Info } from "lucide-react";
 import { useInterviewers } from "@/contexts/interviewers.context";
-import { PieChart } from "@mui/x-charts/PieChart";
+// PieChart replaced by inline pure-SVG DonutChart below (zero-dep, deuteranopia-aware palette).
+// Note: PieChart's hover-shimmer (highlightScope/faded) is intentionally not ported —
+// these are static summary charts; no interactivity beyond hover-tooltip is needed.
+
+/**
+ * Pure-SVG donut chart. Each slice gets a <title> for screen-reader + hover tooltip.
+ * Replaces @mui/x-charts PieChart usage. Drops 750KB of MUI bundle weight (with @mui/material).
+ */
+function DonutChart({
+  data,
+  size = 120,
+  innerRadius = 0.55,
+  className,
+}: {
+  data: { value: number; label: string; color: string }[];
+  size?: number;
+  innerRadius?: number;
+  className?: string;
+}) {
+  const total = data.reduce((a, d) => a + d.value, 0);
+  if (total === 0) {
+    return (
+      <div
+        className={`flex items-center justify-center text-xs text-muted-foreground ${className ?? ""}`}
+        style={{ width: size + 200, height: size }}
+      >
+        No data yet
+      </div>
+    );
+  }
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2;
+  const ir = r * innerRadius;
+  let start = -Math.PI / 2;
+  const arcs = data
+    .filter((d) => d.value > 0)
+    .map((d, i) => {
+      const angle = (d.value / total) * 2 * Math.PI;
+      const end = start + angle;
+      const x1 = cx + r * Math.cos(start);
+      const y1 = cy + r * Math.sin(start);
+      const x2 = cx + r * Math.cos(end);
+      const y2 = cy + r * Math.sin(end);
+      const xi1 = cx + ir * Math.cos(end);
+      const yi1 = cy + ir * Math.sin(end);
+      const xi2 = cx + ir * Math.cos(start);
+      const yi2 = cy + ir * Math.sin(start);
+      const largeArc = angle > Math.PI ? 1 : 0;
+      const path = `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${xi1} ${yi1} A ${ir} ${ir} 0 ${largeArc} 0 ${xi2} ${yi2} Z`;
+      start = end;
+      return (
+        <path key={i} d={path} fill={d.color}>
+          <title>{`${d.label} — ${Math.round((d.value / total) * 100)}%`}</title>
+        </path>
+      );
+    });
+  return (
+    <div
+      className={`flex flex-row items-center gap-3 ${className ?? ""}`}
+      style={{ minHeight: size }}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img">
+        {arcs}
+      </svg>
+      <ul className="text-xs flex flex-col gap-1">
+        {data.map((d, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: d.color }}
+              aria-hidden="true"
+            />
+            <span>{d.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 import { CandidateStatus } from "@/lib/enum";
 import { convertSecondstoMMSS } from "@/lib/utils";
 import Image from "next/image";
@@ -32,7 +111,7 @@ function InfoTooltip({ content }: { content: string }) {
       <Tooltip>
         <TooltipTrigger>
           <Info
-            className="h-2 w-2 text-[#4F46E5] inline-block ml-0 align-super font-bold"
+            className="h-2 w-2 text-brand-bold inline-block ml-0 align-super font-bold"
             strokeWidth={2.5}
           />
         </TooltipTrigger>
@@ -200,7 +279,7 @@ function SummaryInfo({ responses, interview }: SummaryProps) {
                   <InfoTooltip content="Average time users took to complete an interview" />
                 </div>
                 <div className="flex items-center justify-center">
-                  <p className="text-2xl font-semibold text-indigo-600 w-fit p-1 px-2 bg-indigo-100 rounded-md">
+                  <p className="text-2xl font-semibold text-brand-bold w-fit p-1 px-2 bg-brand-subtlest rounded-md">
                     {convertSecondstoMMSS(totalDuration / responses.length)}
                   </p>
                 </div>
@@ -210,7 +289,7 @@ function SummaryInfo({ responses, interview }: SummaryProps) {
                   Interview Completion Rate
                   <InfoTooltip content="Percentage of interviews completed successfully" />
                 </div>
-                <p className="w-fit text-2xl font-semibold text-indigo-600  p-1 px-2 bg-indigo-100 rounded-md">
+                <p className="w-fit text-2xl font-semibold text-brand-bold  p-1 px-2 bg-brand-subtlest rounded-md">
                   {Math.round(
                     (completedInterviews / responses.length) * 10000,
                   ) / 100}
@@ -224,44 +303,25 @@ function SummaryInfo({ responses, interview }: SummaryProps) {
                 Candidate Sentiment
                 <InfoTooltip content="Distribution of user sentiments during interviews" />
               </div>
-              <PieChart
-                sx={{
-                  "& .MuiChartsLegend-series text": {
-                    fontSize: "0.8rem !important",
-                  },
-                }}
-                series={[
+              <DonutChart
+                data={[
                   {
-                    data: [
-                      {
-                        id: 0,
-                        value: sentimentCount.positive,
-                        label: `Positive (${sentimentCount.positive})`,
-                        color: "#22c55e",
-                      },
-                      {
-                        id: 1,
-                        value: sentimentCount.neutral,
-                        label: `Neutral (${sentimentCount.neutral})`,
-                        color: "#eab308",
-                      },
-                      {
-                        id: 2,
-                        value: sentimentCount.negative,
-                        label: `Negative (${sentimentCount.negative})`,
-                        color: "#eb4444",
-                      },
-                    ],
-                    highlightScope: { faded: "global", highlighted: "item" },
-                    faded: {
-                      innerRadius: 10,
-                      additionalRadius: -10,
-                      color: "gray",
-                    },
+                    value: sentimentCount.positive,
+                    label: `Positive (${sentimentCount.positive})`,
+                    color: "#36B37E",
+                  },
+                  {
+                    value: sentimentCount.neutral,
+                    label: `Neutral (${sentimentCount.neutral})`,
+                    color: "#FFAB00",
+                  },
+                  {
+                    value: sentimentCount.negative,
+                    label: `Negative (${sentimentCount.negative})`,
+                    color: "#FF5630",
                   },
                 ]}
-                width={360}
-                height={120}
+                size={120}
               />
             </div>
             <div className="flex flex-col gap-1 my-2 mt-4 mx-2 p-4 rounded-2xl bg-slate-50 shadow-md">
@@ -273,62 +333,31 @@ function SummaryInfo({ responses, interview }: SummaryProps) {
               <div className="text-sm text-center mb-1">
                 Total Responses: {totalResponses}
               </div>
-              <PieChart
-                sx={{
-                  "& .MuiChartsLegend-series text": {
-                    fontSize: "0.8rem !important",
-                  },
-                }}
-                series={[
+              <DonutChart
+                data={[
                   {
-                    data: [
-                      {
-                        id: 0,
-                        value: candidateStatusCount[CandidateStatus.SELECTED],
-                        label: `Selected (${candidateStatusCount[CandidateStatus.SELECTED]})`,
-                        color: "#22c55e",
-                      },
-                      {
-                        id: 1,
-                        value: candidateStatusCount[CandidateStatus.POTENTIAL],
-                        label: `Potential (${candidateStatusCount[CandidateStatus.POTENTIAL]})`,
-                        color: "#eab308",
-                      },
-                      {
-                        id: 2,
-                        value:
-                          candidateStatusCount[CandidateStatus.NOT_SELECTED],
-                        label: `Not Selected (${candidateStatusCount[CandidateStatus.NOT_SELECTED]})`,
-                        color: "#eb4444",
-                      },
-                      {
-                        id: 3,
-                        value: candidateStatusCount[CandidateStatus.NO_STATUS],
-                        label: `No Status (${candidateStatusCount[CandidateStatus.NO_STATUS]})`,
-                        color: "#9ca3af",
-                      },
-                    ],
-                    highlightScope: { faded: "global", highlighted: "item" },
-                    faded: {
-                      innerRadius: 10,
-                      additionalRadius: -10,
-                      color: "gray",
-                    },
+                    value: candidateStatusCount[CandidateStatus.SELECTED],
+                    label: `Selected (${candidateStatusCount[CandidateStatus.SELECTED]})`,
+                    color: "#36B37E",
+                  },
+                  {
+                    value: candidateStatusCount[CandidateStatus.POTENTIAL],
+                    label: `Potential (${candidateStatusCount[CandidateStatus.POTENTIAL]})`,
+                    color: "#FFAB00",
+                  },
+                  {
+                    value:
+                      candidateStatusCount[CandidateStatus.NOT_SELECTED],
+                    label: `Not Selected (${candidateStatusCount[CandidateStatus.NOT_SELECTED]})`,
+                    color: "#FF5630",
+                  },
+                  {
+                    value: candidateStatusCount[CandidateStatus.NO_STATUS],
+                    label: `No Status (${candidateStatusCount[CandidateStatus.NO_STATUS]})`,
+                    color: "#9CA3AF",
                   },
                 ]}
-                width={360}
-                height={120}
-                slotProps={{
-                  legend: {
-                    direction: "column",
-                    position: { vertical: "middle", horizontal: "right" },
-                    padding: 0,
-                    itemMarkWidth: 10,
-                    itemMarkHeight: 10,
-                    markGap: 5,
-                    itemGap: 5,
-                  },
-                }}
+                size={120}
               />
             </div>
           </div>

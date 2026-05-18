@@ -1,13 +1,34 @@
+"use client";
+
 import { ReactNode } from "react";
-import { X } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 
 interface ModalProps {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  /**
+   * When `false`, blocks outside-click AND escape-key dismissal. Default `true`
+   * lets Radix Dialog handle both natively (focus trap, ARIA, restore focus).
+   */
   closeOnOutsideClick?: boolean;
 }
 
+/**
+ * Modal — thin wrapper around Radix Dialog preserving the legacy
+ * `<Modal open onClose>` API. Replaces the previous custom div-based Modal.
+ * Adds focus trap, ESC handling, ARIA aria-modal, and proper backdrop semantics.
+ *
+ * Caller migration is zero-touch: same prop signature.
+ *
+ * When `closeOnOutsideClick={false}`, we prevent both onInteractOutside AND
+ * onEscapeKeyDown. The two callers that opt in (ChromePicker modal, multi-step
+ * interview creation) rely on this to avoid losing form state.
+ */
 export default function Modal({
   open,
   onClose,
@@ -15,26 +36,18 @@ export default function Modal({
   children,
 }: ModalProps) {
   return (
-    <div
-      className={`fixed z-50 inset-0 flex justify-center items-center transition-colors 
-      ${open ? "visible bg-black/30" : "invisible"}
-      `}
-      onClick={closeOnOutsideClick ? onClose : () => {}}
-    >
-      <div
-        className={`bg-white rounded-xl shadow p-6 transition-all
-        ${open ? "scale-100 opacity-100" : "scale-125 opacity-0"}
-        `}
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent
+        onInteractOutside={
+          closeOnOutsideClick ? undefined : (e) => e.preventDefault()
+        }
+        onEscapeKeyDown={
+          closeOnOutsideClick ? undefined : (e) => e.preventDefault()
+        }
+        className="p-6"
       >
-        <button
-          className="absolute top-2 right-2 p-1 rounded-lg text-gray-400 bg-white hover:text-gray-600"
-          onClick={onClose}
-        >
-          <X size={24} />
-        </button>
         {children}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInterviewers } from "@/contexts/interviewers.context";
 import { useClerk } from "@clerk/nextjs";
 
-const createInterviewerCard = () => {
+const CreateInterviewerCard = () => {
   const [open, setOpen] = useState(false);
   const [gallery, setGallery] = useState(false);
   const [name, setName] = useState("");
@@ -69,7 +69,7 @@ const createInterviewerCard = () => {
       <Plus
         size={30}
         strokeWidth={2}
-        className="cursor-pointer bg-indigo-600 rounded-full text-white"
+        className="cursor-pointer bg-brand-bold rounded-full text-white"
         onClick={() => setOpen(true)}
       />
       <Modal
@@ -176,7 +176,7 @@ const createInterviewerCard = () => {
           <div className="flex flex-row justify-end mr-4">
             <Button
               disabled={(name && image ? false : true) || isClicked}
-              className="bg-indigo-600  hover:bg-indigo-800"
+              className="bg-brand-bold  hover:bg-brand-bolder"
               onClick={() => {
                 setIsClicked(true);
                 onSave();
@@ -220,4 +220,4 @@ const createInterviewerCard = () => {
   );
 };
 
-export default createInterviewerCard;
+export default CreateInterviewerCard;

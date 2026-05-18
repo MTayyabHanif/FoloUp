@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Analytics, CallData } from "@/types/response";
 import axios from "axios";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactAudioPlayer from "react-audio-player";
 import { DownloadIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,66 @@ import { useRouter } from "next/navigation";
 import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CircularProgress } from "@nextui-org/react";
+/**
+ * Inline ScoreGauge — circular value display for the overall + communication
+ * scores. Drop-in replacement for the previous NextUI CircularProgress with
+ * showValueLabel. Pure SVG; no external dep.
+ */
+function ScoreGauge({
+  value,
+  maxValue = 100,
+  size = 112,
+  strokeWidth = 8,
+  label,
+}: {
+  value: number;
+  maxValue?: number;
+  size?: number;
+  strokeWidth?: number;
+  label?: React.ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.max(0, Math.min(1, value / maxValue));
+  const dash = circumference * pct;
+  return (
+    <div
+      className="relative inline-flex items-center justify-center drop-shadow-md"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="-rotate-90"
+        role="img"
+        aria-label={typeof label === "string" ? label : `score ${value}`}
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          className="stroke-brand-bold/10"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          className="stroke-brand-bold"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference}`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center text-3xl font-semibold text-brand-bold">
+        {label ?? value}
+      </div>
+    </div>
+  );
+}
 import QuestionAnswerCard from "@/components/dashboard/interview/questionAnswerCard";
 import { marked } from "marked";
 import {
@@ -170,7 +229,7 @@ function CallInfo({
               <div>
                 <div className="flex justify-between items-center pb-4 pr-2">
                   <div
-                    className=" inline-flex items-center text-indigo-600 hover:cursor-pointer"
+                    className=" inline-flex items-center text-brand-bold hover:cursor-pointer"
                     onClick={() => {
                       router.push(`/interviews/${interviewId}`);
                     }}
@@ -264,7 +323,7 @@ function CallInfo({
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
 
                           <AlertDialogAction
-                            className="bg-indigo-600 hover:bg-indigo-800"
+                            className="bg-brand-bold hover:bg-brand-bolder"
                             onClick={async () => {
                               await onDeleteResponseClick();
                             }}
@@ -303,17 +362,12 @@ function CallInfo({
               {analytics?.overallScore !== undefined && (
                 <div className="flex flex-col gap-3 text-sm p-4 rounded-2xl bg-slate-50">
                   <div className="flex flex-row gap-2 align-middle">
-                    <CircularProgress
-                      classNames={{
-                        svg: "w-28 h-28 drop-shadow-md",
-                        indicator: "stroke-indigo-600",
-                        track: "stroke-indigo-600/10",
-                        value: "text-3xl font-semibold text-indigo-600",
-                      }}
-                      value={analytics?.overallScore}
+                    <ScoreGauge
+                      value={analytics?.overallScore ?? 0}
+                      maxValue={100}
+                      size={112}
                       strokeWidth={4}
-                      showValueLabel={true}
-                      formatOptions={{ signDisplay: "never" }}
+                      label={analytics?.overallScore}
                     />
                     <p className="font-medium my-auto text-xl">
                       Overall Hiring Score
@@ -334,25 +388,17 @@ function CallInfo({
               {analytics?.communication && (
                 <div className="flex flex-col gap-3 text-sm p-4 rounded-2xl bg-slate-50">
                   <div className="flex flex-row gap-2 align-middle">
-                    <CircularProgress
-                      classNames={{
-                        svg: "w-28 h-28 drop-shadow-md",
-                        indicator: "stroke-indigo-600",
-                        track: "stroke-indigo-600/10",
-                        value: "text-3xl font-semibold text-indigo-600",
-                      }}
-                      value={analytics?.communication.score}
+                    <ScoreGauge
+                      value={analytics?.communication.score ?? 0}
                       maxValue={10}
-                      minValue={0}
+                      size={112}
                       strokeWidth={4}
-                      showValueLabel={true}
-                      valueLabel={
+                      label={
                         <div className="flex items-baseline">
                           {analytics?.communication.score ?? 0}
                           <span className="text-xl ml-0.5">/10</span>
                         </div>
                       }
-                      formatOptions={{ signDisplay: "never" }}
                     />
                     <p className="font-medium my-auto text-xl">Communication</p>
                   </div>
