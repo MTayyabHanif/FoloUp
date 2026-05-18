@@ -1,0 +1,9 @@
+{
+  "changeName": "index-and-audit-platform",
+  "currentPhase": "archived",
+  "agreedOptionalSteps": ["brainstorming", "cgc", "plan_eng_review", "plan_design_review", "qa", "review"],
+  "skippedSteps": [],
+  "completedGates": ["brainstorming", "cgc", "propose", "plan_eng_review", "plan_design_review", "apply", "qa", "review", "ship", "archive"],
+  "lastUpdated": "2026-05-19T00:00:00Z",
+  "shipCommitSha": "144b2b9"
+}
