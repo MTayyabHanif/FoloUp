@@ -1,0 +1,16 @@
+{
+  "changeName": "adopt-atlassian-design-system",
+  "currentPhase": "archived",
+  "agreedOptionalSteps": ["brainstorming", "cgc", "plan_eng_review", "plan_design_review", "qa", "review"],
+  "skippedSteps": [],
+  "completedGates": ["brainstorming", "cgc", "propose", "plan_eng_review", "plan_design_review", "apply", "qa", "review", "ship", "archive"],
+  "lastUpdated": "2026-05-19T00:00:00Z",
+  "waveCommits": {
+    "wave1": "fd183bd",
+    "wave2": "568a66f",
+    "wave3a": "cbf9700",
+    "wave3b": "90daa32",
+    "wave3c": "afc90ca",
+    "wave4": "af07533"
+  }
+}

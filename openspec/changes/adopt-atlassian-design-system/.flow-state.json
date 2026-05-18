@@ -1,8 +1,0 @@
-{
-  "changeName": "adopt-atlassian-design-system",
-  "currentPhase": "plan_eng_review",
-  "agreedOptionalSteps": ["brainstorming", "cgc", "plan_eng_review", "plan_design_review", "qa", "review"],
-  "skippedSteps": [],
-  "completedGates": ["brainstorming", "cgc", "propose"],
-  "lastUpdated": "2026-05-19T00:00:00Z"
-}
