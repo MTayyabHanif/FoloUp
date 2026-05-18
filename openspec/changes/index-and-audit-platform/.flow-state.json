@@ -1,0 +1,8 @@
+{
+  "changeName": "index-and-audit-platform",
+  "currentPhase": "ship",
+  "agreedOptionalSteps": ["brainstorming", "cgc", "plan_eng_review", "plan_design_review", "qa", "review"],
+  "skippedSteps": [],
+  "completedGates": ["brainstorming", "cgc", "propose", "plan_eng_review", "plan_design_review", "apply", "qa", "review"],
+  "lastUpdated": "2026-05-19T00:00:00Z"
+}
