@@ -1,0 +1,15 @@
+{
+  "changeName": "redesign-journey-and-components",
+  "currentPhase": "archived",
+  "agreedOptionalSteps": ["brainstorming", "cgc", "qa", "review"],
+  "skippedSteps": ["plan_eng_review", "plan_design_review"],
+  "completedGates": ["brainstorming", "cgc", "propose", "apply", "qa", "review", "ship", "archive"],
+  "lastUpdated": "2026-05-19T00:00:00Z",
+  "waveCommits": {
+    "wave1": "d83e494",
+    "wave2": "372f162",
+    "wave3": "c19d824",
+    "wave4": "944a9ed",
+    "wave5": "82f52ad"
+  }
+}
