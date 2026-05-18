@@ -10,9 +10,23 @@ import { ResponseProvider } from "@/contexts/responses.context";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { ClientProvider } from "@/contexts/clients.context";
 
-const queryClient = new QueryClient();
-
 const Providers = ({ children }: ThemeProviderProps) => {
+  // Lazy-init the QueryClient inside the component (per Next.js App Router
+  // SSR guidance) so each browser session gets its own instance instead of
+  // sharing module-level state across requests.
+  const [queryClient] = React.useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            refetchOnWindowFocus: false,
+            retry: 1,
+          },
+        },
+      }),
+  );
+
   const Provider = compose([
     InterviewProvider,
     InterviewerProvider,

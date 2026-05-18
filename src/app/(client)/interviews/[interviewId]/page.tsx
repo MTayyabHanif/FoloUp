@@ -80,8 +80,11 @@ function InterviewHome({
   const [isViewed, setIsViewed] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
+  // Single source of truth for the interview's brand color. Previous code had
+  // two states (themeColor + iconColor) tracking the same DB column; the
+  // equality-skip in the apply handler made first saves silently no-op (see
+  // BROKEN-FEATURES §2.1). Now the swatch click saves directly.
   const [themeColor, setThemeColor] = useState<string>("#4F46E5");
-  const [iconColor, seticonColor] = useState<string>("#4F46E5");
   const { organization } = useOrganization();
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
 
@@ -108,7 +111,6 @@ function InterviewHome({
           setIsActive(response.is_active);
           setIsViewed(response.is_viewed);
           setThemeColor(response.theme_color ?? "#4F46E5");
-          seticonColor(response.theme_color ?? "#4F46E5");
         }
       } catch (error) {
         console.error(error);
@@ -248,17 +250,20 @@ function InterviewHome({
     setIsSharePopupOpen(false);
   };
 
+  /**
+   * Swatch click handler — save immediately if the value actually changed.
+   * Closes the picker on every click (swatches are committed values, not
+   * a continuous slider).
+   */
   const handleColorChange = (hex: string) => {
-    setThemeColor(hex);
-  };
-
-  const applyColorChange = () => {
-    if (themeColor !== iconColor) {
-      seticonColor(themeColor);
-      handleThemeColorChange(themeColor);
+    if (hex.toLowerCase() !== themeColor.toLowerCase()) {
+      setThemeColor(hex);
+      handleThemeColorChange(hex);
     }
     setShowColorPicker(false);
   };
+
+  const closeColorPicker = () => setShowColorPicker(false);
 
   const filterResponses = () => {
     if (!responses) {
@@ -286,7 +291,7 @@ function InterviewHome({
 
             <div
               className="w-5 h-5 rounded-full border-2 border-white shadow"
-              style={{ backgroundColor: iconColor }}
+              style={{ backgroundColor: themeColor }}
             />
 
             <div className="flex flex-row gap-3 my-auto">
@@ -579,7 +584,7 @@ function InterviewHome({
       <Modal
         open={showColorPicker}
         closeOnOutsideClick={false}
-        onClose={applyColorChange}
+        onClose={closeColorPicker}
       >
         <div className="w-[250px] p-3">
           <h3 className="text-lg font-semibold mb-4 text-center">
