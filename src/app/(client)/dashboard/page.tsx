@@ -119,7 +119,7 @@ function Interviews() {
               {isModalOpen && (
                 <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
                   <div className="flex flex-col space-y-4">
-                    <div className="flex justify-center text-indigo-600">
+                    <div className="flex justify-center text-brand-bold">
                       <Gem />
                     </div>
                     <h3 className="text-xl font-semibold text-center">

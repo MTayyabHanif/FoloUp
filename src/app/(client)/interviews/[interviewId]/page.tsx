@@ -19,7 +19,20 @@ import { InterviewService } from "@/services/interviews.service";
 import EditInterview from "@/components/dashboard/interview/editInterview";
 import Modal from "@/components/dashboard/Modal";
 import { toast } from "sonner";
-import { ChromePicker } from "react-color";
+// react-color removed: ChromePicker replaced with curated brand-palette swatches
+// (keyboard-accessible via Radix Popover semantics inherited from Modal/Dialog).
+// 8-swatch palette mirrors the donut chart palette in summaryInfo.tsx for
+// design-language consistency. Brand color always first.
+const BRAND_COLOR_PALETTE = [
+  "#4F46E5", // FoloUp brand (--ds-brand-bold)
+  "#2684FF", // ADS blue
+  "#FFAB00", // ADS yellow
+  "#36B37E", // ADS green
+  "#FF5630", // ADS red-orange
+  "#00B8D9", // ADS teal
+  "#6554C0", // ADS purple
+  "#FF7452", // ADS coral
+] as const;
 import SharePopup from "@/components/dashboard/interview/sharePopup";
 import {
   Tooltip,
@@ -235,8 +248,8 @@ function InterviewHome({
     setIsSharePopupOpen(false);
   };
 
-  const handleColorChange = (color: any) => {
-    setThemeColor(color.hex);
+  const handleColorChange = (hex: string) => {
+    setThemeColor(hex);
   };
 
   const applyColorChange = () => {
@@ -286,7 +299,7 @@ function InterviewHome({
                 <TooltipTrigger asChild>
                   <Button
                     className={
-                      "bg-transparent shadow-none relative text-xs text-indigo-600 px-1 h-7 hover:scale-110 hover:bg-transparent"
+                      "bg-transparent shadow-none relative text-xs text-brand-bold px-1 h-7 hover:scale-110 hover:bg-transparent"
                     }
                     variant={"secondary"}
                     onClick={(event) => {
@@ -310,7 +323,7 @@ function InterviewHome({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="bg-transparent shadow-none text-xs text-indigo-600 px-0 h-7 hover:scale-110 relative"
+                    className="bg-transparent shadow-none text-xs text-brand-bold px-0 h-7 hover:scale-110 relative"
                     onClick={(event) => {
                       event.stopPropagation();
                       seeInterviewPreviewPage();
@@ -334,7 +347,7 @@ function InterviewHome({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="bg-transparent shadow-none text-xs text-indigo-600 px-0 h-7 hover:scale-110 relative"
+                    className="bg-transparent shadow-none text-xs text-brand-bold px-0 h-7 hover:scale-110 relative"
                     onClick={(event) => {
                       event.stopPropagation();
                       setShowColorPicker(!showColorPicker);
@@ -358,7 +371,7 @@ function InterviewHome({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    className="bg-transparent shadow-none text-xs text-indigo-600 px-0 h-7 hover:scale-110 relative"
+                    className="bg-transparent shadow-none text-xs text-brand-bold px-0 h-7 hover:scale-110 relative"
                     onClick={(event) => {
                       router.push(
                         `/interviews/${params.interviewId}?edit=true`,
@@ -400,7 +413,7 @@ function InterviewHome({
                   <Switch
                     checked={isActive}
                     className={`ms-3 my-auto ${
-                      isActive ? "bg-indigo-600" : "bg-[#E6E7EB]"
+                      isActive ? "bg-brand-bold" : "bg-[#E6E7EB]"
                     }`}
                     onCheckedChange={handleToggle}
                   />
@@ -459,10 +472,10 @@ function InterviewHome({
                 {filterResponses().length > 0 ? (
                   filterResponses().map((response) => (
                     <div
-                      className={`p-2 rounded-md hover:bg-indigo-100 border-2 my-1 text-left text-xs ${
+                      className={`p-2 rounded-md hover:bg-brand-subtlest border-2 my-1 text-left text-xs ${
                         searchParams.call == response.call_id
-                          ? "bg-indigo-200"
-                          : "border-indigo-100"
+                          ? "bg-brand-subtle"
+                          : "border-brand-subtlest"
                       } flex flex-row justify-between cursor-pointer w-full`}
                       key={response?.id}
                       onClick={() => {
@@ -498,7 +511,7 @@ function InterviewHome({
                           <div className="flex flex-col items-center justify-center ml-auto flex-shrink-0">
                             {!response.is_viewed && (
                               <div className="w-4 h-4 flex items-center justify-center mb-1">
-                                <div className="text-indigo-500 text-xl leading-none">
+                                <div className="text-brand-bold text-xl leading-none">
                                   ●
                                 </div>
                               </div>
@@ -514,8 +527,8 @@ function InterviewHome({
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className="w-6 h-6 rounded-full bg-white border-2 border-indigo-500 flex items-center justify-center">
-                                          <span className="text-indigo-500 text-xs font-semibold">
+                                        <div className="w-6 h-6 rounded-full bg-white border-2 border-brand-bold flex items-center justify-center">
+                                          <span className="text-brand-bold text-xs font-semibold">
                                             {response?.analytics?.overallScore}
                                           </span>
                                         </div>
@@ -572,16 +585,31 @@ function InterviewHome({
           <h3 className="text-lg font-semibold mb-4 text-center">
             Choose a Theme Color
           </h3>
-          <ChromePicker
-            disableAlpha={true}
-            color={themeColor}
-            styles={{
-              default: {
-                picker: { width: "100%" },
-              },
-            }}
-            onChange={handleColorChange}
-          />
+          <div
+            role="radiogroup"
+            aria-label="Theme color swatches"
+            className="grid grid-cols-4 gap-2"
+          >
+            {BRAND_COLOR_PALETTE.map((hex) => {
+              const selected = themeColor.toLowerCase() === hex.toLowerCase();
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  aria-label={`Theme color ${hex}`}
+                  onClick={() => handleColorChange(hex)}
+                  className={`relative h-10 w-10 rounded-md transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-brand-bold)] focus-visible:ring-offset-2 ${
+                    selected
+                      ? "ring-2 ring-[var(--ds-brand-bold)] ring-offset-2"
+                      : ""
+                  }`}
+                  style={{ backgroundColor: hex }}
+                />
+              );
+            })}
+          </div>
         </div>
       </Modal>
       {isSharePopupOpen && (

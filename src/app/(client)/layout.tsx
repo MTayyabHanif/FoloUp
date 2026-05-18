@@ -71,7 +71,7 @@ export default function RootLayout({
                   toast: "bg-white",
                   title: "text-black",
                   description: "text-red-400",
-                  actionButton: "bg-indigo-400",
+                  actionButton: "bg-brand-subtle",
                   cancelButton: "bg-orange-400",
                   closeButton: "bg-white-400",
                 },
