@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@atlaskit/tokens": "^13.0.4",
     "@clerk/clerk-js": "^5",
     "@clerk/nextjs": "^6",
     "@emotion/react": "^11.11.4",

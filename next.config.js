@@ -17,6 +17,9 @@ const nextConfig = {
       },
     ],
   },
+  // Next.js 16: silence Turbopack warning while webpack config (node: scheme rewriter)
+  // remains for production builds. Both paths produce equivalent output for our usage.
+  turbopack: {},
   webpack: (webpackConfig, { webpack }) => {
     webpackConfig.plugins.push(
       // Remove node: from import specifiers, because Next.js does not yet support node: scheme

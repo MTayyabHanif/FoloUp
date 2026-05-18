@@ -3,15 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-@layer base {
   :root {
+    /* ── shadcn legacy tokens (untouched until subsequent waves) ── */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
 
@@ -41,6 +34,31 @@
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
+
+    /* ── ADS brand ramp — hex fallback (gamut-safe across all browsers) ── */
+    --ds-brand-bold: #4f46e5;
+    --ds-brand-bolder: #3730a3;
+    --ds-brand-subtle: #ede9fe;
+    --ds-brand-subtlest: #f5f3ff;
+
+    /* ── ADS link token (initially equals brand-bold; lets change #3 introduce prose links cleanly) ── */
+    --ds-link-default: var(--ds-brand-bold);
+
+    /* ── ADS motion tokens ── */
+    --ds-motion-duration-fast: 100ms;
+    --ds-motion-duration-medium: 200ms;
+    --ds-motion-duration-slow: 400ms;
+    --ds-motion-easing-incoming: cubic-bezier(0, 0, 0.2, 1);
+    --ds-motion-easing-outgoing: cubic-bezier(0.4, 0, 1, 1);
+    --ds-motion-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ── ADS elevation shadows (light mode) ── */
+    --ds-shadow-raised: 0 1px 1px rgba(9, 30, 66, 0.25),
+      0 0 1px rgba(9, 30, 66, 0.31);
+    --ds-shadow-overflow: 0 8px 16px rgba(9, 30, 66, 0.15),
+      0 0 1px rgba(9, 30, 66, 0.31);
+    --ds-shadow-overlay: 0 20px 32px rgba(9, 30, 66, 0.12),
+      0 0 1px rgba(9, 30, 66, 0.31);
   }
 
   .dark {
@@ -71,6 +89,38 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    /* ── ADS brand ramp — dark mode hex fallback (lighter for contrast) ── */
+    --ds-brand-bold: #818cf8;
+    --ds-brand-bolder: #a5b4fc;
+    --ds-brand-subtle: #312e81;
+    --ds-brand-subtlest: #1e1b4b;
+
+    --ds-link-default: var(--ds-brand-bold);
+
+    /* ── ADS elevation shadows (dark mode) ── */
+    --ds-shadow-raised: 0 1px 1px rgba(3, 4, 17, 0.36),
+      0 0 1px rgba(3, 4, 17, 0.5);
+    --ds-shadow-overflow: 0 8px 16px rgba(3, 4, 17, 0.36),
+      0 0 1px rgba(3, 4, 17, 0.5);
+    --ds-shadow-overlay: 0 20px 32px rgba(3, 4, 17, 0.36),
+      0 0 1px rgba(3, 4, 17, 0.5);
+  }
+}
+
+/* ── ADS brand ramp — OKLCH override for perceptually uniform browsers ── */
+@supports (color: oklch(0 0 0)) {
+  :root {
+    --ds-brand-bold: oklch(54% 0.27 273);
+    --ds-brand-bolder: oklch(45% 0.27 273);
+    --ds-brand-subtle: oklch(91% 0.06 273);
+    --ds-brand-subtlest: oklch(97% 0.02 273);
+  }
+  .dark {
+    --ds-brand-bold: oklch(72% 0.18 273);
+    --ds-brand-bolder: oklch(80% 0.14 273);
+    --ds-brand-subtle: oklch(28% 0.12 273);
+    --ds-brand-subtlest: oklch(20% 0.06 273);
   }
 }
 

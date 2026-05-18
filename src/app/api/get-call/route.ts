@@ -9,7 +9,7 @@ const retell = new Retell({
   apiKey: process.env.RETELL_API_KEY || "",
 });
 
-export async function POST(req: Request, res: Response) {
+export async function POST(req: Request) {
   logger.info("get-call request received");
   const body = await req.json();
 

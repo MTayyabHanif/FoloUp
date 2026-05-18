@@ -8,7 +8,7 @@ import {
 } from "@/lib/prompts/generate-insights";
 import { logger } from "@/lib/logger";
 
-export async function POST(req: Request, res: Response) {
+export async function POST(req: Request) {
   logger.info("generate-insights request received");
   const body = await req.json();
 

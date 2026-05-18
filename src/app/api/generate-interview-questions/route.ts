@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 
 export const maxDuration = 60;
 
-export async function POST(req: Request, res: Response) {
+export async function POST(req: Request) {
   logger.info("generate-interview-questions request received");
   const body = await req.json();
 

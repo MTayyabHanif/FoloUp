@@ -4,7 +4,7 @@ import { Retell } from "retell-sdk";
 
 const apiKey = process.env.RETELL_API_KEY || "";
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
   if (req.method !== "POST") {
     return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
   }

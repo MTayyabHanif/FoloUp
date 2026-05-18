@@ -17,6 +17,7 @@ module.exports = {
     },
     extend: {
       colors: {
+        // ── shadcn/Radix semantic tokens (kept; consumed via --<token> CSS vars) ──
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -50,6 +51,13 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // ── ADS brand ramp (audit D3b option a — #4F46E5 preserved as bold) ──
+        brand: {
+          bold: "var(--ds-brand-bold)",
+          bolder: "var(--ds-brand-bolder)",
+          subtle: "var(--ds-brand-subtle)",
+          subtlest: "var(--ds-brand-subtlest)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -58,17 +66,20 @@ module.exports = {
       },
       keyframes: {
         "accordion-down": {
-          from: { height: 0 },
+          from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: 0 },
+          to: { height: "0" },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        // ── ADS motion: duration.medium = 200ms, easing.standard ──
+        "accordion-down":
+          "accordion-down var(--ds-motion-duration-medium, 200ms) var(--ds-motion-easing-standard, cubic-bezier(0.4,0,0.2,1))",
+        "accordion-up":
+          "accordion-up var(--ds-motion-duration-medium, 200ms) var(--ds-motion-easing-standard, cubic-bezier(0.4,0,0.2,1))",
       },
     },
   },
