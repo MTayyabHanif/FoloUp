@@ -1,0 +1,8 @@
+{
+  "changeName": "redesign-journey-and-components",
+  "currentPhase": "apply",
+  "agreedOptionalSteps": ["brainstorming", "cgc", "qa", "review"],
+  "skippedSteps": ["plan_eng_review", "plan_design_review"],
+  "completedGates": ["brainstorming", "cgc", "propose"],
+  "lastUpdated": "2026-05-19T00:00:00Z"
+}
