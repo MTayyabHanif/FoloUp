@@ -36,3 +36,9 @@ yarn-error.log*
 next-env.d.ts
 
 .idea/
+
+# claude code local-only tooling
+.claude/settings.local.json
+.claude/flow.local.yaml
+.claude/scheduled_tasks.lock
+.claude/launch.json

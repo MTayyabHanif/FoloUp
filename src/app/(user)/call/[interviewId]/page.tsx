@@ -1,18 +1,22 @@
 "use client";
 
 import { useInterviews } from "@/contexts/interviews.context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import Call from "@/components/call";
 import Image from "next/image";
 import { ArrowUpRightSquareIcon } from "lucide-react";
 import { Interview } from "@/types/interview";
 import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
 
-type Props = {
-  params: {
+interface Props {
+  params: Promise<{
     interviewId: string;
-  };
-};
+  }>;
+  searchParams: Promise<{
+    call: string;
+    edit: boolean;
+  }>;
+}
 
 type PopupProps = {
   title: string;
@@ -80,7 +84,8 @@ function PopUpMessage({ title, description, image }: PopupProps) {
   );
 }
 
-function InterviewInterface({ params }: Props) {
+function InterviewInterface({ params: paramsPromise }: Props) {
+  const params = use(paramsPromise);
   const [interview, setInterview] = useState<Interview>();
   const [isActive, setIsActive] = useState(true);
   const { getInterviewById } = useInterviews();
@@ -109,7 +114,7 @@ function InterviewInterface({ params }: Props) {
 
     fetchinterview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params.interviewId]);
 
   return (
     <div>

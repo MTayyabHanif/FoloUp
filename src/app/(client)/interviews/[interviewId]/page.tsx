@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { useOrganization } from "@clerk/nextjs";
 import { useInterviews } from "@/contexts/interviews.context";
 import { Share2, Filter, Pencil, UserIcon, Eye, Palette } from "lucide-react";
@@ -38,18 +38,23 @@ import { CandidateStatus } from "@/lib/enum";
 import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
 
 interface Props {
-  params: {
+  params: Promise<{
     interviewId: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     call: string;
     edit: boolean;
-  };
+  }>;
 }
 
 const base_url = process.env.NEXT_PUBLIC_LIVE_URL;
 
-function InterviewHome({ params, searchParams }: Props) {
+function InterviewHome({
+  params: paramsPromise,
+  searchParams: searchParamsPromise,
+}: Props) {
+  const params = use(paramsPromise);
+  const searchParams = use(searchParamsPromise);
   const [interview, setInterview] = useState<Interview>();
   const [responses, setResponses] = useState<Response[]>();
   const { getInterviewById } = useInterviews();
@@ -85,12 +90,13 @@ function InterviewHome({ params, searchParams }: Props) {
     const fetchInterview = async () => {
       try {
         const response = await getInterviewById(params.interviewId);
-        setInterview(response);
-        setIsActive(response.is_active);
-        setIsViewed(response.is_viewed);
-        setThemeColor(response.theme_color ?? "#4F46E5");
-        seticonColor(response.theme_color ?? "#4F46E5");
-        setLoading(true);
+        if (response) {
+          setInterview(response);
+          setIsActive(response.is_active);
+          setIsViewed(response.is_viewed);
+          setThemeColor(response.theme_color ?? "#4F46E5");
+          seticonColor(response.theme_color ?? "#4F46E5");
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -137,7 +143,7 @@ function InterviewHome({ params, searchParams }: Props) {
 
     fetchResponses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params.interviewId]);
 
   const handleDeleteResponse = (deletedCallId: string) => {
     if (responses) {

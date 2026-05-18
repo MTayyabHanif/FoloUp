@@ -5,6 +5,7 @@ import {
   AlarmClockIcon,
   XCircleIcon,
   CheckCircleIcon,
+  AlertCircle,
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle } from "../ui/card";
@@ -80,6 +81,7 @@ function Call({ interview }: InterviewProps) {
   const [interviewTimeDuration, setInterviewTimeDuration] =
     useState<string>("1");
   const [time, setTime] = useState(0);
+  const [micPermissionError, setMicPermissionError] = useState(false);
   const [currentTimeDuration, setCurrentTimeDuration] = useState<string>("0");
 
   const lastUserResponseRef = useRef<HTMLDivElement | null>(null);
@@ -195,7 +197,65 @@ function Call({ interview }: InterviewProps) {
     }
   };
 
+  const checkMicrophonePermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop the tracks to release the microphone since we just want to check permission
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch (err) {
+      console.error("Microphone permission denied:", err);
+      return false;
+    }
+  };
+
+  const [micPermissionStatus, setMicPermissionStatus] = useState<PermissionState | "unknown">("unknown");
+
+  useEffect(() => {
+    // Check permission on mount
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions
+        .query({ name: "microphone" as PermissionName })
+        .then((permissionStatus) => {
+          setMicPermissionStatus(permissionStatus.state);
+          // If already denied, show error immediately
+          if (permissionStatus.state === "denied") {
+            setMicPermissionError(true);
+          } else {
+             // If prompt or granted, clear error (we'll check again on click)
+            setMicPermissionError(false);
+          }
+
+          permissionStatus.onchange = () => {
+             setMicPermissionStatus(permissionStatus.state);
+             if (permissionStatus.state === "denied") {
+                setMicPermissionError(true);
+             } else {
+                setMicPermissionError(false);
+             }
+          };
+        })
+        .catch(console.error);
+    }
+  }, []);
+
   const startConversation = async () => {
+    // If specifically denied, don't even try to start (button should be disabled anyway)
+    if (micPermissionError) return;
+
+    setMicPermissionError(false);
+    // basic validation
+    if (!interview?.is_anonymous && (!isValidEmail || !name)) {
+        return;
+    }
+
+    // Check microphone permission first
+    const hasPermission = await checkMicrophonePermission();
+    if (!hasPermission) {
+      setMicPermissionError(true);
+      return; 
+    }
+
     const data = {
       mins: interview?.time_duration,
       objective: interview?.objective,
@@ -276,140 +336,199 @@ function Call({ interview }: InterviewProps) {
   }, [isEnded]);
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+    <div className="flex justify-center items-center min-h-screen bg-gray-50/50">
       {isStarted && <TabSwitchWarning />}
-      <div className="bg-white rounded-md md:w-[80%] w-[90%]">
-        <Card className="h-[88vh] rounded-lg border-2 border-b-4 border-r-4 border-black text-xl font-bold transition-all  md:block dark:border-white ">
+      <div className="w-full max-w-3xl mx-auto p-4">
+        <Card className="bg-white shadow-xl rounded-2xl border-0 overflow-hidden">
           <div>
-            <div className="m-4 h-[15px] rounded-lg border-[1px]  border-black">
-              <div
-                className=" bg-indigo-600 h-[15px] rounded-lg"
-                style={{
-                  width: isEnded
-                    ? "100%"
-                    : `${
+            {!isEnded && (
+               <div className="h-1.5 w-full bg-gray-100">
+                <div
+                  className="bg-indigo-600 h-full transition-all duration-500 ease-in-out"
+                  style={{
+                    width: `${
                         (Number(currentTimeDuration) /
                           (Number(interviewTimeDuration) * 60)) *
                         100
                       }%`,
-                }}
-              />
-            </div>
-            <CardHeader className="items-center p-1">
+                  }}
+                />
+              </div>
+            )}
+            
+            <CardHeader className="p-8 pb-0">
               {!isEnded && (
-                <CardTitle className="flex flex-row items-center text-lg md:text-xl font-bold mb-2">
-                  {interview?.name}
-                </CardTitle>
-              )}
-              {!isEnded && (
-                <div className="flex mt-2 flex-row">
-                  <AlarmClockIcon
-                    className="text-indigo-600 h-[1rem] w-[1rem] rotate-0 scale-100  dark:-rotate-90 dark:scale-0 mr-2 font-bold"
-                    style={{ color: interview.theme_color }}
-                  />
-                  <div className="text-sm font-normal">
-                    Expected duration:{" "}
-                    <span
-                      className="font-bold"
-                      style={{ color: interview.theme_color }}
-                    >
-                      {interviewTimeDuration} mins{" "}
-                    </span>
-                    or less
-                  </div>
+                <div className="flex flex-col gap-2 mb-6">
+                   <div className="flex items-center justify-between">
+                      <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
+                        {interview?.name}
+                      </CardTitle>
+                      
+                       <div className="flex items-center text-sm font-medium px-3 py-1 rounded-full bg-indigo-50 text-indigo-700">
+                        <AlarmClockIcon
+                          className="w-4 h-4 mr-2"
+                        />
+                        <span>{interviewTimeDuration} mins</span>
+                      </div>
+                   </div>
                 </div>
               )}
             </CardHeader>
             {!isStarted && !isEnded && !isOldUser && (
-              <div className="w-fit min-w-[400px] max-w-[400px] mx-auto mt-2  border border-indigo-200 rounded-md p-2 m-2 bg-slate-50">
-                <div>
+              <div className="px-8 pb-8 pt-2">
+                <div className="flex flex-col items-center">
                   {interview?.logo_url && (
-                    <div className="p-1 flex justify-center">
+                    <div className="mb-6">
                       <Image
                         src={interview?.logo_url}
                         alt="Logo"
-                        className="h-10 w-auto"
-                        width={100}
-                        height={100}
+                        className="h-16 w-auto object-contain"
+                        width={120}
+                        height={120}
                       />
                     </div>
                   )}
-                  <div className="p-2 font-normal text-sm mb-4 whitespace-pre-line">
-                    {interview?.description}
-                    <p className="font-bold text-sm">
-                      {"\n"}Ensure your volume is up and grant microphone access
-                      when prompted. Additionally, please make sure you are in a
-                      quiet environment.
-                      {"\n\n"}Note: Tab switching will be recorded.
-                    </p>
-                  </div>
-                  {!interview?.is_anonymous && (
-                    <div className="flex flex-col gap-2 justify-center">
-                      <div className="flex justify-center">
-                        <input
-                          value={email}
-                          className="h-fit mx-auto py-2 border-2 rounded-md w-[75%] self-center px-2 border-gray-400 text-sm font-normal"
-                          placeholder="Enter your email address"
-                          onChange={(e) => setEmail(e.target.value)}
-                        />
-                      </div>
-                      <div className="flex justify-center">
-                        <input
-                          value={name}
-                          className="h-fit mb-4 mx-auto py-2 border-2 rounded-md w-[75%] self-center px-2 border-gray-400 text-sm font-normal"
-                          placeholder="Enter your first name"
-                          onChange={(e) => setName(e.target.value)}
-                        />
-                      </div>
+                  
+                  <div className="w-full max-w-md space-y-6">
+                    <div className="text-center space-y-4">
+                        <p className="text-gray-600 text-base leading-relaxed">
+                          {interview?.description}
+                        </p>
+
+                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-left">
+                            <div className="flex gap-3">
+                                <div className="flex-shrink-0 mt-0.5">
+                                    <AlertCircle className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div className="text-sm text-blue-900 space-y-1">
+                                    <p className="font-medium">Before you start:</p>
+                                    <ul className="list-disc pl-4 space-y-1 text-blue-800/90">
+                                        <li>Ensure your volume is up</li>
+                                        <li>Check that you are in a quiet environment</li>
+                                        <li>Tab switching will be recorded</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                  )}
-                </div>
-                <div className="w-[80%] flex flex-row mx-auto justify-center items-center align-middle">
-                  <Button
-                    className="min-w-20 h-10 rounded-lg flex flex-row justify-center mb-8"
-                    style={{
-                      backgroundColor: interview.theme_color ?? "#4F46E5",
-                      color: isLightColor(interview.theme_color ?? "#4F46E5")
-                        ? "black"
-                        : "white",
-                    }}
-                    disabled={
-                      Loading ||
-                      (!interview?.is_anonymous && (!isValidEmail || !name))
-                    }
-                    onClick={startConversation}
-                  >
-                    {!Loading ? "Start Interview" : <MiniLoader />}
-                  </Button>
+
+                    {!interview?.is_anonymous && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Email Address</label>
+                          <input
+                            value={email}
+                            type="email"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder:text-gray-400"
+                            placeholder="name@example.com"
+                            onChange={(e) => setEmail(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">First Name</label>
+                          <input
+                            value={name}
+                             type="text"
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder:text-gray-400"
+                            placeholder="Your first name"
+                            onChange={(e) => setName(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-4 flex flex-col items-center gap-3">
+                        {/* Step 1: Check Microphone (if not granted) */}
+                        {(micPermissionStatus === "prompt" || micPermissionStatus === "unknown") && (
+                           <Button
+                            className="w-full h-12 rounded-xl text-base font-medium shadow-sm hover:shadow-md transition-all"
+                            style={{
+                              backgroundColor: "#F59E0B", // Amber-500
+                              color: "white",
+                            }}
+                            onClick={checkMicrophonePermission}
+                          >
+                            <AlertCircle className="w-5 h-5 mr-2" />
+                            Check Microphone Access
+                          </Button>
+                        )}
+
+                        {/* Step 2: Start Interview (only if granted) */}
+                        {micPermissionStatus === "granted" && (
+                           <div className="w-full space-y-3">
+                            <div className="bg-green-50 text-green-700 text-sm py-2 px-4 rounded-lg flex items-center justify-center font-medium border border-green-100">
+                                <CheckCircleIcon className="w-4 h-4 mr-2" />
+                                Microphone Connected
+                            </div>
+                            <Button
+                              className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all transform hover:-translate-y-0.5"
+                              style={{
+                                backgroundColor: interview.theme_color ?? "#4F46E5",
+                                color: isLightColor(interview.theme_color ?? "#4F46E5")
+                                  ? "black"
+                                  : "white",
+                              }}
+                              disabled={
+                                Loading ||
+                                (!interview?.is_anonymous && (!isValidEmail || !name))
+                              }
+                              onClick={startConversation}
+                            >
+                              {!Loading ? "Start Interview" : <MiniLoader />}
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Error State: Denied */}
+                        {micPermissionStatus === "denied" && (
+                          <div className="w-full bg-red-50 border border-red-100 rounded-xl p-4 text-center space-y-3">
+                              <div className="flex flex-col items-center text-red-600 font-medium">
+                                  <XCircleIcon className="w-8 h-8 mb-2 opacity-80" />
+                                  <span>Microphone Access Blocked</span>
+                              </div>
+                            <p className="text-sm text-red-600/80">
+                              Please allow microphone access in your browser settings (click the lock icon in the address bar).
+                            </p>
+                            <Button
+                              variant="outline"
+                              className="w-full border-red-200 text-red-700 hover:bg-red-100 hover:text-red-800"
+                              onClick={checkMicrophonePermission}
+                            >
+                              Try Again
+                            </Button>
+                          </div>
+                        )}
+                  
                   <AlertDialog>
-                    <AlertDialogTrigger>
-                      <Button
-                        className="bg-white border ml-2 text-black min-w-15 h-10 rounded-lg flex flex-row justify-center mb-8"
-                        style={{ borderColor: interview.theme_color }}
+                    <AlertDialogTrigger asChild>
+                      <button
+                        className="text-sm text-gray-400 hover:text-gray-600 font-medium py-2 transition-colors"
                         disabled={Loading}
                       >
-                        Exit
-                      </Button>
+                        Exit Interview
+                      </button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogTitle>Are you sure you want to exit?</AlertDialogTitle>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          className="bg-indigo-600 hover:bg-indigo-800"
+                          className="bg-indigo-600 hover:bg-indigo-700"
                           onClick={async () => {
                             await onEndCallClick();
                           }}
                         >
-                          Continue
+                          Exit
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 </div>
+                </div>
               </div>
+            </div>
             )}
             {isStarted && !isEnded && !isOldUser && (
               <div className="flex flex-row p-2 grow">
