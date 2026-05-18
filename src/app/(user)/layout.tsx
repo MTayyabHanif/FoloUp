@@ -1,60 +1,32 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "../globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
-import Providers from "@/components/providers";
 import { Toaster } from "sonner";
 
-const inter = Inter({ subsets: ["latin"] });
+import Providers from "@/components/providers";
 
-export const metadata: Metadata = {
-  title: "FoloUp",
-  description: "AI powered Interviews",
-  openGraph: {
-    title: "FoloUp",
-    description: "AI-powered Interviews",
-    siteName: "FoloUp",
-    images: [
-      {
-        url: "/foloup.png",
-        width: 800,
-        height: 600,
-      },
-    ],
-    locale: "en_US",
-    type: "website",
-  },
-};
-
-export default function RootLayout({
+/**
+ * (user) layout — candidate route group.
+ * Owns: Providers, candidate-styled Toaster. Does NOT own <html>, <body>,
+ * ClerkProvider, or metadata — those live in the root layout.
+ */
+export default function UserGroupLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="icon" href="/browser-user-icon.ico" />
-      </head>
-      <body className={inter.className}>
-        <ClerkProvider>
-          <Providers>
-            {children}
-            <Toaster
-              toastOptions={{
-                classNames: {
-                  toast: "bg-white border-2 border-brand-subtle",
-                  title: "text-black",
-                  description: "text-red-400",
-                  actionButton: "bg-brand-subtle",
-                  cancelButton: "bg-orange-400",
-                  closeButton: "bg-lime-400",
-                },
-              }}
-            />
-          </Providers>
-        </ClerkProvider>
-      </body>
-    </html>
+    <Providers>
+      {children}
+      <Toaster
+        toastOptions={{
+          classNames: {
+            toast: "bg-white border-2 border-brand-subtle",
+            title: "text-black",
+            description: "text-red-400",
+            actionButton: "bg-brand-subtle",
+            cancelButton: "bg-orange-400",
+            closeButton: "bg-lime-400",
+          },
+        }}
+      />
+    </Providers>
   );
 }
