@@ -1,32 +1,23 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
+import type { Interviewer } from "@/types/interviewer";
+
 const supabase = createClientComponentClient();
 
-const getAllInterviewers = async (clientId: string = "") => {
-  try {
-    const { data: clientData, error: clientError } = await supabase
-      .from("interviewer")
-      .select(`*`);
+const getAllInterviewers = async (_clientId: string = "") => {
+  const { data, error } = await supabase.from("interviewer").select(`*`);
 
-    if (clientError) {
-      console.error(
-        `Error fetching interviewers for clientId ${clientId}:`,
-        clientError,
-      );
-
-      return [];
-    }
-
-    return clientData || [];
-  } catch (error) {
-    console.log(error);
-
-    return [];
+  if (error) {
+    throw new Error(`getAllInterviewers failed: ${error.message}`);
   }
+
+  return data ?? [];
 };
 
-const createInterviewer = async (payload: any) => {
-  // Check for existing interviewer with the same name
+const createInterviewer = async (
+  payload: Partial<Interviewer> & { name: string; agent_id: string },
+) => {
+  // Idempotency check: a name + agent_id pair must be unique.
   const { data: existingInterviewer, error: checkError } = await supabase
     .from("interviewer")
     .select("*")
@@ -34,45 +25,41 @@ const createInterviewer = async (payload: any) => {
     .filter("agent_id", "eq", payload.agent_id)
     .single();
 
+  // PGRST116 = no rows returned, which is the happy path here.
   if (checkError && checkError.code !== "PGRST116") {
-    console.error("Error checking existing interviewer:", checkError);
-
-    return null;
+    throw new Error(
+      `createInterviewer existence check failed: ${checkError.message}`,
+    );
   }
 
   if (existingInterviewer) {
-    console.error("An interviewer with this name already exists");
-
-    return null;
+    // Not an error per se — the bootstrap flow can hit this on retry.
+    return existingInterviewer;
   }
 
-  const { error, data } = await supabase
+  const { data, error } = await supabase
     .from("interviewer")
     .insert({ ...payload });
 
   if (error) {
-    console.error("Error creating interviewer:", error);
-
-    return null;
+    throw new Error(`createInterviewer failed: ${error.message}`);
   }
 
   return data;
 };
 
 const getInterviewer = async (interviewerId: bigint) => {
-  const { data: interviewerData, error: interviewerError } = await supabase
+  const { data, error } = await supabase
     .from("interviewer")
     .select("*")
     .eq("id", interviewerId)
     .single();
 
-  if (interviewerError) {
-    console.error("Error fetching interviewer:", interviewerError);
-
-    return null;
+  if (error) {
+    throw new Error(`getInterviewer failed: ${error.message}`);
   }
 
-  return interviewerData;
+  return data;
 };
 
 export const InterviewerService = {
