@@ -9,6 +9,7 @@ interface InterviewerContextProps {
   interviewers: Interviewer[];
   setInterviewers: React.Dispatch<React.SetStateAction<Interviewer[]>>;
   createInterviewer: (payload: any) => void;
+  fetchInterviewers: () => Promise<void>;
   interviewersLoading: boolean;
   setInterviewersLoading: (interviewersLoading: boolean) => void;
 }
@@ -17,6 +18,7 @@ export const InterviewerContext = React.createContext<InterviewerContextProps>({
   interviewers: [],
   setInterviewers: () => {},
   createInterviewer: () => {},
+  fetchInterviewers: async () => {},
   interviewersLoading: false,
   setInterviewersLoading: () => undefined,
 });
@@ -61,6 +63,7 @@ export function InterviewerProvider({ children }: InterviewerProviderProps) {
         interviewers,
         setInterviewers,
         createInterviewer,
+        fetchInterviewers,
         interviewersLoading,
         setInterviewersLoading,
       }}

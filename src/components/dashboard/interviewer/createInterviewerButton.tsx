@@ -1,20 +1,31 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { InterviewerService } from "@/services/interviewers.service";
+import { useInterviewers } from "@/contexts/interviewers.context";
 import axios from "axios";
 import { Plus, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 function CreateInterviewerButton() {
   const [isLoading, setIsLoading] = useState(false);
+  const { fetchInterviewers } = useInterviewers();
 
   const createInterviewers = async () => {
     setIsLoading(true);
-    const response = await axios.get("/api/create-interviewer", {});
-    console.log(response);
-    setIsLoading(false);
-    InterviewerService.getAllInterviewers();
+    try {
+      await axios.get("/api/create-interviewer");
+      await fetchInterviewers();
+      toast.success("Interviewers created successfully");
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.error
+          ? err.response.data.error
+          : "Failed to create interviewers";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

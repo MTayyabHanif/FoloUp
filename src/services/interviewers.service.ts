@@ -1,10 +1,13 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Interviewer } from "@/types/interviewer";
 
-const supabase = createClientComponentClient();
-
-const getAllInterviewers = async (_clientId: string = "") => {
+const getAllInterviewers = async (
+  _clientId: string = "",
+  client?: SupabaseClient,
+) => {
+  const supabase = client ?? createClientComponentClient();
   const { data, error } = await supabase.from("interviewer").select(`*`);
 
   if (error) {
@@ -16,7 +19,10 @@ const getAllInterviewers = async (_clientId: string = "") => {
 
 const createInterviewer = async (
   payload: Partial<Interviewer> & { name: string; agent_id: string },
+  client?: SupabaseClient,
 ) => {
+  const supabase = client ?? createClientComponentClient();
+
   // Idempotency check: a name + agent_id pair must be unique.
   const { data: existingInterviewer, error: checkError } = await supabase
     .from("interviewer")
@@ -48,7 +54,11 @@ const createInterviewer = async (
   return data;
 };
 
-const getInterviewer = async (interviewerId: bigint) => {
+const getInterviewer = async (
+  interviewerId: bigint,
+  client?: SupabaseClient,
+) => {
+  const supabase = client ?? createClientComponentClient();
   const { data, error } = await supabase
     .from("interviewer")
     .select("*")

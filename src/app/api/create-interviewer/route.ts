@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { InterviewerService } from "@/services/interviewers.service";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse, NextRequest } from "next/server";
 import Retell from "retell-sdk";
 import { INTERVIEWERS, RETELL_AGENT_GENERAL_PROMPT } from "@/lib/constants";
@@ -10,6 +11,11 @@ const retellClient = new Retell({
 
 export async function GET(res: NextRequest) {
   logger.info("create-interviewer request received");
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+  );
 
   try {
     const newModel = await retellClient.llm.create({
@@ -32,10 +38,13 @@ export async function GET(res: NextRequest) {
       agent_name: "Lisa",
     });
 
-    const newInterviewer = await InterviewerService.createInterviewer({
-      agent_id: newFirstAgent.agent_id,
-      ...INTERVIEWERS.LISA,
-    });
+    const newInterviewer = await InterviewerService.createInterviewer(
+      {
+        agent_id: newFirstAgent.agent_id,
+        ...INTERVIEWERS.LISA,
+      },
+      supabase,
+    );
 
     // Create Bob
     const newSecondAgent = await retellClient.agent.create({
@@ -44,10 +53,13 @@ export async function GET(res: NextRequest) {
       agent_name: "Bob",
     });
 
-    const newSecondInterviewer = await InterviewerService.createInterviewer({
-      agent_id: newSecondAgent.agent_id,
-      ...INTERVIEWERS.BOB,
-    });
+    const newSecondInterviewer = await InterviewerService.createInterviewer(
+      {
+        agent_id: newSecondAgent.agent_id,
+        ...INTERVIEWERS.BOB,
+      },
+      supabase,
+    );
 
     logger.info("");
 
@@ -59,10 +71,16 @@ export async function GET(res: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    logger.error("Error creating interviewers:");
+    logger.error("Error creating interviewers:", error as object);
+
+    const details =
+      error instanceof Error ? error.message : String(error);
 
     return NextResponse.json(
-      { error: "Failed to create interviewers" },
+      {
+        error: "Failed to create interviewers",
+        ...(process.env.NODE_ENV !== "production" && { details }),
+      },
       { status: 500 },
     );
   }
