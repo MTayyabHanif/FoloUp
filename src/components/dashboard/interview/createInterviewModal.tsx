@@ -57,7 +57,7 @@ function CreateInterviewModal({ open, setOpen }: Props) {
   return (
     <>
       {loading ? (
-        <div className="w-[38rem] h-[35.3rem]">
+        <div className="flex h-[min(35rem,80vh)] w-full items-center justify-center">
           <LoaderWithLogo />
         </div>
       ) : !proceed ? (

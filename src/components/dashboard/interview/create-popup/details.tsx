@@ -142,7 +142,7 @@ function DetailsPopup({
 
   return (
     <>
-      <div className="text-center w-[38rem]">
+      <div className="text-center w-full">
         <h1 className="text-xl font-semibold">Create an Interview</h1>
         <div className="flex flex-col justify-center items-start mt-4 ml-10 mr-8">
           <div className="flex flex-row justify-center items-center">
@@ -160,7 +160,7 @@ function DetailsPopup({
           <div className="relative flex items-center mt-1">
             <div
               id="slider-3"
-              className=" h-36 pt-1 overflow-x-scroll scroll whitespace-nowrap scroll-smooth scrollbar-hide w-[27.5rem]"
+              className=" h-36 pt-1 overflow-x-scroll scroll whitespace-nowrap scroll-smooth scrollbar-hide w-full"
             >
               {interviewers.map((item, key) => (
                 <div
@@ -219,7 +219,7 @@ function DetailsPopup({
           <h3 className="text-sm font-medium">Objective:</h3>
           <Textarea
             value={objective}
-            className="h-24 mt-2 border-2 border-gray-500 w-[33.2rem]"
+            className="h-24 mt-2 border-2 border-gray-500 w-full"
             placeholder="e.g. Find best candidates based on their technical skills and previous projects."
             onChange={(e) => setObjective(e.target.value)}
             onBlur={(e) => setObjective(e.target.value.trim())}
@@ -345,6 +345,7 @@ function DetailsPopup({
       </div>
       <Modal
         open={openInterviewerDetails}
+        size="xl"
         closeOnOutsideClick={true}
         onClose={() => {
           setOpenInterviewerDetails(false);

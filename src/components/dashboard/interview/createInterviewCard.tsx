@@ -12,22 +12,32 @@ function CreateInterviewCard() {
   return (
     <>
       <Card
-        className=" flex items-center border-dashed border-gray-700 border-2 cursor-pointer hover:scale-105 ease-in-out duration-300 h-60 w-56 ml-1 mr-3 mt-4 rounded-xl shrink-0 overflow-hidden shadow-md"
-        onClick={() => {
-          setOpen(true);
+        className="group flex h-60 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed bg-card transition-all hover:border-brand-bold hover:bg-brand-subtlest"
+        onClick={() => setOpen(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
         }}
       >
-        <CardContent className="flex items-center flex-col mx-auto">
-          <div className="flex flex-col justify-center items-center w-full overflow-hidden">
-            <Plus size={90} strokeWidth={0.5} className="text-gray-700" />
+        <CardContent className="flex flex-col items-center justify-center gap-2 px-6 py-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-subtlest text-brand-bold transition-transform group-hover:scale-110">
+            <Plus className="h-7 w-7" strokeWidth={2} />
           </div>
-          <CardTitle className="p-0 text-md text-center">
-            Create an Interview
+          <CardTitle className="text-sm font-semibold">
+            Create an interview
           </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Auto-generate questions from a job description.
+          </p>
         </CardContent>
       </Card>
       <Modal
         open={open}
+        size="2xl"
         closeOnOutsideClick={false}
         onClose={() => {
           setOpen(false);

@@ -559,6 +559,7 @@ function InterviewHome({
       {/* Theme picker — width-constrained, swatch grid */}
       <Modal
         open={showColorPicker}
+        size="sm"
         closeOnOutsideClick={false}
         onClose={closeColorPicker}
       >

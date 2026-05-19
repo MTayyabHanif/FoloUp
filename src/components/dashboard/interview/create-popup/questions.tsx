@@ -102,8 +102,8 @@ function QuestionsPopup({ interviewData, setProceed, setOpen }: Props) {
   return (
     <div>
       <div
-        className={`text-center px-1 flex flex-col justify-top items-center w-[38rem] ${
-          interviewData.question_count > 1 ? "h-[29rem]" : ""
+        className={`flex w-full flex-col items-center justify-start px-1 text-center ${
+          interviewData.question_count > 1 ? "h-[min(29rem,70vh)]" : ""
         } `}
       >
         <div className="relative flex justify-center w-full">

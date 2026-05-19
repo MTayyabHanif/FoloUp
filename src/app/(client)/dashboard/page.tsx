@@ -168,7 +168,7 @@ function Interviews() {
 
       {/* Upgrade modal — width-constrained inside the new Dialog wrapper */}
       {isModalOpen && (
-        <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <Modal open={isModalOpen} size="2xl" onClose={() => setIsModalOpen(false)}>
           <div className="flex w-full max-w-xl flex-col space-y-4">
             <div className="flex justify-center text-brand-bold">
               <Gem />

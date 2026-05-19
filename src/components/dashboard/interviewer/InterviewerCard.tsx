@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Image from "next/image";
+
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import Modal from "@/components/dashboard/Modal";
 import { Interviewer } from "@/types/interviewer";
@@ -16,26 +17,37 @@ const InterviewerCard = ({ interviewer }: Props) => {
   return (
     <>
       <Card
-        className="p-0 inline-block cursor-pointer hover:scale-105 ease-in-out duration-300 h-40 w-36 ml-1 mr-3 rounded-xl shrink-0 overflow-hidden shadow-md"
+        className="group flex h-48 cursor-pointer flex-col overflow-hidden rounded-xl bg-card p-0 transition-all hover:-translate-y-0.5 hover:shadow-[var(--ds-shadow-overflow)]"
         onClick={() => setOpen(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
       >
-        <CardContent className="p-0">
-          <div className="w-full h-28 overflow-hidden">
+        <CardContent className="flex h-full flex-col p-0">
+          <div className="relative h-32 w-full overflow-hidden bg-secondary">
             <Image
               src={interviewer.image}
-              alt="Picture of the interviewer"
-              width={200}
-              height={40}
-              className="w-full h-full object-cover object-center"
+              alt={`${interviewer.name} portrait`}
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+              className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
             />
           </div>
-          <CardTitle className="mt-3 text-base text-center">
-            {interviewer.name}
-          </CardTitle>
+          <div className="flex flex-1 items-center justify-center px-3 py-2">
+            <CardTitle className="truncate text-sm font-semibold">
+              {interviewer.name}
+            </CardTitle>
+          </div>
         </CardContent>
       </Card>
       <Modal
         open={open}
+        size="xl"
         closeOnOutsideClick={true}
         onClose={() => {
           setOpen(false);
