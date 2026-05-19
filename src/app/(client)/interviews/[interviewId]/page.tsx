@@ -49,6 +49,13 @@ import {
 } from "@/components/ui/select";
 import { CandidateStatus } from "@/lib/enum";
 import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
+import {
+  PageShell,
+  PageHeader,
+  Section,
+} from "@/components/ui/page-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Inbox } from "lucide-react";
 
 interface Props {
   params: Promise<{
@@ -278,317 +285,286 @@ function InterviewHome({
     );
   };
 
-  return (
-    <div className="flex flex-col w-full h-full m-2 bg-white">
-      {loading ? (
-        <div className="flex flex-col items-center justify-center h-[80%] w-full">
+  if (loading) {
+    return (
+      <PageShell>
+        <div className="flex flex-1 items-center justify-center py-24">
           <LoaderWithText />
         </div>
-      ) : (
-        <>
-          <div className="flex flex-row p-3 pt-4 justify-center gap-6 items-center sticky top-2 bg-white">
-            <div className="font-bold text-md">{interview?.name}</div>
+      </PageShell>
+    );
+  }
 
-            <div
-              className="w-5 h-5 rounded-full border-2 border-white shadow"
-              style={{ backgroundColor: themeColor }}
-            />
+  const filtered = filterResponses();
 
-            <div className="flex flex-row gap-3 my-auto">
-              <UserIcon className="my-auto" size={16} />:{" "}
-              {String(responses?.length)}
-            </div>
+  const headerActions = (
+    <TooltipProvider delayDuration={150}>
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                openSharePopup();
+              }}
+              aria-label="Share interview"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Share</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                seeInterviewPreviewPage();
+              }}
+              aria-label="Preview interview as a candidate"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Preview</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowColorPicker(!showColorPicker);
+              }}
+              aria-label="Change theme color"
+            >
+              <Palette className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Theme</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                router.push(`/interviews/${params.interviewId}?edit=true`)
+              }
+              aria-label="Edit interview"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Edit</TooltipContent>
+        </Tooltip>
 
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className={
-                      "bg-transparent shadow-none relative text-xs text-brand-bold px-1 h-7 hover:scale-110 hover:bg-transparent"
-                    }
-                    variant={"secondary"}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openSharePopup();
-                    }}
-                  >
-                    <Share2 size={16} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="bg-zinc-300"
-                  side="bottom"
-                  sideOffset={4}
-                >
-                  <span className="text-black flex flex-row gap-4">Share</span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className="bg-transparent shadow-none text-xs text-brand-bold px-0 h-7 hover:scale-110 relative"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      seeInterviewPreviewPage();
-                    }}
-                  >
-                    <Eye />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="bg-zinc-300"
-                  side="bottom"
-                  sideOffset={4}
-                >
-                  <span className="text-black flex flex-row gap-4">
-                    Preview
-                  </span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className="bg-transparent shadow-none text-xs text-brand-bold px-0 h-7 hover:scale-110 relative"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setShowColorPicker(!showColorPicker);
-                    }}
-                  >
-                    <Palette size={19} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="bg-zinc-300"
-                  side="bottom"
-                  sideOffset={4}
-                >
-                  <span className="text-black flex flex-row gap-4">
-                    Theme Color
-                  </span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    className="bg-transparent shadow-none text-xs text-brand-bold px-0 h-7 hover:scale-110 relative"
-                    onClick={(event) => {
-                      router.push(
-                        `/interviews/${params.interviewId}?edit=true`,
-                      );
-                    }}
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="bg-zinc-300"
-                  side="bottom"
-                  sideOffset={4}
-                >
-                  <span className="text-black flex flex-row gap-4">Edit</span>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+        <div className="ml-2 flex items-center gap-2 border-l pl-3">
+          {currentPlan === "free_trial_over" ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm text-muted-foreground">Inactive</span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                Upgrade your plan to reactivate
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {isActive ? "Active" : "Inactive"}
+              </span>
+              <Switch
+                checked={isActive}
+                onCheckedChange={handleToggle}
+                aria-label="Toggle interview active"
+              />
+            </>
+          )}
+        </div>
+      </div>
+    </TooltipProvider>
+  );
 
-            <label className="inline-flex cursor-pointer">
-              {currentPlan == "free_trial_over" ? (
-                <>
-                  <span className="ms-3 my-auto text-sm">Inactive</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipContent
-                        className="bg-zinc-300"
-                        side="bottom"
-                        sideOffset={4}
-                      >
-                        Upgrade your plan to reactivate
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </>
-              ) : (
-                <>
-                  <span className="ms-3 my-auto text-sm">Active</span>
-                  <Switch
-                    checked={isActive}
-                    className={`ms-3 my-auto ${
-                      isActive ? "bg-brand-bold" : "bg-[#E6E7EB]"
-                    }`}
-                    onCheckedChange={handleToggle}
-                  />
-                </>
-              )}
-            </label>
-          </div>
-          <div className="flex flex-row w-full p-2 h-[85%] gap-1 ">
-            <div className="w-[20%] flex flex-col p-2 divide-y-2 rounded-sm border-2 border-slate-100">
-              <div className="flex w-full justify-center py-2">
-                <Select
-                  onValueChange={async (newValue: string) => {
-                    setFilterStatus(newValue);
-                  }}
-                >
-                  <SelectTrigger className="w-[95%] bg-slate-100 rounded-lg">
-                    <Filter size={18} className=" text-slate-400" />
-                    <SelectValue placeholder="Filter By" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={CandidateStatus.NO_STATUS}>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-gray-400 rounded-full mr-2" />
-                        No Status
-                      </div>
-                    </SelectItem>
-                    <SelectItem value={CandidateStatus.NOT_SELECTED}>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2" />
-                        Not Selected
-                      </div>
-                    </SelectItem>
-                    <SelectItem value={CandidateStatus.POTENTIAL}>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2" />
-                        Potential
-                      </div>
-                    </SelectItem>
-                    <SelectItem value={CandidateStatus.SELECTED}>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-green-500 rounded-full mr-2" />
-                        Selected
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="ALL">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 border-2 border-gray-300 rounded-full mr-2" />
-                        All
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+  const headerDescription = (
+    <span className="inline-flex items-center gap-3">
+      <span
+        className="inline-block h-3 w-3 rounded-full border border-white shadow-sm"
+        style={{ backgroundColor: themeColor }}
+        aria-hidden="true"
+      />
+      <span className="inline-flex items-center gap-1.5">
+        <UserIcon className="h-3.5 w-3.5" />
+        {responses?.length ?? 0}{" "}
+        {responses?.length === 1 ? "response" : "responses"}
+      </span>
+    </span>
+  );
 
-              <ScrollArea className="h-full p-1 rounded-md border-none">
-                {filterResponses().length > 0 ? (
-                  filterResponses().map((response) => (
-                    <div
-                      className={`p-2 rounded-md hover:bg-brand-subtlest border-2 my-1 text-left text-xs ${
-                        searchParams.call == response.call_id
-                          ? "bg-brand-subtle"
-                          : "border-brand-subtlest"
-                      } flex flex-row justify-between cursor-pointer w-full`}
-                      key={response?.id}
-                      onClick={() => {
-                        router.push(
-                          `/interviews/${params.interviewId}?call=${response.call_id}`,
-                        );
-                        handleResponseClick(response);
-                      }}
-                    >
-                      <div className="flex flex-row gap-1 items-center w-full">
-                        {response.candidate_status === "NOT_SELECTED" ? (
-                          <div className="w-[5%] h-full bg-red-500 rounded-sm" />
-                        ) : response.candidate_status === "POTENTIAL" ? (
-                          <div className="w-[5%] h-full bg-yellow-500 rounded-sm" />
-                        ) : response.candidate_status === "SELECTED" ? (
-                          <div className="w-[5%] h-full bg-green-500 rounded-sm" />
-                        ) : (
-                          <div className="w-[5%] h-full bg-gray-400 rounded-sm" />
-                        )}
-                        <div className="flex items-center justify-between w-full">
-                          <div className="flex flex-col my-auto">
-                            <p className="font-medium mb-[2px]">
-                              {response?.name
-                                ? `${response?.name}'s Response`
-                                : "Anonymous"}
-                            </p>
-                            <p className="">
-                              {formatTimestampToDateHHMM(
-                                String(response?.created_at),
-                              )}
-                            </p>
-                          </div>
-                          <div className="flex flex-col items-center justify-center ml-auto flex-shrink-0">
-                            {!response.is_viewed && (
-                              <div className="w-4 h-4 flex items-center justify-center mb-1">
-                                <div className="text-brand-bold text-xl leading-none">
-                                  ●
-                                </div>
-                              </div>
-                            )}
-                            <div
-                              className={`w-6 h-6 flex items-center justify-center ${
-                                response.is_viewed ? "h-full" : ""
-                              }`}
-                            >
-                              {response.analytics &&
-                                response.analytics.overallScore !==
-                                  undefined && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="w-6 h-6 rounded-full bg-white border-2 border-brand-bold flex items-center justify-center">
-                                          <span className="text-brand-bold text-xs font-semibold">
-                                            {response?.analytics?.overallScore}
-                                          </span>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        className="bg-gray-500"
-                                        side="bottom"
-                                        sideOffset={4}
-                                      >
-                                        <span className="text-white font-normal flex flex-row gap-4">
-                                          Overall Score
-                                        </span>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+  return (
+    <PageShell className="pb-12">
+      <PageHeader
+        eyebrow="Interview"
+        title={interview?.name ?? "Interview"}
+        description={headerDescription}
+        actions={headerActions}
+      />
+
+      {/* List + detail layout. Sidebar is fixed-width; main pane is flex-1
+          min-w-0 so its content cannot push the sidebar around. */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+        <aside className="w-full shrink-0 lg:w-72 xl:w-80">
+          <Section
+            compact
+            title="Responses"
+            actions={
+              <Select
+                onValueChange={(v) => setFilterStatus(v)}
+                defaultValue="ALL"
+              >
+                <SelectTrigger className="h-8 w-[140px]" aria-label="Filter responses">
+                  <Filter className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All</SelectItem>
+                  <SelectItem value={CandidateStatus.NO_STATUS}>
+                    No status
+                  </SelectItem>
+                  <SelectItem value={CandidateStatus.NOT_SELECTED}>
+                    Not selected
+                  </SelectItem>
+                  <SelectItem value={CandidateStatus.POTENTIAL}>
+                    Potential
+                  </SelectItem>
+                  <SelectItem value={CandidateStatus.SELECTED}>
+                    Selected
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            }
+          >
+            <div className="rounded-lg border bg-card">
+              {filtered.length > 0 ? (
+                <ScrollArea className="h-[calc(100vh-260px)]">
+                  <ul className="divide-y">
+                    {filtered.map((response) => {
+                      const isActiveRow =
+                        searchParams.call === response.call_id;
+                      const statusColor =
+                        response.candidate_status === "NOT_SELECTED"
+                          ? "bg-red-500"
+                          : response.candidate_status === "POTENTIAL"
+                            ? "bg-yellow-500"
+                            : response.candidate_status === "SELECTED"
+                              ? "bg-green-500"
+                              : "bg-gray-400";
+                      return (
+                        <li key={response?.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              router.push(
+                                `/interviews/${params.interviewId}?call=${response.call_id}`,
+                              );
+                              handleResponseClick(response);
+                            }}
+                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-brand-subtlest focus-visible:outline-none focus-visible:bg-brand-subtlest ${
+                              isActiveRow ? "bg-brand-subtle" : ""
+                            }`}
+                          >
+                            <span
+                              className={`h-8 w-1 shrink-0 rounded-full ${statusColor}`}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate font-medium">
+                                {response?.name
+                                  ? `${response.name}'s response`
+                                  : "Anonymous"}
+                              </span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {formatTimestampToDateHHMM(
+                                  String(response?.created_at),
                                 )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500">
-                    No responses to display
-                  </p>
-                )}
-              </ScrollArea>
-            </div>
-            {responses && (
-              <div className="w-[85%] rounded-md ">
-                {searchParams.call ? (
-                  <CallInfo
-                    call_id={searchParams.call}
-                    onDeleteResponse={handleDeleteResponse}
-                    onCandidateStatusChange={handleCandidateStatusChange}
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1">
+                              {!response.is_viewed ? (
+                                <span
+                                  className="inline-block h-2 w-2 rounded-full bg-brand-bold"
+                                  aria-label="Unviewed"
+                                />
+                              ) : null}
+                              {response.analytics &&
+                              response.analytics.overallScore !== undefined ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-brand-bold bg-white text-xs font-semibold text-brand-bold">
+                                        {response.analytics.overallScore}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                      Overall score
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : null}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </ScrollArea>
+              ) : (
+                <div className="p-4">
+                  <EmptyState
+                    size="compact"
+                    icon={<Inbox className="h-5 w-5" />}
+                    title="No responses yet"
+                    description="Share the interview link to start collecting responses."
                   />
-                ) : searchParams.edit ? (
-                  <EditInterview interview={interview} />
-                ) : (
-                  <SummaryInfo responses={responses} interview={interview} />
-                )}
-              </div>
-            )}
-          </div>
-        </>
-      )}
+                </div>
+              )}
+            </div>
+          </Section>
+        </aside>
+
+        <main className="min-w-0 flex-1">
+          {responses && (
+            <div className="rounded-lg border bg-card p-6 shadow-[var(--ds-shadow-raised)]">
+              {searchParams.call ? (
+                <CallInfo
+                  call_id={searchParams.call}
+                  onDeleteResponse={handleDeleteResponse}
+                  onCandidateStatusChange={handleCandidateStatusChange}
+                />
+              ) : searchParams.edit ? (
+                <EditInterview interview={interview} />
+              ) : (
+                <SummaryInfo responses={responses} interview={interview} />
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Theme picker — width-constrained, swatch grid */}
       <Modal
         open={showColorPicker}
         closeOnOutsideClick={false}
         onClose={closeColorPicker}
       >
-        <div className="w-[250px] p-3">
-          <h3 className="text-lg font-semibold mb-4 text-center">
-            Choose a Theme Color
+        <div className="w-full max-w-xs">
+          <h3 className="mb-4 text-center text-lg font-semibold">
+            Choose a theme color
           </h3>
           <div
             role="radiogroup"
@@ -617,6 +593,7 @@ function InterviewHome({
           </div>
         </div>
       </Modal>
+
       {isSharePopupOpen && (
         <SharePopup
           open={isSharePopupOpen}
@@ -628,7 +605,7 @@ function InterviewHome({
           onClose={closeSharePopup}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 
