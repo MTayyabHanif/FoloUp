@@ -143,7 +143,7 @@ function EditInterview({ interview }: EditInterviewProps) {
       console.error("Error deleting interview:", error);
       toast.error("Failed to delete the interview.", {
         position: "bottom-right",
-        duration: 3000,
+        duration: 3500,
       });
     }
   };
