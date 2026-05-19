@@ -61,7 +61,7 @@ export function AppSidebar({
         onClick={onNavigate}
       >
         <span className="text-xl font-bold tracking-tight">
-          Folo<span className="text-brand-bold">Up</span>
+          Robust <span className="text-brand-bold">Devs Hiring</span>
         </span>
         <span className="rounded-full bg-brand-subtlest px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-brand-bold">
           Beta

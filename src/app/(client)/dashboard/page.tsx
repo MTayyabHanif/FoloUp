@@ -211,7 +211,7 @@ function Interviews() {
             </div>
             <p className="text-center text-sm">
               Contact{" "}
-              <span className="font-semibold">founders@folo-up.co</span> to
+              <span className="font-semibold">hi@robustagency.co</span> to
               upgrade your plan.
             </p>
           </div>

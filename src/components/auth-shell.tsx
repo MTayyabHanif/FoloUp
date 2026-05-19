@@ -27,7 +27,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
             <Construction className="h-7 w-7" />
           </div>
           <h1 className="mt-4 text-xl font-semibold">
-            Folo<span className="text-brand-bold">Up</span>
+            Robust <span className="text-brand-bold">Devs Hiring</span>
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
             Mobile sign-in is under construction. Please use a desktop browser

@@ -50,7 +50,7 @@ function Interviewers() {
           <EmptyState
             icon={<Users className="h-6 w-6" />}
             title="No interviewers yet"
-            description="Bootstrap the default Lisa and Bob interviewers to start using FoloUp."
+            description="Bootstrap the default Lisa and Bob interviewers to start using Robust Devs Hiring."
             action={<CreateInterviewerButton />}
           />
         ) : (

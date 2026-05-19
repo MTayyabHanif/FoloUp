@@ -26,7 +26,7 @@ export default function GlobalError({
       <div className="max-w-md w-full text-center space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">
-            Folo<span className="text-brand-bold">Up</span>
+            Robust <span className="text-brand-bold">Devs Hiring</span>
           </h1>
           <p className="text-sm text-muted-foreground">
             Something went wrong on our end.

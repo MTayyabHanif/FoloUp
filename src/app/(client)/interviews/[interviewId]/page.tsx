@@ -24,7 +24,7 @@ import { toast } from "sonner";
 // 8-swatch palette mirrors the donut chart palette in summaryInfo.tsx for
 // design-language consistency. Brand color always first.
 const BRAND_COLOR_PALETTE = [
-  "#4F46E5", // FoloUp brand (--ds-brand-bold)
+  "#4F46E5", // Robust Devs Hiring brand (--ds-brand-bold)
   "#2684FF", // ADS blue
   "#FFAB00", // ADS yellow
   "#36B37E", // ADS green

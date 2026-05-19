@@ -131,7 +131,7 @@ export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
           aria-label="Help"
           onClick={() => {
             window.open(
-              process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://folo-up.co/",
+              process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://robustagency.co",
               "_blank",
               "noopener,noreferrer",
             );

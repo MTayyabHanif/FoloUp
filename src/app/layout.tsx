@@ -9,19 +9,12 @@ import { cn } from "@/lib/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FoloUp",
+  title: "Robust Devs Hiring",
   description: "AI-powered hiring interviews",
   openGraph: {
-    title: "FoloUp",
+    title: "Robust Devs Hiring",
     description: "AI-powered hiring interviews",
-    siteName: "FoloUp",
-    images: [
-      {
-        url: "/foloup.png",
-        width: 800,
-        height: 600,
-      },
-    ],
+    siteName: "Robust Devs Hiring",
     locale: "en_US",
     type: "website",
   },

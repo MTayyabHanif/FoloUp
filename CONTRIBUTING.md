@@ -1,35 +1,39 @@
 # Contributing
 
-Thanks for considering contributing to FoloUp!
+Internal contribution guide for the Robust Devs Hiring app.
 
-## Opening issues
+## Branch naming
 
-If you find a bug, please feel free to [open an issue](https://github.com/FoloUp/FoloUp/issues).
+Use one of these prefixes followed by a short kebab-case slug:
 
-## Fixing bugs
+- `feat/<slug>` — new feature or capability
+- `fix/<slug>` — bug fix
+- `chore/<slug>` — tooling, dependency, or non-functional change
+- `refactor/<slug>` — restructure without behaviour change
 
-Here’s a quick guide:
+Example: `feat/candidate-status-filter`, `fix/interview-card-loading-state`.
 
-1. [Fork this repository](https://github.com/FoloUp/FoloUp/fork) and then clone it locally:
+## Pull request process
 
-```bash
-git clone https://github.com/FoloUp/FoloUp
-```
+1. Open the PR against `main`.
+2. Make sure the build passes locally before pushing:
+   ```bash
+   yarn build
+   ```
+3. The Vercel preview deployment must be green. Use the preview URL for visual / functional QA.
+4. One approval is required before merge. Squash-merge is the default — keep the PR title clean (conventional commits format encouraged: `feat:`, `fix:`, `chore:`, etc.).
 
-2. Create a topic branch for your changes:
+## Testing expectations
 
-```bash
-git checkout -b fix-for-that-thing
-```
+- Run `yarn build` to catch type and build-time errors.
+- Manually test the affected flow on the Vercel preview before requesting review.
+- For changes to the candidate (interview) flow, test from both the recruiter dashboard and a candidate browser session.
 
-3. If everything looks good, push to your fork:
+## Deployment
 
-```bash
-git push origin fix-for-that-thing
-```
+- Merge to `main` triggers an automatic Vercel deployment to production.
+- There is no separate staging branch — the PR preview deployment is the staging environment.
 
-4. [Submit a pull request.](https://help.github.com/articles/creating-a-pull-request)
+## Questions
 
-## Adding new features
-
-Thinking of adding a new feature? [Open an issue](https://github.com/FoloUp/FoloUp/issues) and let’s design it together.
+Reach out to the team or email `hi@robustagency.co`.

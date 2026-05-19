@@ -677,13 +677,13 @@ function Call({ interview }: InterviewProps) {
         </Card>
         <a
           className="flex flex-row justify-center align-middle mt-3"
-          href={process.env.NEXT_PUBLIC_MARKETING_URL || "https://folo-up.co/"}
+          href={process.env.NEXT_PUBLIC_MARKETING_URL || "https://robustagency.co"}
           target="_blank"
         >
           <div className="text-center text-md font-semibold mr-2  ">
             Powered by{" "}
             <span className="font-bold">
-              Folo<span className="text-brand-bold">Up</span>
+              Robust <span className="text-brand-bold">Devs Hiring</span>
             </span>
           </div>
           <ArrowUpRightSquareIcon className="h-[1.5rem] w-[1.5rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-brand-bold " />

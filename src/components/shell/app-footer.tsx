@@ -6,7 +6,7 @@ import Link from "next/link";
  */
 export function AppFooter() {
   const marketingUrl =
-    process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://folo-up.co/";
+    process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://robustagency.co";
   const year = new Date().getFullYear();
 
   return (
@@ -15,7 +15,7 @@ export function AppFooter() {
         <p>
           © {year}{" "}
           <span className="font-semibold text-foreground">
-            Folo<span className="text-brand-bold">Up</span>
+            Robust <span className="text-brand-bold">Devs Hiring</span>
           </span>
           . All rights reserved.
         </p>
@@ -58,12 +58,12 @@ export function AppFooter() {
 
 /**
  * CandidateFooter — minimal footer used in the candidate flow. Single
- * "Powered by FoloUp" attribution + Privacy. Replaces the inline
+ * "Powered by Robust Devs Hiring" attribution + Privacy. Replaces the inline
  * <PoweredBy> component in /call/[id]/page.tsx.
  */
 export function CandidateFooter() {
   const marketingUrl =
-    process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://folo-up.co/";
+    process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://robustagency.co";
 
   return (
     <footer className="border-t bg-background py-4 text-center text-xs text-muted-foreground">
@@ -76,7 +76,7 @@ export function CandidateFooter() {
             rel="noopener noreferrer"
             className="font-bold text-foreground transition-colors hover:opacity-80"
           >
-            Folo<span className="text-brand-bold">Up</span>
+            Robust <span className="text-brand-bold">Devs Hiring</span>
           </a>
         </span>
         <span className="hidden text-muted-foreground/40 sm:inline">·</span>
