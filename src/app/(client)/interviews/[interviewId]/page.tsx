@@ -1,53 +1,33 @@
 "use client";
 
+import React, { use, useEffect, useState } from "react";
+import { useOrganization } from "@clerk/nextjs";
+import {
+  Eye,
+  Palette,
+  Pencil,
+  PlayCircle,
+  Share2,
+  UserRound,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import React, { useState, useEffect, use } from "react";
-import { useOrganization } from "@clerk/nextjs";
-import { useInterviews } from "@/contexts/interviews.context";
-import { Share2, Filter, Pencil, UserIcon, Eye, Palette } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useRouter } from "next/navigation";
+import { useInterviews } from "@/contexts/interviews.context";
+import { useInterviewers } from "@/contexts/interviewers.context";
 import { ResponseService } from "@/services/responses.service";
 import { ClientService } from "@/services/clients.service";
-import { Interview } from "@/types/interview";
-import { Response } from "@/types/response";
-import { formatTimestampToDateHHMM } from "@/lib/utils";
+import { InterviewService } from "@/services/interviews.service";
+import type { Interview } from "@/types/interview";
+import type { Response } from "@/types/response";
 import CallInfo from "@/components/call/callInfo";
 import SummaryInfo from "@/components/dashboard/interview/summaryInfo";
-import { InterviewService } from "@/services/interviews.service";
 import EditInterview from "@/components/dashboard/interview/editInterview";
 import Modal from "@/components/dashboard/Modal";
-import { toast } from "sonner";
-// react-color removed: ChromePicker replaced with curated brand-palette swatches
-// (keyboard-accessible via Radix Popover semantics inherited from Modal/Dialog).
-// 8-swatch palette mirrors the donut chart palette in summaryInfo.tsx for
-// design-language consistency. Brand color always first.
-const BRAND_COLOR_PALETTE = [
-  "#4F46E5", // Robust Devs brand (--ds-brand-bold)
-  "#2684FF", // ADS blue
-  "#FFAB00", // ADS yellow
-  "#36B37E", // ADS green
-  "#FF5630", // ADS red-orange
-  "#00B8D9", // ADS teal
-  "#6554C0", // ADS purple
-  "#FF7452", // ADS coral
-] as const;
 import SharePopup from "@/components/dashboard/interview/sharePopup";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CandidateStatus } from "@/lib/enum";
 import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
 import {
   PageShell,
@@ -55,19 +35,64 @@ import {
   Section,
 } from "@/components/ui/page-shell";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Inbox } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  buildHiringWorkflowSummary,
+  formatDurationLabel,
+  formatResponseTime,
+  getWorkflowToneClasses,
+  type WorkflowStage,
+} from "@/lib/hiring-workflow";
 
 interface Props {
   params: Promise<{
     interviewId: string;
   }>;
   searchParams: Promise<{
-    call: string;
-    edit: boolean;
+    call?: string;
+    edit?: boolean | string;
   }>;
 }
 
-const base_url = process.env.NEXT_PUBLIC_LIVE_URL;
+const baseUrl = process.env.NEXT_PUBLIC_LIVE_URL;
+const RECRUITER_MARKER_PALETTE = [
+  "#203b14",
+  "#4a3212",
+  "#6d7d58",
+  "#8b6d4d",
+  "#9aa58b",
+  "#b8b597",
+  "#6b7b8c",
+  "#8a7f96",
+] as const;
+
+function OverviewCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-[#e0e5d5] bg-[#fbfdf6] p-5">
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
+        {label}
+      </p>
+      <p className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-[#0a1d08]">
+        {value}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-[#53614d]">{detail}</p>
+    </div>
+  );
+}
 
 function InterviewHome({
   params: paramsPromise,
@@ -75,74 +100,97 @@ function InterviewHome({
 }: Props) {
   const params = use(paramsPromise);
   const searchParams = use(searchParamsPromise);
-  const [interview, setInterview] = useState<Interview>();
-  const [responses, setResponses] = useState<Response[]>();
   const { getInterviewById } = useInterviews();
-  const [isSharePopupOpen, setIsSharePopupOpen] = useState(false);
+  const { interviewers } = useInterviewers();
+  const { organization } = useOrganization();
   const router = useRouter();
+
+  const [interview, setInterview] = useState<Interview>();
+  const [responses, setResponses] = useState<Response[]>([]);
+  const [isSharePopupOpen, setIsSharePopupOpen] = useState(false);
   const [isActive, setIsActive] = useState<boolean>(true);
   const [currentPlan, setCurrentPlan] = useState<string>("");
-  const [isGeneratingInsights, setIsGeneratingInsights] =
-    useState<boolean>(false);
-  const [isViewed, setIsViewed] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
-  // Single source of truth for the interview's brand color. Previous code had
-  // two states (themeColor + iconColor) tracking the same DB column; the
-  // equality-skip in the apply handler made first saves silently no-op (see
-  // BROKEN-FEATURES §2.1). Now the swatch click saves directly.
-  const [themeColor, setThemeColor] = useState<string>("#4F46E5");
-  const { organization } = useOrganization();
-  const [filterStatus, setFilterStatus] = useState<string>("ALL");
-  // Show in-progress (status='ongoing') responses by default — recruiters
-  // most urgently want to see live sessions happening. Toggle to hide.
-  const [showLiveSessions, setShowLiveSessions] = useState<boolean>(true);
+  const [themeColor, setThemeColor] = useState<string>("#203b14");
+  const [railFilter, setRailFilter] = useState<"all" | WorkflowStage>("all");
+
+  const selectedCallId =
+    typeof searchParams.call === "string" ? searchParams.call : "";
+  const isEditMode =
+    searchParams.edit === true || String(searchParams.edit) === "true";
+
+  const interviewer =
+    interviewers.find((item) => item.id === interview?.interviewer_id) ?? null;
+  const workflow = interview
+    ? buildHiringWorkflowSummary({
+        interview,
+        responses,
+        interviewer,
+      })
+    : null;
 
   const seeInterviewPreviewPage = () => {
-    const protocol = base_url?.includes("localhost") ? "http" : "https";
-    if (interview?.url) {
-      const url = interview?.readable_slug
-        ? `${protocol}://${base_url}/call/${interview?.readable_slug}`
-        : interview.url.startsWith("http")
-          ? interview.url
-          : `https://${interview.url}`;
-      window.open(url, "_blank");
-    } else {
-      console.error("Interview URL is null or undefined.");
+    const protocol = baseUrl?.includes("localhost") ? "http" : "https";
+    if (!interview?.url) {
+      return;
     }
+
+    const url = interview.readable_slug
+      ? `${protocol}://${baseUrl}/call/${interview.readable_slug}`
+      : interview.url.startsWith("http")
+        ? interview.url
+        : `https://${interview.url}`;
+    window.open(url, "_blank");
   };
 
   useEffect(() => {
-    const fetchInterview = async () => {
+    let isMounted = true;
+
+    const fetchData = async () => {
       try {
-        const response = await getInterviewById(params.interviewId);
-        if (response) {
-          setInterview(response);
-          setIsActive(response.is_active);
-          setIsViewed(response.is_viewed);
-          setThemeColor(response.theme_color ?? "#4F46E5");
+        setLoading(true);
+        const [interviewResponse, responsesResponse] = await Promise.all([
+          getInterviewById(params.interviewId),
+          ResponseService.getAllResponses(params.interviewId),
+        ]);
+
+        if (!isMounted) {
+          return;
         }
+
+        if (interviewResponse) {
+          setInterview(interviewResponse);
+          setIsActive(interviewResponse.is_active);
+          setThemeColor(interviewResponse.theme_color ?? "#203b14");
+        }
+        setResponses(responsesResponse);
       } catch (error) {
         console.error(error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-    if (!interview || !isGeneratingInsights) {
-      fetchInterview();
-    }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getInterviewById, params.interviewId, isGeneratingInsights]);
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [getInterviewById, params.interviewId]);
 
   useEffect(() => {
     const fetchOrganizationData = async () => {
       try {
-        if (organization?.id) {
-          const data = await ClientService.getOrganizationById(organization.id);
-          if (data?.plan) {
-            setCurrentPlan(data.plan);
-          }
+        if (!organization?.id) {
+          return;
+        }
+
+        const data = await ClientService.getOrganizationById(organization.id);
+        if (data?.plan) {
+          setCurrentPlan(data.plan);
         }
       } catch (error) {
         console.error("Error fetching organization data:", error);
@@ -151,46 +199,25 @@ function InterviewHome({
 
     fetchOrganizationData();
   }, [organization]);
-  useEffect(() => {
-    const fetchResponses = async () => {
-      try {
-        const response = await ResponseService.getAllResponses(
-          params.interviewId,
-        );
-        setResponses(response);
-        setLoading(true);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchResponses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.interviewId]);
 
   const handleDeleteResponse = (deletedCallId: string) => {
-    if (responses) {
-      setResponses(
-        responses.filter((response) => response.call_id !== deletedCallId),
-      );
-      if (searchParams.call === deletedCallId) {
-        router.push(`/interviews/${params.interviewId}`);
-      }
+    setResponses((previousResponses) =>
+      previousResponses.filter((response) => response.call_id !== deletedCallId),
+    );
+
+    if (selectedCallId === deletedCallId) {
+      router.push(`/interviews/${params.interviewId}`);
     }
   };
 
   const handleResponseClick = async (response: Response) => {
     try {
       await ResponseService.saveResponse({ is_viewed: true }, response.call_id);
-      if (responses) {
-        const updatedResponses = responses.map((r) =>
-          r.call_id === response.call_id ? { ...r, is_viewed: true } : r,
-        );
-        setResponses(updatedResponses);
-      }
-      setIsViewed(true);
+      setResponses((previousResponses) =>
+        previousResponses.map((item) =>
+          item.call_id === response.call_id ? { ...item, is_viewed: true } : item,
+        ),
+      );
     } catch (error) {
       console.error(error);
     }
@@ -204,6 +231,10 @@ function InterviewHome({
       await InterviewService.updateInterview(
         { is_active: updatedIsActive },
         params.interviewId,
+      );
+
+      setInterview((previous) =>
+        previous ? { ...previous, is_active: updatedIsActive } : previous,
       );
 
       toast.success("Interview status updated", {
@@ -229,27 +260,32 @@ function InterviewHome({
         params.interviewId,
       );
 
-      toast.success("Theme color updated", {
+      setThemeColor(newColor);
+      setInterview((previous) =>
+        previous ? { ...previous, theme_color: newColor } : previous,
+      );
+
+      toast.success("Identity marker updated", {
         position: "bottom-right",
         duration: 3000,
       });
     } catch (error) {
       console.error(error);
       toast.error("Error", {
-        description: "Failed to update the theme color.",
+        description: "Failed to update the identity marker.",
         duration: 3000,
       });
     }
   };
 
   const handleCandidateStatusChange = (callId: string, newStatus: string) => {
-    setResponses((prevResponses) => {
-      return prevResponses?.map((response) =>
+    setResponses((previousResponses) =>
+      previousResponses.map((response) =>
         response.call_id === callId
           ? { ...response, candidate_status: newStatus }
           : response,
-      );
-    });
+      ),
+    );
   };
 
   const openSharePopup = () => {
@@ -260,14 +296,8 @@ function InterviewHome({
     setIsSharePopupOpen(false);
   };
 
-  /**
-   * Swatch click handler — save immediately if the value actually changed.
-   * Closes the picker on every click (swatches are committed values, not
-   * a continuous slider).
-   */
   const handleColorChange = (hex: string) => {
     if (hex.toLowerCase() !== themeColor.toLowerCase()) {
-      setThemeColor(hex);
       handleThemeColorChange(hex);
     }
     setShowColorPicker(false);
@@ -275,24 +305,7 @@ function InterviewHome({
 
   const closeColorPicker = () => setShowColorPicker(false);
 
-  const filterResponses = () => {
-    if (!responses) {
-      return [];
-    }
-    let next = responses;
-    if (filterStatus !== "ALL") {
-      next = next.filter(
-        (response) => response?.candidate_status == filterStatus,
-      );
-    }
-    if (!showLiveSessions) {
-      next = next.filter((response) => response?.status !== "ongoing");
-    }
-
-    return next;
-  };
-
-  if (loading) {
+  if (loading || !workflow) {
     return (
       <PageShell>
         <div className="flex flex-1 items-center justify-center py-24">
@@ -302,275 +315,253 @@ function InterviewHome({
     );
   }
 
-  const filtered = filterResponses();
+  const visibleGroups = workflow.stageGroups.filter((group) => {
+    if (railFilter === "all") {
+      return group.count > 0;
+    }
+
+    return group.key === railFilter && group.count > 0;
+  });
 
   const headerActions = (
-    <TooltipProvider delayDuration={150}>
-      <div className="flex items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Share interview"
-              onClick={(e) => {
-                e.stopPropagation();
-                openSharePopup();
-              }}
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Share</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Preview interview as a candidate"
-              onClick={(e) => {
-                e.stopPropagation();
-                seeInterviewPreviewPage();
-              }}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Preview</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Change theme color"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowColorPicker(!showColorPicker);
-              }}
-            >
-              <Palette className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Theme</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Edit interview"
-              onClick={() =>
-                router.push(`/interviews/${params.interviewId}?edit=true`)
-              }
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Edit</TooltipContent>
-        </Tooltip>
-
-        <div className="ml-2 flex items-center gap-2 border-l pl-3">
-          {currentPlan === "free_trial_over" ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-sm text-muted-foreground">Inactive</span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                Upgrade your plan to reactivate
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <>
-              <span className="text-sm text-muted-foreground">
-                {isActive ? "Active" : "Inactive"}
-              </span>
-              <Switch
-                checked={isActive}
-                aria-label="Toggle interview active"
-                onCheckedChange={handleToggle}
-              />
-            </>
-          )}
-        </div>
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        className="rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] hover:bg-[#f6f8ef]"
+        variant="ghost"
+        onClick={openSharePopup}
+      >
+        <Share2 className="mr-2 h-4 w-4" />
+        Share
+      </Button>
+      <Button
+        className="rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] hover:bg-[#f6f8ef]"
+        variant="ghost"
+        onClick={seeInterviewPreviewPage}
+      >
+        <Eye className="mr-2 h-4 w-4" />
+        Preview
+      </Button>
+      <Button
+        className="rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] hover:bg-[#f6f8ef]"
+        variant="ghost"
+        onClick={() => setShowColorPicker(!showColorPicker)}
+      >
+        <Palette className="mr-2 h-4 w-4" />
+        Marker
+      </Button>
+      <Button
+        className="rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] hover:bg-[#f6f8ef]"
+        variant="ghost"
+        onClick={() => router.push(`/interviews/${params.interviewId}?edit=true`)}
+      >
+        <Pencil className="mr-2 h-4 w-4" />
+        Edit
+      </Button>
+      <div className="ml-2 flex items-center gap-3 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2">
+        {currentPlan === "free_trial_over" ? (
+          <span className="text-sm text-[#6f7866]">Inactive</span>
+        ) : (
+          <>
+            <span className="text-sm text-[#53614d]">
+              {isActive ? "Active" : "Inactive"}
+            </span>
+            <Switch checked={isActive} aria-label="Toggle interview active" onCheckedChange={handleToggle} />
+          </>
+        )}
       </div>
-    </TooltipProvider>
-  );
-
-  const headerDescription = (
-    <span className="inline-flex items-center gap-3">
-      <span
-        className="inline-block h-3 w-3 rounded-full border border-white shadow-sm"
-        style={{ backgroundColor: themeColor }}
-        aria-hidden="true"
-      />
-      <span className="inline-flex items-center gap-1.5">
-        <UserIcon className="h-3.5 w-3.5" />
-        {responses?.length ?? 0}{" "}
-        {responses?.length === 1 ? "response" : "responses"}
-      </span>
-    </span>
+    </div>
   );
 
   return (
     <PageShell className="pb-12">
       <PageHeader
-        eyebrow="Interview"
-        title={interview?.name ?? "Interview"}
-        description={headerDescription}
+        eyebrow="Job workspace"
+        title={workflow.title}
+        description={`${workflow.interviewer?.name ?? "AI interviewer"} · ${formatDurationLabel(workflow.durationMinutes)} · ${workflow.totalResponses} candidate${workflow.totalResponses === 1 ? "" : "s"}`}
         actions={headerActions}
       />
 
-      {/* List + detail layout. Sidebar is fixed-width; main pane is flex-1
-          min-w-0 so its content cannot push the sidebar around. */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
-        <aside className="w-full shrink-0 lg:w-72 xl:w-80">
+      <div className="rounded-[28px] border border-[#e0e5d5] bg-[#f6f8ef] p-6 text-[#0a1d08]">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2">
+              <span
+                className="inline-flex h-3 w-3 rounded-full border border-white/80"
+                style={{ backgroundColor: themeColor }}
+              />
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getWorkflowToneClasses(
+                  workflow.healthTone,
+                )}`}
+              >
+                {workflow.healthLabel}
+              </span>
+            </div>
+            <p className="mt-4 text-sm leading-7 text-[#53614d]">
+              {workflow.objective}
+            </p>
+          </div>
+
+          <div className="rounded-[22px] border border-[#e0e5d5] bg-[#fbfdf6] px-5 py-4 text-sm leading-6 text-[#53614d]">
+            <div className="inline-flex items-center gap-2 text-[#0a1d08]">
+              <UserRound className="h-4 w-4" />
+              <span className="font-semibold">
+                {workflow.interviewer?.name ?? "AI interviewer"}
+              </span>
+            </div>
+            <p className="mt-3">
+              {workflow.healthSummary}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <OverviewCard
+            label="Live sessions"
+            value={workflow.liveCount}
+            detail="Candidates currently inside the interview."
+          />
+          <OverviewCard
+            label="Needs review"
+            value={workflow.reviewCount}
+            detail="Finished sessions waiting for recruiter judgment."
+          />
+          <OverviewCard
+            label="Shortlist"
+            value={workflow.shortlistedCount}
+            detail="Potential and selected candidates in this job."
+          />
+          <OverviewCard
+            label="Analysis pending"
+            value={workflow.analysisPendingCount}
+            detail="Sessions still waiting for complete AI insights."
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="space-y-4">
           <Section
-            title="Responses"
+            title="Candidate pipeline"
+            description="Group the workflow by live momentum, pending decisions, and final outcomes."
             actions={
               <Select
-                defaultValue="ALL"
-                onValueChange={(v) => setFilterStatus(v)}
+                value={railFilter}
+                onValueChange={(value) =>
+                  setRailFilter(value as "all" | WorkflowStage)
+                }
               >
-                <SelectTrigger className="h-8 w-[140px]" aria-label="Filter responses">
-                  <Filter className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
-                  <SelectValue placeholder="All" />
+                <SelectTrigger className="h-9 w-[170px] rounded-full border-[#e0e5d5] bg-[#fbfdf6]">
+                  <SelectValue placeholder="Filter stages" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All</SelectItem>
-                  <SelectItem value={CandidateStatus.NO_STATUS}>
-                    No status
-                  </SelectItem>
-                  <SelectItem value={CandidateStatus.NOT_SELECTED}>
-                    Not selected
-                  </SelectItem>
-                  <SelectItem value={CandidateStatus.POTENTIAL}>
-                    Potential
-                  </SelectItem>
-                  <SelectItem value={CandidateStatus.SELECTED}>
-                    Selected
-                  </SelectItem>
+                  <SelectItem value="all">All stages</SelectItem>
+                  <SelectItem value="live">Live now</SelectItem>
+                  <SelectItem value="review">Needs review</SelectItem>
+                  <SelectItem value="potential">Potential</SelectItem>
+                  <SelectItem value="selected">Selected</SelectItem>
+                  <SelectItem value="interrupted">Interrupted</SelectItem>
+                  <SelectItem value="not_selected">Closed out</SelectItem>
+                  <SelectItem value="abandoned">Abandoned</SelectItem>
                 </SelectContent>
               </Select>
             }
             compact
           >
-            <div className="mb-2 flex items-center justify-end gap-2 text-xs">
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-muted-foreground">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 accent-brand-bold"
-                  checked={showLiveSessions}
-                  onChange={(e) => setShowLiveSessions(e.target.checked)}
-                />
-                Show live sessions
-              </label>
-            </div>
-            <div className="rounded-lg border bg-card">
-              {filtered.length > 0 ? (
-                <ScrollArea className="h-[calc(100vh-260px)]">
-                  <ul className="divide-y">
-                    {filtered.map((response) => {
-                      const isActiveRow =
-                        searchParams.call === response.call_id;
-                      const statusColor =
-                        response.candidate_status === "NOT_SELECTED"
-                          ? "bg-red-500"
-                          : response.candidate_status === "POTENTIAL"
-                            ? "bg-yellow-500"
-                            : response.candidate_status === "SELECTED"
-                              ? "bg-green-500"
-                              : "bg-gray-400";
-                      
-return (
-                        <li key={response?.id}>
-                          <button
-                            type="button"
-                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-brand-subtlest focus-visible:outline-none focus-visible:bg-brand-subtlest ${
-                              isActiveRow ? "bg-brand-subtle" : ""
-                            }`}
-                            onClick={() => {
-                              router.push(
-                                `/interviews/${params.interviewId}?call=${response.call_id}`,
-                              );
-                              handleResponseClick(response);
-                            }}
+            <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-3">
+              {visibleGroups.length > 0 ? (
+                <ScrollArea className="h-[calc(100vh-330px)] pr-1">
+                  <div className="space-y-4">
+                    {visibleGroups.map((group) => (
+                      <div key={group.key} className="space-y-2">
+                        <div className="flex items-center justify-between px-2">
+                          <div>
+                            <p className="text-sm font-semibold text-[#0a1d08]">
+                              {group.label}
+                            </p>
+                            <p className="text-xs text-[#6f7866]">
+                              {group.description}
+                            </p>
+                          </div>
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getWorkflowToneClasses(
+                              group.tone,
+                            )}`}
                           >
-                            <span
-                              className={`h-8 w-1 shrink-0 rounded-full ${statusColor}`}
-                              aria-hidden="true"
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate font-medium">
-                                {response?.name
-                                  ? `${response.name}'s response`
-                                  : "Anonymous"}
-                              </span>
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {formatTimestampToDateHHMM(
-                                  String(response?.created_at),
-                                )}
-                              </span>
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1">
-                              {response.status === "ongoing" ? (
-                                <span
-                                  role="status"
-                                  aria-live="polite"
-                                  aria-label="Live interview in progress"
-                                  className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200"
-                                >
-                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-                                  Live
-                                </span>
-                              ) : null}
-                              {response.status === "interrupted" ? (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
-                                  Interrupted
-                                </span>
-                              ) : null}
-                              {response.status === "abandoned" ? (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">
-                                  Never started
-                                </span>
-                              ) : null}
-                              {!response.is_viewed &&
-                              response.status !== "ongoing" ? (
-                                <span
-                                  className="inline-block h-2 w-2 rounded-full bg-brand-bold"
-                                  aria-label="Unviewed"
-                                />
-                              ) : null}
-                              {response.analytics &&
-                              response.analytics.overallScore !== undefined ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-brand-bold bg-white text-xs font-semibold text-brand-bold">
-                                        {response.analytics.overallScore}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                      Overall score
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : null}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            {group.count}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {group.candidates.map((candidate) => {
+                            const isSelectedRow =
+                              selectedCallId === candidate.callId;
+
+                            return (
+                              <button
+                                key={candidate.callId}
+                                type="button"
+                                className={`flex w-full items-start justify-between gap-3 rounded-[20px] border px-4 py-4 text-left transition-colors ${
+                                  isSelectedRow
+                                    ? "border-[#203b14] bg-[#eef4e1]"
+                                    : "border-[#e0e5d5] bg-[#f8faf3] hover:border-[#c5ccb6] hover:bg-[#f3f7ea]"
+                                }`}
+                                onClick={() => {
+                                  router.push(
+                                    `/interviews/${params.interviewId}?call=${candidate.callId}`,
+                                  );
+                                  handleResponseClick(candidate.response);
+                                }}
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-[#0a1d08]">
+                                    {candidate.displayName}
+                                  </p>
+                                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#53614d]">
+                                    {candidate.summary}
+                                  </p>
+                                  <p className="mt-2 text-xs text-[#6f7866]">
+                                    {formatResponseTime(candidate.createdAt)}
+                                  </p>
+                                </div>
+                                <div className="shrink-0 text-right">
+                                  {candidate.score !== null ? (
+                                    <span className="inline-flex rounded-full border border-[#c5ccb6] bg-[#fbfdf6] px-3 py-1 text-xs font-semibold text-[#0a1d08]">
+                                      {candidate.score}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex rounded-full border border-[#d8ddd0] bg-[#fbfdf6] px-3 py-1 text-xs font-semibold text-[#6f7866]">
+                                      Pending
+                                    </span>
+                                  )}
+                                  {!candidate.isViewed &&
+                                  candidate.status !== "ongoing" ? (
+                                    <p className="mt-2 text-xs font-semibold text-[#4a3212]">
+                                      Unopened
+                                    </p>
+                                  ) : null}
+                                  {candidate.status === "ongoing" ? (
+                                    <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#203b14]">
+                                      <PlayCircle className="h-3.5 w-3.5" />
+                                      Live
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </ScrollArea>
               ) : (
                 <div className="p-4">
                   <EmptyState
                     size="compact"
-                    icon={<Inbox className="h-5 w-5" />}
-                    title="No responses yet"
-                    description="Share the interview link to start collecting responses."
+                    icon={<UserRound className="h-5 w-5" />}
+                    title="No candidates in this stage"
+                    description="Change the filter or share the interview link to start collecting candidate sessions."
                   />
                 </div>
               )}
@@ -578,55 +569,63 @@ return (
           </Section>
         </aside>
 
-        <main className="min-w-0 flex-1">
-          {responses && (
-            <div className="rounded-lg border bg-card p-6 shadow-[var(--ds-shadow-raised)]">
-              {searchParams.call ? (
-                <CallInfo
-                  call_id={searchParams.call}
-                  onDeleteResponse={handleDeleteResponse}
-                  onCandidateStatusChange={handleCandidateStatusChange}
-                />
-              ) : searchParams.edit ? (
-                <EditInterview interview={interview} />
-              ) : (
-                <SummaryInfo responses={responses} interview={interview} />
-              )}
-            </div>
-          )}
+        <main className="min-w-0">
+          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+            {selectedCallId ? (
+              <CallInfo
+                call_id={selectedCallId}
+                onDeleteResponse={handleDeleteResponse}
+                onCandidateStatusChange={handleCandidateStatusChange}
+              />
+            ) : isEditMode ? (
+              <EditInterview interview={interview} />
+            ) : (
+              <SummaryInfo
+                workflow={workflow}
+                onOpenCandidate={(callId) =>
+                  router.push(`/interviews/${params.interviewId}?call=${callId}`)
+                }
+              />
+            )}
+          </div>
         </main>
       </div>
 
-      {/* Theme picker — width-constrained, swatch grid */}
       <Modal
         open={showColorPicker}
         size="sm"
         closeOnOutsideClick={false}
         onClose={closeColorPicker}
       >
-        <div className="w-full max-w-xs">
-          <h3 className="mb-4 text-center text-lg font-semibold">
-            Choose a theme color
+        <div className="w-full max-w-sm rounded-[28px] bg-[#fbfdf6] p-1 text-[#0a1d08]">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
+            Recruiter identity marker
+          </p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
+            Keep the brand cue subtle
           </h3>
+          <p className="mt-2 text-sm leading-6 text-[#53614d]">
+            This marker helps you recognize the workflow in recruiter surfaces only. It no longer changes the candidate experience.
+          </p>
           <div
             role="radiogroup"
             aria-label="Theme color swatches"
-            className="grid grid-cols-4 gap-2"
+            className="mt-5 grid grid-cols-4 gap-3"
           >
-            {BRAND_COLOR_PALETTE.map((hex) => {
+            {RECRUITER_MARKER_PALETTE.map((hex) => {
               const selected = themeColor.toLowerCase() === hex.toLowerCase();
-              
-return (
+
+              return (
                 <button
                   key={hex}
                   type="button"
                   role="radio"
                   aria-checked={selected}
                   aria-label={`Theme color ${hex}`}
-                  className={`relative h-10 w-10 rounded-md transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-brand-bold)] focus-visible:ring-offset-2 ${
+                  className={`relative h-12 w-12 rounded-full border transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#203b14] focus-visible:ring-offset-2 ${
                     selected
-                      ? "ring-2 ring-[var(--ds-brand-bold)] ring-offset-2"
-                      : ""
+                      ? "border-[#203b14] ring-2 ring-[#203b14] ring-offset-2"
+                      : "border-[#d8ddd0]"
                   }`}
                   style={{ backgroundColor: hex }}
                   onClick={() => handleColorChange(hex)}
@@ -637,17 +636,17 @@ return (
         </div>
       </Modal>
 
-      {isSharePopupOpen && (
+      {isSharePopupOpen ? (
         <SharePopup
           open={isSharePopupOpen}
           shareContent={
             interview?.readable_slug
-              ? `${base_url}/call/${interview?.readable_slug}`
+              ? `${baseUrl}/call/${interview.readable_slug}`
               : (interview?.url as string)
           }
           onClose={closeSharePopup}
         />
-      )}
+      ) : null}
     </PageShell>
   );
 }

@@ -16,14 +16,16 @@ import { cn } from "@/lib/utils";
 export type BannerTone = "info" | "success" | "warning" | "danger" | "brand";
 
 const TONE_CLASSES: Record<BannerTone, string> = {
-  info: "border-blue-200 bg-blue-50 text-blue-900 [&_svg]:text-blue-600",
-  success: "border-green-200 bg-green-50 text-green-900 [&_svg]:text-green-600",
+  info:
+    "border-[color:rgba(197,204,182,0.9)] bg-[color:rgba(251,253,246,0.92)] text-[hsl(var(--foreground))] [&_svg]:text-[var(--color-valley-green)]",
+  success:
+    "border-[color:rgba(159,177,127,0.55)] bg-[color:rgba(215,232,181,0.42)] text-[hsl(var(--foreground))] [&_svg]:text-[var(--color-valley-green)]",
   warning:
-    "border-amber-200 bg-amber-50 text-amber-900 [&_svg]:text-amber-600",
+    "border-[color:rgba(74,50,18,0.18)] bg-[color:rgba(74,50,18,0.08)] text-[var(--color-deep-earth)] [&_svg]:text-[var(--color-amber-seed)]",
   danger:
-    "border-destructive/30 bg-destructive/10 text-destructive [&_svg]:text-destructive",
+    "border-[color:rgba(146,74,55,0.26)] bg-[color:rgba(146,74,55,0.08)] text-[hsl(var(--foreground))] [&_svg]:text-destructive",
   brand:
-    "border-brand-subtle bg-brand-subtlest text-foreground [&_svg]:text-brand-bold",
+    "border-[color:rgba(159,177,127,0.55)] bg-[color:rgba(215,232,181,0.32)] text-[hsl(var(--foreground))] [&_svg]:text-[var(--color-valley-green)]",
 };
 
 const TONE_ICONS: Record<BannerTone, React.ComponentType<{ className?: string }>> = {
@@ -53,11 +55,12 @@ export function Banner({
   ...props
 }: BannerProps) {
   const Icon = TONE_ICONS[tone];
+
   return (
     <div
       role="status"
       className={cn(
-        "flex flex-col gap-2 rounded-lg border px-4 py-3 md:flex-row md:items-center",
+        "flex flex-col gap-2 rounded-[28px] border px-5 py-4 shadow-[var(--shadow-subtle)] md:flex-row md:items-center",
         TONE_CLASSES[tone],
         className,
       )}
@@ -65,9 +68,9 @@ export function Banner({
     >
       <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
       <div className="flex-1 space-y-0.5">
-        <p className="text-sm font-medium leading-tight">{title}</p>
+        <p className="text-sm font-medium leading-tight tracking-[-0.04em]">{title}</p>
         {description ? (
-          <p className="text-sm leading-snug opacity-90">{description}</p>
+          <p className="text-sm leading-snug tracking-[-0.04em] opacity-90">{description}</p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -75,8 +78,8 @@ export function Banner({
         <button
           type="button"
           aria-label="Dismiss"
+          className="shrink-0 rounded-full p-1 transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
           onClick={onDismiss}
-          className="shrink-0 rounded-md p-1 transition-opacity hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
         >
           <X className="h-4 w-4" />
         </button>

@@ -53,7 +53,7 @@ const DrawerContent = React.forwardRef<
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay
       className={cn(
-        "fixed inset-0 z-50 bg-black/50",
+        "fixed inset-0 z-50 bg-[rgba(10,29,8,0.18)] backdrop-blur-[2px]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "duration-[var(--ds-motion-duration-medium)]",
@@ -62,8 +62,9 @@ const DrawerContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 flex flex-col gap-4 border bg-background p-6",
+        "fixed z-50 flex flex-col gap-4 border border-[hsl(var(--border))] bg-background p-6",
         "shadow-[var(--ds-shadow-overlay)]",
+        "sm:rounded-[28px]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "duration-[var(--ds-motion-duration-medium)]",
         SIDE_CLASSES[side],
@@ -73,7 +74,7 @@ const DrawerContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-brand-bold)] focus-visible:ring-offset-2">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full border border-transparent bg-[color:rgba(251,253,246,0.72)] p-1 opacity-80 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -92,12 +93,12 @@ function DrawerHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-1 pr-6", className)}>
-      <DialogPrimitive.Title className="text-lg font-semibold leading-none tracking-tight">
+    <div className={cn("space-y-2 pr-6", className)}>
+      <DialogPrimitive.Title className="text-lg font-semibold leading-none tracking-[-0.04em]">
         {title}
       </DialogPrimitive.Title>
       {description ? (
-        <DialogPrimitive.Description className="text-sm text-muted-foreground">
+        <DialogPrimitive.Description className="text-sm tracking-[-0.04em] text-muted-foreground">
           {description}
         </DialogPrimitive.Description>
       ) : null}
@@ -124,7 +125,7 @@ function DrawerFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2 border-t border-[hsl(var(--border))] pt-4 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}

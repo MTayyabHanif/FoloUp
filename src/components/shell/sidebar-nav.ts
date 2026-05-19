@@ -32,6 +32,7 @@ export type NavSection = {
  */
 export const NAV_SECTIONS: NavSection[] = [
   {
+    label: "Overview",
     items: [
       {
         label: "Dashboard",
@@ -47,7 +48,7 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: "Workspace",
+    label: "Platform",
     items: [
       {
         label: "Settings",

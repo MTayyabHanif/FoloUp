@@ -23,10 +23,10 @@ export function PageShell({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className="w-full">
+    <div className="relative w-full">
       <div
         className={cn(
-          "mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-8 md:px-8",
+          "mx-auto flex w-full max-w-7xl flex-col gap-[var(--section-gap)] px-5 py-6 md:px-8 md:py-8",
           className,
         )}
         {...props}
@@ -60,22 +60,25 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-col gap-4 border-b pb-6 md:flex-row md:items-end md:justify-between",
+        "flex flex-col gap-5 border-b border-[hsl(var(--border))] pb-8 md:flex-row md:items-end md:justify-between",
         className,
       )}
       {...props}
     >
       <div className="min-w-0 flex-1 space-y-1">
         {eyebrow ? (
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <p
+            className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
+            style={{ fontFamily: "var(--font-fragmentmono)" }}
+          >
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="truncate text-2xl font-semibold tracking-tight">
+        <h1 className="truncate text-[clamp(2rem,4vw,3.35rem)] font-semibold leading-[1.02] tracking-[-0.04em] text-[hsl(var(--foreground))]">
           {title}
         </h1>
         {description ? (
-          <p className="line-clamp-2 text-sm text-muted-foreground">
+          <p className="max-w-3xl text-sm leading-6 tracking-[-0.04em] text-muted-foreground md:text-base">
             {description}
           </p>
         ) : null}
@@ -116,23 +119,24 @@ export function Section({
   ...props
 }: SectionProps) {
   const hasHeader = title || description || actions;
+
   return (
     <section className={cn("flex flex-col", className)} {...props}>
       {hasHeader ? (
         <div
           className={cn(
             "flex flex-col gap-2 md:flex-row md:items-end md:justify-between",
-            compact ? "mb-3" : "mb-4",
+            compact ? "mb-3" : "mb-5",
           )}
         >
           <div className="min-w-0 flex-1 space-y-1">
             {title ? (
-              <h2 className="truncate text-lg font-semibold tracking-tight">
+              <h2 className="truncate text-lg font-semibold tracking-[-0.04em] text-[hsl(var(--foreground))] md:text-xl">
                 {title}
               </h2>
             ) : null}
             {description ? (
-              <p className="line-clamp-2 text-sm text-muted-foreground">
+              <p className="text-sm leading-6 tracking-[-0.04em] text-muted-foreground">
                 {description}
               </p>
             ) : null}
@@ -169,9 +173,10 @@ export function DataGrid({
   cols = "3",
   ...props
 }: DataGridProps) {
+
   return (
     <div
-      className={cn("grid gap-4", GRID_COLS[cols], className)}
+      className={cn("grid gap-5", GRID_COLS[cols], className)}
       {...props}
     />
   );

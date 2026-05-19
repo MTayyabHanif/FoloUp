@@ -10,21 +10,29 @@ export function AppFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto border-t bg-card px-6 py-4 md:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center">
-        <p>
-          © {year}{" "}
-          <span className="font-semibold text-foreground">
-            Robust <span className="text-brand-bold">Devs</span>
+    <footer className="mt-auto border-t border-[hsl(var(--border))] bg-[color:rgba(251,253,246,0.92)] px-6 py-5 md:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-3 text-xs text-muted-foreground lg:flex-row lg:items-center">
+        <div className="space-y-1">
+          <p className="tracking-[-0.04em]">
+            © {year}{" "}
+            <span className="font-semibold text-foreground">
+              Foloup
+            </span>
+            . All rights reserved.
+          </p>
+          <p className="max-w-xl tracking-[-0.04em] text-muted-foreground">
+            Built for interview operations, candidate review, and consistent hiring decisions.
+          </p>
+        </div>
+        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="rounded-full border border-[color:rgba(197,204,182,0.82)] bg-[color:rgba(224,229,213,0.18)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--color-valley-green)]">
+            Light-only Adaline
           </span>
-          . All rights reserved.
-        </p>
-        <nav aria-label="Footer" className="flex items-center gap-4">
           <a
             href={marketingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-colors hover:text-foreground"
+            className="transition-colors hover:text-[var(--color-valley-green)]"
           >
             Marketing site
           </a>
@@ -32,7 +40,7 @@ export function AppFooter() {
             href={`${marketingUrl.replace(/\/$/, "")}/privacy`}
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-colors hover:text-foreground"
+            className="transition-colors hover:text-[var(--color-valley-green)]"
           >
             Privacy
           </a>
@@ -40,13 +48,13 @@ export function AppFooter() {
             href={`${marketingUrl.replace(/\/$/, "")}/terms`}
             target="_blank"
             rel="noopener noreferrer"
-            className="transition-colors hover:text-foreground"
+            className="transition-colors hover:text-[var(--color-valley-green)]"
           >
             Terms
           </a>
           <Link
             href="/dashboard"
-            className="transition-colors hover:text-foreground"
+            className="transition-colors hover:text-[var(--color-valley-green)]"
           >
             Dashboard
           </Link>
@@ -66,17 +74,17 @@ export function CandidateFooter() {
     process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://robustagency.co";
 
   return (
-    <footer className="border-t bg-background py-4 text-center text-xs text-muted-foreground">
-      <div className="mx-auto flex max-w-3xl flex-col items-center gap-1 px-4 sm:flex-row sm:justify-center sm:gap-3">
-        <span>
+    <footer className="border-t border-[hsl(var(--border))] bg-[color:rgba(251,253,246,0.9)] py-5 text-center text-xs text-muted-foreground">
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 px-4 sm:flex-row sm:justify-center sm:gap-3">
+        <span className="tracking-[-0.04em]">
           Powered by{" "}
           <a
             href={marketingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-bold text-foreground transition-colors hover:opacity-80"
+            className="font-semibold text-foreground transition-colors hover:text-[var(--color-valley-green)]"
           >
-            Robust <span className="text-brand-bold">Devs</span>
+            Foloup
           </a>
         </span>
         <span className="hidden text-muted-foreground/40 sm:inline">·</span>
@@ -84,7 +92,7 @@ export function CandidateFooter() {
           href={`${marketingUrl.replace(/\/$/, "")}/privacy`}
           target="_blank"
           rel="noopener noreferrer"
-          className="transition-colors hover:text-foreground"
+          className="transition-colors hover:text-[var(--color-valley-green)]"
         >
           Privacy
         </a>

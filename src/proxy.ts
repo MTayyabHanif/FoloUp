@@ -1,11 +1,11 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Routes that bypass Clerk authentication entirely.
-// - "/" handled by src/app/page.tsx server redirect (added in change #3 wave 5)
+// - "/" handled by src/app/page.tsx server redirect
 // - "/sign-in" and "/sign-up" are Clerk's hosted flows
 // - "/call(.*)" is the candidate-facing interview route (unauthenticated by design)
-// - The four /api/* candidate-flow routes plus the new /api/response-webhook
-//   are public; the webhook gates itself via Retell signature verification.
+// - The candidate session API routes plus the webhook are public; the webhook
+//   gates itself via Retell signature verification.
 const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",

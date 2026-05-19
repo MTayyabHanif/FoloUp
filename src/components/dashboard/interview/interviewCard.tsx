@@ -1,181 +1,210 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { ArrowUpRight, Copy, CopyCheck, PauseCircle, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
-import { Copy, ArrowUpRight } from "lucide-react";
-import { CopyCheck } from "lucide-react";
-import { ResponseService } from "@/services/responses.service";
-import axios from "axios";
-import MiniLoader from "@/components/loaders/mini-loader/miniLoader";
-import { InterviewerService } from "@/services/interviewers.service";
+import {
+  formatDurationLabel,
+  formatResponseTime,
+  getWorkflowToneClasses,
+  type HiringWorkflowSummary,
+} from "@/lib/hiring-workflow";
 
 interface Props {
-  name: string | null;
-  interviewerId: bigint;
-  id: string;
-  url: string;
-  readableSlug: string;
+  workflow: HiringWorkflowSummary;
 }
 
-const base_url = process.env.NEXT_PUBLIC_LIVE_URL;
+const baseUrl = process.env.NEXT_PUBLIC_LIVE_URL;
 
-function InterviewCard({ name, interviewerId, id, url, readableSlug }: Props) {
+function InterviewCard({ workflow }: Props) {
   const [copied, setCopied] = useState(false);
-  const [responseCount, setResponseCount] = useState<number | null>(null);
-  const [isFetching, setIsFetching] = useState(false);
-  const [img, setImg] = useState("");
 
-  useEffect(() => {
-    const fetchInterviewer = async () => {
-      const interviewer =
-        await InterviewerService.getInterviewer(interviewerId);
-      setImg(interviewer.image);
-    };
-    fetchInterviewer();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const fetchResponses = async () => {
-      try {
-        const responses = await ResponseService.getAllResponses(id);
-        setResponseCount(responses.length);
-        if (responses.length > 0) {
-          setIsFetching(true);
-          for (const response of responses) {
-            if (!response.is_analysed) {
-              try {
-                const result = await axios.post("/api/get-call", {
-                  id: response.call_id,
-                });
-
-                if (result.status !== 200) {
-                  throw new Error(`HTTP error! status: ${result.status}`);
-                }
-              } catch (error) {
-                console.error(
-                  `Failed to call api/get-call for response id ${response.call_id}:`,
-                  error,
-                );
-              }
-            }
-          }
-          setIsFetching(false);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchResponses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const link = workflow.interview.readable_slug
+    ? `${baseUrl}/call/${workflow.interview.readable_slug}`
+    : (workflow.interview.url ?? "");
 
   const copyToClipboard = () => {
-    navigator.clipboard
-      .writeText(
-        readableSlug ? `${base_url}/call/${readableSlug}` : (url as string),
-      )
-      .then(
-        () => {
-          setCopied(true);
-          toast.success(
-            "The link to your interview has been copied to your clipboard.",
-            {
-              position: "bottom-right",
-              duration: 3000,
-            },
-          );
-          setTimeout(() => {
-            setCopied(false);
-          }, 2000);
-        },
-        (err) => {
-          console.log("failed to copy", err.mesage);
-        },
-      );
+    navigator.clipboard.writeText(link).then(
+      () => {
+        setCopied(true);
+        toast.success("Interview link copied.", {
+          position: "bottom-right",
+          duration: 2500,
+        });
+        window.setTimeout(() => setCopied(false), 1800);
+      },
+      (error) => {
+        console.error("failed to copy", error?.message);
+      },
+    );
   };
 
   const handleJumpToInterview = (event: React.MouseEvent) => {
     event.stopPropagation();
     event.preventDefault();
-    const interviewUrl = readableSlug
-      ? `/call/${readableSlug}`
-      : `/call/${url}`;
+    const interviewUrl = workflow.interview.readable_slug
+      ? `/call/${workflow.interview.readable_slug}`
+      : `/call/${workflow.interview.url}`;
     window.open(interviewUrl, "_blank");
   };
 
   return (
     <a
-      href={`/interviews/${id}`}
-      style={{
-        pointerEvents: isFetching ? "none" : "auto",
-        cursor: isFetching ? "default" : "pointer",
-      }}
+      href={`/interviews/${workflow.interview.id}`}
+      className="group flex min-h-[280px] flex-col justify-between rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6 text-[#0a1d08] transition-all hover:-translate-y-0.5 hover:border-[#c5ccb6] hover:bg-[#f6f8ef]"
     >
-      <Card className="group relative flex h-60 cursor-pointer flex-col overflow-hidden rounded-xl p-0 transition-all hover:-translate-y-0.5 hover:shadow-[var(--ds-shadow-overflow)]">
-        <CardContent className={`flex h-full flex-col p-0 ${isFetching ? "opacity-60" : ""}`}>
-          {/* Header band — brand-bold tint with truncating title */}
-          <div className="flex h-32 w-full items-center justify-center bg-brand-bold px-4 py-3 text-center">
-            <CardTitle className="line-clamp-3 w-full text-base font-semibold text-white">
-              {name}
-              {isFetching && (
-                <div className="mt-1">
-                  <MiniLoader />
-                </div>
-              )}
-            </CardTitle>
-          </div>
-          {/* Footer row — interviewer avatar + response count */}
-          <div className="flex flex-1 items-center justify-between gap-3 px-4 py-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary">
-              <Image
-                src={img}
-                alt="Interviewer"
-                width={48}
-                height={48}
-                className="h-full w-full object-cover object-center"
+      <div className="space-y-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-3">
+            <div className="inline-flex items-center gap-2">
+              <span
+                className="inline-flex h-3 w-3 rounded-full border border-white/80"
+                style={{ backgroundColor: workflow.identityColor }}
+                aria-hidden="true"
               />
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getWorkflowToneClasses(
+                  workflow.healthTone,
+                )}`}
+              >
+                {workflow.healthLabel}
+              </span>
             </div>
-            <div className="min-w-0 flex-1 text-right text-sm">
-              <p className="truncate font-semibold text-foreground">
-                {responseCount?.toString() || 0}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {responseCount === 1 ? "response" : "responses"}
+            <div>
+              <h3 className="line-clamp-2 text-[28px] font-semibold leading-[1.02] tracking-[-0.05em]">
+                {workflow.title}
+              </h3>
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#53614d]">
+                {workflow.objective}
               </p>
             </div>
           </div>
-          {/* Floating actions in top-right */}
-          <div className="absolute right-2 top-2 flex gap-1">
+
+          <div className="flex shrink-0 gap-2">
             <Button
-              className="h-7 w-7 bg-white/90 p-0 text-brand-bold shadow-sm hover:bg-white"
-              variant={"secondary"}
+              className="h-9 w-9 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] p-0 text-[#203b14] hover:bg-[#eef4e1]"
+              variant="ghost"
+              aria-label="Open interview preview"
               onClick={handleJumpToInterview}
-              aria-label="Open interview"
             >
-              <ArrowUpRight size={14} />
+              <ArrowUpRight className="h-4 w-4" />
             </Button>
             <Button
-              className={`h-7 w-7 p-0 shadow-sm ${
-                copied
-                  ? "bg-brand-subtle text-white hover:bg-brand-subtle"
-                  : "bg-white/90 text-brand-bold hover:bg-white"
-              }`}
-              variant={"secondary"}
+              className="h-9 w-9 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] p-0 text-[#203b14] hover:bg-[#eef4e1]"
+              variant="ghost"
+              aria-label={copied ? "Link copied" : "Copy interview link"}
               onClick={(event) => {
                 event.stopPropagation();
                 event.preventDefault();
                 copyToClipboard();
               }}
-              aria-label={copied ? "Link copied" : "Copy interview link"}
             >
-              {copied ? <CopyCheck size={14} /> : <Copy size={14} />}
+              {copied ? (
+                <CopyCheck className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-[20px] border border-[#e0e5d5] bg-[#f7f9f1] px-4 py-3">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
+              Pipeline
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
+              {workflow.totalResponses}
+            </p>
+            <p className="mt-1 text-xs text-[#53614d]">
+              {workflow.selectedCount} selected, {workflow.potentialCount} potential
+            </p>
+          </div>
+          <div className="rounded-[20px] border border-[#e0e5d5] bg-[#f7f9f1] px-4 py-3">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
+              Next action
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
+              {workflow.attentionCount}
+            </p>
+            <p className="mt-1 text-xs text-[#53614d]">
+              live or review blockers waiting on a recruiter
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {workflow.stageGroups
+            .filter((group) => group.count > 0)
+            .slice(0, 4)
+            .map((group) => (
+              <span
+                key={group.key}
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getWorkflowToneClasses(
+                  group.tone,
+                )}`}
+              >
+                {group.label} {group.count}
+              </span>
+            ))}
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-4 border-t border-[#e0e5d5] pt-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="h-12 w-12 overflow-hidden rounded-full border border-[#e0e5d5] bg-[#eef4e1]">
+              {workflow.interviewer?.image ? (
+                <Image
+                  src={workflow.interviewer.image}
+                  alt={workflow.interviewer.name}
+                  width={48}
+                  height={48}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#203b14]">
+                  {(workflow.interviewer?.name ?? "AI").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">
+                {workflow.interviewer?.name ?? "AI interviewer"}
+              </p>
+              <p className="truncate text-sm text-[#53614d]">
+                {formatDurationLabel(workflow.durationMinutes)} · {workflow.questionCount} questions
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right text-xs text-[#53614d]">
+            {workflow.interview.is_active ? (
+              <span className="inline-flex items-center gap-1">
+                <PlayCircle className="h-4 w-4 text-[#203b14]" />
+                Active
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1">
+                <PauseCircle className="h-4 w-4 text-[#8b6d4d]" />
+                Paused
+              </span>
+            )}
+            <p className="mt-2">
+              {workflow.recentCandidate
+                ? `Latest activity ${formatResponseTime(workflow.recentCandidate.createdAt)}`
+                : "No candidate activity yet"}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-sm leading-6 text-[#53614d]">
+          {workflow.topCandidate
+            ? `${workflow.topCandidate.displayName} is the strongest current signal${workflow.topCandidate.score !== null ? ` with a score of ${workflow.topCandidate.score}` : ""}.`
+            : workflow.healthSummary}
+        </p>
+      </div>
     </a>
   );
 }

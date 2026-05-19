@@ -15,7 +15,7 @@ import {
 
 /**
  * (client) layout — recruiter route group. Owns the full platform shell:
- * sidebar (with brand, org switcher, navigation, theme toggle, user card),
+ * sidebar (with brand, org switcher, navigation, user card),
  * sticky page header (breadcrumb + help), and recruiter footer.
  *
  * Layout structure:
@@ -53,9 +53,10 @@ export default function ClientGroupLayout({
         <Toaster
           toastOptions={{
             classNames: {
-              toast: "bg-white",
-              title: "text-black",
-              description: "text-red-400",
+              toast:
+                "rounded-[24px] border border-[hsl(var(--border))] bg-[color:rgba(251,253,246,0.98)] text-[hsl(var(--foreground))] shadow-[var(--ds-shadow-overflow)]",
+              title: "text-[hsl(var(--foreground))] tracking-[-0.04em]",
+              description: "text-muted-foreground tracking-[-0.04em]",
             },
           }}
         />
@@ -65,9 +66,13 @@ export default function ClientGroupLayout({
 
   return (
     <Providers>
-      <div className="flex min-h-screen bg-background">
+      <div className="relative flex min-h-screen bg-background">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(215,232,181,0.2),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(224,229,213,0.28),transparent_28%)]"
+        />
         {/* Desktop sidebar — permanent fixed column */}
-        <div className="hidden h-screen w-64 shrink-0 md:sticky md:top-0 md:block">
+        <div className="relative hidden h-screen w-80 shrink-0 md:sticky md:top-0 md:block">
           <AppSidebar />
         </div>
 
@@ -79,7 +84,7 @@ export default function ClientGroupLayout({
           <DrawerContent
             side="left"
             size="default"
-            className="w-72 p-0"
+            className="w-80 rounded-none p-0 sm:max-w-[20rem]"
           >
             <AppSidebar
               onNavigate={() => setMobileSidebarOpen(false)}
@@ -88,7 +93,7 @@ export default function ClientGroupLayout({
         </Drawer>
 
         {/* Main content column */}
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <div className="relative flex min-h-screen min-w-0 flex-1 flex-col">
           <AppHeader onMenuClick={() => setMobileSidebarOpen(true)} />
           <main className="flex-1">{children}</main>
           <AppFooter />
@@ -98,12 +103,16 @@ export default function ClientGroupLayout({
       <Toaster
         toastOptions={{
           classNames: {
-            toast: "bg-white",
-            title: "text-black",
-            description: "text-red-400",
-            actionButton: "bg-brand-subtle",
-            cancelButton: "bg-orange-400",
-            closeButton: "bg-white",
+            toast:
+              "rounded-[24px] border border-[hsl(var(--border))] bg-[color:rgba(251,253,246,0.98)] text-[hsl(var(--foreground))] shadow-[var(--ds-shadow-overflow)]",
+            title: "text-[hsl(var(--foreground))] tracking-[-0.04em]",
+            description: "text-muted-foreground tracking-[-0.04em]",
+            actionButton:
+              "rounded-full bg-[var(--color-amber-seed)] text-[var(--color-canvas-ice)]",
+            cancelButton:
+              "rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]",
+            closeButton:
+              "bg-[color:rgba(251,253,246,0.9)] text-[hsl(var(--foreground))]",
           },
         }}
       />

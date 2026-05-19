@@ -35,8 +35,8 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-lg border border-dashed bg-secondary/30 text-center",
-        size === "compact" ? "gap-2 px-6 py-8" : "gap-3 px-6 py-12",
+        "flex flex-col items-center justify-center rounded-[28px] border border-dashed border-[hsl(var(--border))] bg-[color:rgba(224,229,213,0.32)] text-center shadow-[var(--shadow-subtle)]",
+        size === "compact" ? "gap-2 px-6 py-8" : "gap-4 px-6 py-12",
         className,
       )}
       {...props}
@@ -44,7 +44,7 @@ export function EmptyState({
       {icon ? (
         <div
           className={cn(
-            "flex items-center justify-center rounded-full bg-brand-subtlest text-brand-bold",
+            "flex items-center justify-center rounded-full border border-[color:rgba(197,204,182,0.9)] bg-[color:rgba(251,253,246,0.9)] text-[var(--color-valley-green)]",
             size === "compact" ? "h-10 w-10" : "h-14 w-14",
           )}
           aria-hidden="true"
@@ -54,13 +54,13 @@ export function EmptyState({
       ) : null}
       <div className="max-w-md space-y-1">
         <h3 className={cn(
-          "font-semibold tracking-tight",
+          "font-semibold tracking-[-0.04em] text-[hsl(var(--foreground))]",
           size === "compact" ? "text-sm" : "text-base",
         )}>
           {title}
         </h3>
         {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm tracking-[-0.04em] text-muted-foreground">{description}</p>
         ) : null}
       </div>
       {action ? <div className="mt-1">{action}</div> : null}

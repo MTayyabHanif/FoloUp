@@ -2,12 +2,10 @@
 
 import Image from "next/image";
 import { useState, type MouseEvent } from "react";
-import { Copy, CopyCheck } from "lucide-react";
+import { Copy, CopyCheck, Mic2 } from "lucide-react";
 import ReactAudioPlayer from "react-audio-player";
 import { toast } from "sonner";
 
-import { CardTitle } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,49 +15,67 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Interviewer } from "@/types/interviewer";
+import { VOICE_OPTIONS } from "@/lib/constants";
 
 interface Props {
   interviewer: Interviewer | undefined;
 }
 
-/**
- * Per-trait control row. Slider + numeric value to the right.
- */
-function TraitControl({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | undefined;
-}) {
-  const normalized = (value ?? 10) / 10;
+const VOICE_LABELS = Object.fromEntries(
+  VOICE_OPTIONS.map((voice) => [voice.id, voice.label]),
+);
 
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-24 shrink-0 text-sm font-medium text-foreground">
-        {label}
-      </span>
-      <div className="flex-1">
-        <Slider value={[normalized]} max={1} step={0.1} />
-      </div>
-      <span className="w-10 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
-        {normalized.toFixed(1)}
-      </span>
-    </div>
-  );
-}
+const TRAITS = [
+  {
+    key: "empathy",
+    label: "Empathy",
+    describe: (value: number) =>
+      value >= 8
+        ? "Creates a warm, reassuring tone."
+        : value >= 5
+          ? "Balances empathy with structure."
+          : "Keeps emotional distance and clarity.",
+  },
+  {
+    key: "rapport",
+    label: "Rapport",
+    describe: (value: number) =>
+      value >= 8
+        ? "Builds quick conversational trust."
+        : value >= 5
+          ? "Feels approachable but grounded."
+          : "Maintains a more formal interview stance.",
+  },
+  {
+    key: "exploration",
+    label: "Exploration",
+    describe: (value: number) =>
+      value >= 8
+        ? "Pushes for depth, nuance, and specifics."
+        : value >= 5
+          ? "Uses selective follow-up to surface signal."
+          : "Stays close to the planned path.",
+  },
+  {
+    key: "speed",
+    label: "Pace",
+    describe: (value: number) =>
+      value >= 8
+        ? "Moves quickly and keeps momentum high."
+        : value >= 5
+          ? "Keeps a calm, steady cadence."
+          : "Leaves more pauses and thinking space.",
+  },
+] as const;
 
 function InterviewerDetailsModal({ interviewer }: Props) {
   const [copied, setCopied] = useState(false);
 
-  // Dynamic rows formula: at least 6, at most 24, adapting to actual content.
-  // The textarea itself does not scroll (resize-none); the modal container's
-  // overflow-y-auto provides a single scroll context.
   const prompt = interviewer?.prompt ?? "";
-  const promptRows = Math.min(
-    24,
-    Math.max(6, prompt.split("\n").length + 2),
-  );
+  const promptRows = Math.min(24, Math.max(8, prompt.split("\n").length + 2));
+  const voiceLabel = interviewer?.voice_id
+    ? VOICE_LABELS[interviewer.voice_id] ?? interviewer.voice_id
+    : "Voice not set";
 
   const handleCopyPrompt = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -89,64 +105,110 @@ function InterviewerDetailsModal({ interviewer }: Props) {
   };
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      {/* Header */}
-      <header className="text-center">
-        <CardTitle className="text-2xl font-semibold">
-          {interviewer?.name}
-        </CardTitle>
-      </header>
-
-      {/* Portrait + description side-by-side at md+, stacked on mobile */}
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
-        <div className="h-40 w-36 shrink-0 overflow-hidden rounded-xl border-2 border-border bg-secondary">
-          <Image
-            src={interviewer?.image || ""}
-            alt={`${interviewer?.name ?? "Interviewer"} portrait`}
-            width={180}
-            height={200}
-            className="h-full w-full object-cover object-center"
-          />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {interviewer?.description}
-          </p>
-          {interviewer?.audio && (
-            <ReactAudioPlayer
-              src={`/audio/${interviewer.audio}`}
-              className="w-full"
-              controls
+    <div className="flex w-full flex-col gap-6 text-[#0a1d08]">
+      <section className="overflow-hidden rounded-[32px] border border-[#dfe4d4] bg-[#f8fbf0]">
+        <div className="grid gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="relative min-h-[240px] border-b border-[#e0e5d5] md:border-b-0 md:border-r">
+            <Image
+              src={interviewer?.image || ""}
+              alt={`${interviewer?.name ?? "Interviewer"} portrait`}
+              sizes="220px"
+              className="object-cover object-center"
+              fill
             />
-          )}
-        </div>
-      </div>
+          </div>
+          <div className="p-6 md:p-7">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-[#203b14]">
+              <Mic2 className="h-3.5 w-3.5" />
+              {voiceLabel}
+            </div>
+            <div className="mt-4 space-y-3">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] text-[#0a1d08]">
+                {interviewer?.name}
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-[#42513d]">
+                {interviewer?.description}
+              </p>
+            </div>
 
-      {/* Trait sliders */}
-      <section className="space-y-3">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Interviewer settings
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            Display only — does not affect interview behavior.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-3">
-          <TraitControl label="Empathy" value={interviewer?.empathy} />
-          <TraitControl label="Exploration" value={interviewer?.exploration} />
-          <TraitControl label="Rapport" value={interviewer?.rapport} />
-          <TraitControl label="Speed" value={interviewer?.speed} />
+            {interviewer?.audio ? (
+              <div className="mt-6 rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
+                  Voice sample
+                </p>
+                <ReactAudioPlayer
+                  src={`/audio/${interviewer.audio}`}
+                  className="mt-3 w-full"
+                  controls
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
       </section>
 
-      {/* Prompt */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Prompt
+      <section className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-5 md:p-6">
+        <div className="mb-5 space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[#6b7568]">
+            Conversation profile
+          </p>
+          <h3 className="text-lg font-semibold tracking-[-0.03em] text-[#0a1d08]">
+            Visible trait metadata
           </h3>
-          {prompt && (
+          <p className="text-sm leading-6 text-[#42513d]">
+            These settings remain descriptive metadata for recruiters. They help
+            explain the persona’s interviewing stance at a glance.
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {TRAITS.map((trait) => {
+            const value = interviewer?.[trait.key] ?? 5;
+
+            return (
+              <div
+                key={trait.key}
+                className="rounded-[22px] border border-[#e0e5d5] bg-[#f8fbf0] p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-[#0a1d08]">
+                    {trait.label}
+                  </span>
+                  <span className="rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1 text-sm text-[#203b14]">
+                    {value}
+                  </span>
+                </div>
+                <div className="mt-3 h-1.5 rounded-full bg-[#edf1e3]">
+                  <div
+                    className="h-full rounded-full bg-[#203b14]"
+                    style={{ width: `${Math.max(10, (value / 10) * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-[#5e6958]">
+                  {trait.describe(value)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-5 md:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-2">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[#6b7568]">
+              Prompt composition
+            </p>
+            <h3 className="text-lg font-semibold tracking-[-0.03em] text-[#0a1d08]">
+              Persona script
+            </h3>
+            <p className="text-sm leading-6 text-[#42513d]">
+              The stored prompt defines how this interviewer opens, probes, and
+              keeps the conversation on track.
+            </p>
+          </div>
+
+          {prompt ? (
             <TooltipProvider delayDuration={150}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -154,7 +216,7 @@ function InterviewerDetailsModal({ interviewer }: Props) {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0"
+                    className="h-9 w-9 rounded-full"
                     aria-label={copied ? "Prompt copied" : "Copy prompt"}
                     onClick={handleCopyPrompt}
                   >
@@ -166,20 +228,20 @@ function InterviewerDetailsModal({ interviewer }: Props) {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          )}
+          ) : null}
         </div>
+
         {prompt ? (
           <Textarea
             value={prompt}
             rows={promptRows}
-            className="resize-none font-mono text-xs"
+            className="mt-5 resize-none rounded-[22px] border-[#dfe4d4] bg-[#f8fbf0] font-mono text-xs leading-6"
             readOnly
           />
         ) : (
-          <p className="rounded-md border border-dashed border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
-            No prompt stored for this interviewer. If you just landed this
-            change, run <code className="font-mono">migration.sql</code> to
-            backfill prompts for the seed interviewers.
+          <p className="mt-5 rounded-[22px] border border-dashed border-[#c5ccb6] bg-[#f8fbf0] p-4 text-sm leading-6 text-[#5e6958]">
+            No prompt is stored for this persona yet. Existing CRUD behavior is
+            unchanged; once a prompt is present it will appear here in full.
           </p>
         )}
       </section>

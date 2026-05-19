@@ -52,6 +52,7 @@ function humanize(segment: string): string {
   if (segment.length > 24) {
     return segment.slice(0, 8) + "…";
   }
+
   return segment
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -68,13 +69,14 @@ export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
     const isLast = idx === segments.length - 1;
     const label =
       isLast && pageTitle ? pageTitle : humanize(seg);
+
     return { href, label, isLast };
   });
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur md:px-6",
+        "sticky top-0 z-30 flex min-h-[72px] items-center gap-3 border-b border-[hsl(var(--border))] bg-[color:rgba(251,253,246,0.92)] px-4 backdrop-blur md:px-6",
       )}
     >
       {onMenuClick ? (
@@ -106,7 +108,7 @@ export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
               ) : null}
               {crumb.isLast ? (
                 <span
-                  className="truncate font-medium text-foreground"
+                  className="truncate font-medium tracking-[-0.04em] text-foreground"
                   aria-current="page"
                 >
                   {crumb.label}
@@ -114,7 +116,7 @@ export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
               ) : (
                 <Link
                   href={crumb.href}
-                  className="truncate text-muted-foreground transition-colors hover:text-foreground"
+                  className="truncate tracking-[-0.04em] text-muted-foreground transition-colors hover:text-[var(--color-valley-green)]"
                 >
                   {crumb.label}
                 </Link>
@@ -124,7 +126,10 @@ export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
         )}
       </nav>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        <div className="hidden rounded-full border border-[color:rgba(197,204,182,0.86)] bg-[color:rgba(224,229,213,0.22)] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground lg:block">
+          Recruiter shell
+        </div>
         <Button
           variant="ghost"
           size="icon"

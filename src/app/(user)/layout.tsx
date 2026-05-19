@@ -16,16 +16,21 @@ export default function UserGroupLayout({
 }) {
   return (
     <Providers>
-      <div className="flex min-h-screen flex-col">
+      <div className="relative flex min-h-screen flex-col bg-background">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_center,rgba(215,232,181,0.22),transparent_24%),linear-gradient(180deg,rgba(224,229,213,0.22),transparent_22%)]"
+        />
         <main className="flex-1">{children}</main>
         <CandidateFooter />
       </div>
       <Toaster
         toastOptions={{
           classNames: {
-            toast: "bg-white border-2 border-brand-subtle",
-            title: "text-black",
-            description: "text-red-400",
+            toast:
+              "rounded-[24px] border border-[hsl(var(--border))] bg-[color:rgba(251,253,246,0.98)] text-[hsl(var(--foreground))] shadow-[var(--ds-shadow-overflow)]",
+            title: "text-[hsl(var(--foreground))] tracking-[-0.04em]",
+            description: "text-muted-foreground tracking-[-0.04em]",
           },
         }}
       />

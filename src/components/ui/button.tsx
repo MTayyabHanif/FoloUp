@@ -5,27 +5,28 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-brand-bold)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-[var(--radius-buttons)] text-sm font-medium tracking-[-0.04em] transition-all duration-[var(--ds-motion-duration-medium)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-brand-bold text-white shadow hover:bg-brand-bolder",
+          "bg-[var(--color-amber-seed)] text-[var(--color-canvas-ice)] shadow-[var(--shadow-subtle)] hover:bg-[var(--color-deep-earth)]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-[var(--shadow-subtle)] hover:opacity-95",
         outline:
-          "border border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground",
+          "border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))] shadow-[var(--shadow-subtle)] hover:border-[var(--color-valley-green)] hover:text-[var(--color-valley-green)]",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "border border-[color:rgba(197,204,182,0.9)] bg-[var(--color-forest-dew)] text-[var(--color-valley-green)] shadow-[var(--shadow-subtle)] hover:bg-[color:rgba(215,232,181,0.78)]",
+        ghost:
+          "border border-transparent text-[var(--color-valley-green)] hover:border-[color:rgba(197,204,182,0.92)] hover:bg-[color:rgba(215,232,181,0.42)]",
         link:
-          "text-[var(--ds-link-default)] underline-offset-4 hover:underline",
+          "rounded-none px-0 text-[var(--color-valley-green)] underline-offset-4 hover:text-[var(--color-adaline-ink)] hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        default: "h-11 px-6 py-2.5",
+        sm: "h-9 px-4 text-xs",
+        lg: "h-12 px-8 text-sm",
+        icon: "h-11 w-11 rounded-full",
       },
     },
     defaultVariants: {

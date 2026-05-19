@@ -1,47 +1,44 @@
 "use client";
 
 import {
-  ArrowUpRightSquareIcon,
-  AlarmClockIcon,
-  XCircleIcon,
-  CheckCircleIcon,
   AlertCircle,
-  Clock,
+  CheckCircle2,
+  CheckCircleIcon,
+  Clock3,
+  Headphones,
   HelpCircle,
+  Loader2,
+  Mic,
+  PhoneOff,
+  RefreshCcw,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  Volume2,
   WifiOff,
 } from "lucide-react";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Card, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { useResponses } from "@/contexts/responses.context";
 import Image from "next/image";
 import axios from "axios";
 import { RetellWebClient } from "retell-client-js-sdk";
-import MiniLoader from "../loaders/mini-loader/miniLoader";
 import { toast } from "sonner";
-import { isLightColor, testEmail } from "@/lib/utils";
+
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useResponses } from "@/contexts/responses.context";
+import { cn, testEmail } from "@/lib/utils";
+import { FeedbackService } from "@/services/feedback.service";
+import { InterviewerService } from "@/services/interviewers.service";
 import { ResponseService } from "@/services/responses.service";
 import { Interview } from "@/types/interview";
 import { FeedbackData } from "@/types/response";
-import { FeedbackService } from "@/services/feedback.service";
 import { FeedbackForm } from "@/components/call/feedbackForm";
 import {
   TabSwitchWarning,
   useTabSwitchPrevention,
 } from "./tabSwitchPrevention";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { InterviewerService } from "@/services/interviewers.service";
 
 const webClient = new RetellWebClient();
 
@@ -50,7 +47,7 @@ type InterviewProps = {
   sessionToken?: string;
 };
 
-type registerCallResponseType = {
+type RegisterCallResponse = {
   data: {
     registerCallResponse: {
       call_id: string;
@@ -81,22 +78,178 @@ type ReconnectPhase =
   | "check_failed"
   | "register_failed";
 
-type transcriptType = {
+type Transcript = {
   role: string;
   content: string;
 };
 
-/**
- * Renders the reconnect-flow UI: welcome-back banner, "Resume Interview"
- * confirmation, three loading micro-states, session-expired screen,
- * session-not-found screen, offline screen, and the two API-failure
- * retry screens. Each branch is screen-reader friendly (role="status"
- * for transient phases, role="alert" for terminal states).
- */
+type InterviewerProfile = {
+  image: string;
+  name: string;
+  description: string;
+} | null;
+
+function formatDurationLabel(minutes: string) {
+  const parsed = Number(minutes);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return "Guided session";
+  }
+
+  return `${parsed} minute${parsed === 1 ? "" : "s"}`;
+}
+
+function formatRemainingTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")} remaining`;
+}
+
+function CandidateFrame({
+  children,
+  title,
+  subtitle,
+  progressPercent,
+}: {
+  children: ReactNode;
+  title: string;
+  subtitle: string;
+  progressPercent?: number;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-[32px] border border-[#c5ccb6] bg-[#fbfdf6]/96 text-[#0a1d08] shadow-[rgba(99,143,61,0.1)_0px_0px_0px_1px]">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute right-[-6rem] top-[-7rem] h-56 w-56 rounded-full bg-[#d7e8b5]/45 blur-3xl" />
+        <div className="absolute bottom-[-8rem] left-[-5rem] h-64 w-64 rounded-full bg-[#e0e5d5]/75 blur-3xl" />
+      </div>
+
+      {typeof progressPercent === "number" ? (
+        <div className="relative h-1.5 w-full bg-[#e0e5d5]">
+          <div
+            className="h-full bg-[#203b14] transition-all duration-500 ease-out"
+            style={{ width: `${Math.min(progressPercent, 100)}%` }}
+          />
+        </div>
+      ) : null}
+
+      <div className="relative border-b border-[#e0e5d5] px-6 py-6 md:px-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-white/75 px-4 py-2 text-[12px] font-medium uppercase tracking-[0.18em] text-[#203b14]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Candidate interview
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-[2.8rem] md:leading-[1.05]">
+                {title}
+              </h1>
+              <p className=" text-sm leading-6 text-[#31200b]/76 md:text-base">
+                {subtitle}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
+function MetaPill({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-full border border-[#e0e5d5] bg-white/80 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#d7e8b5]/45 text-[#203b14]">
+          {icon}
+        </div>
+        <div>
+          <p className="text-[12px] uppercase tracking-[0.16em] text-[#203b14]">
+            {label}
+          </p>
+          <p className="text-sm font-medium text-[#0a1d08]">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NoteCard({
+  title,
+  children,
+  icon,
+  tone = "default",
+}: {
+  title: string;
+  children: ReactNode;
+  icon: ReactNode;
+  tone?: "default" | "soft" | "warning";
+}) {
+  const toneClasses =
+    tone === "warning"
+      ? "border-[#c5ccb6] bg-[#f6f8ef]"
+      : tone === "soft"
+        ? "border-[#d7e8b5] bg-[#f7faef]"
+        : "border-[#e0e5d5] bg-white/80";
+
+  return (
+    <div className={cn("rounded-[24px] border p-5", toneClasses)}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-[#fbfdf6] text-[#203b14]">
+          {icon}
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
+            {title}
+          </h3>
+          <div className="text-sm leading-6 text-[#31200b]/78">{children}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusPanel({
+  title,
+  body,
+  icon,
+  actions,
+}: {
+  title: string;
+  body: string;
+  icon: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="mx-auto flex max-w-xl flex-col items-center gap-5 px-6 py-10 text-center md:px-10">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#e0e5d5] bg-[#d7e8b5]/45 text-[#203b14]">
+        {icon}
+      </div>
+      <div className="space-y-3">
+        <h2 className="text-3xl font-semibold tracking-[-0.04em] text-[#0a1d08]">
+          {title}
+        </h2>
+        <p className="text-sm leading-7 text-[#31200b]/78 md:text-base">
+          {body}
+        </p>
+      </div>
+      {actions ? <div className="flex w-full justify-center">{actions}</div> : null}
+    </div>
+  );
+}
+
 function ReconnectPanel({
   phase,
   name,
-  themeColor,
   onResume,
   onRetryCheck,
   onCloseTab,
@@ -104,194 +257,198 @@ function ReconnectPanel({
 }: {
   phase: ReconnectPhase;
   name: string;
-  themeColor: string;
   onResume: () => void;
   onRetryCheck: () => void;
   onCloseTab: () => void;
   onReturnHome: () => void;
 }) {
-  const resumeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const resumeButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  // Auto-focus the Resume button so keyboard-only users don't have to tab.
   useEffect(() => {
     if (phase === "ready_to_resume") {
-      resumeBtnRef.current?.focus();
+      resumeButtonRef.current?.focus();
     }
   }, [phase]);
 
-  if (phase === "checking") {
+  if (phase === "checking" || phase === "reconnecting" || phase === "starting") {
+    const labels: Record<ReconnectPhase, string> = {
+      idle: "",
+      checking: "Checking whether your session is still ready to resume.",
+      ready_to_resume: "",
+      reconnecting: "Reconnecting you to the active interview session.",
+      starting: "Starting the interview again with your saved progress.",
+      expired: "",
+      not_found: "",
+      offline: "",
+      check_failed: "",
+      register_failed: "",
+    };
+
     return (
-      <div
-        className="px-8 pb-10 pt-4 flex flex-col items-center"
-        role="status"
-        aria-live="polite"
-      >
-        <MiniLoader />
-        <p className="mt-4 text-sm text-gray-600 font-medium">
-          Checking session…
-        </p>
+      <div className="px-6 py-10 md:px-8">
+        <StatusPanel
+          title="Preparing your session"
+          body={labels[phase]}
+          icon={<Loader2 className="h-8 w-8 animate-spin" />}
+        />
       </div>
     );
   }
 
   if (phase === "ready_to_resume") {
-    const displayName = name?.trim() || "back";
+    const displayName = name?.trim() || "there";
 
     return (
-      <div className="px-8 pb-8 pt-2" role="region" aria-label="Resume interview">
-        <div className="flex flex-col items-center max-w-md mx-auto space-y-6">
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 w-full">
-            <div className="flex gap-3">
-              <CheckCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-              <div className="text-sm text-blue-900 space-y-1">
-                <p className="font-medium">Welcome back, {displayName}</p>
-                <p className="text-blue-800/90">
-                  Your interview session is still active. Ready to pick up
-                  where you left off?
-                </p>
-              </div>
-            </div>
+      <div className="grid gap-6 px-6 py-8 md:grid-cols-[1.05fr_0.95fr] md:px-8 md:py-10">
+        <div className="space-y-4">
+          <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
+            Resume available
+          </p>
+          <h2 className="text-3xl font-semibold tracking-[-0.04em] text-[#0a1d08]">
+            Welcome back, {displayName}
+          </h2>
+          <p className="text-sm leading-7 text-[#31200b]/78 md:text-base">
+            Your earlier interview session is still within the reconnect
+            window. Resume now to continue from the same response record.
+          </p>
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            <Button
+              ref={resumeButtonRef}
+              className="h-12 rounded-full bg-[#4a3212] px-6 text-base font-medium text-[#fbfdf6] hover:bg-[#31200b]"
+              onClick={onResume}
+            >
+              Resume interview
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 rounded-full border-[#e0e5d5] bg-[#fbfdf6] px-6 text-[#0a1d08] hover:border-[#203b14] hover:text-[#203b14]"
+              onClick={onCloseTab}
+            >
+              Start over from this page
+            </Button>
           </div>
-          <Button
-            ref={resumeBtnRef}
-            className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-brand-bold/30 transition-all"
-            style={{
-              backgroundColor: themeColor,
-              color: isLightColor(themeColor) ? "black" : "white",
-            }}
-            onClick={onResume}
-          >
-            Resume Interview
-          </Button>
         </div>
-      </div>
-    );
-  }
 
-  if (phase === "reconnecting") {
-    return (
-      <div
-        className="px-8 pb-10 pt-4 flex flex-col items-center"
-        role="status"
-        aria-live="polite"
-      >
-        <MiniLoader />
-        <p className="mt-4 text-sm text-gray-600 font-medium">Reconnecting…</p>
-      </div>
-    );
-  }
-
-  if (phase === "starting") {
-    return (
-      <div
-        className="px-8 pb-10 pt-4 flex flex-col items-center"
-        role="status"
-        aria-live="polite"
-      >
-        <MiniLoader />
-        <p className="mt-4 text-sm text-gray-600 font-medium">
-          Starting interview…
-        </p>
+        <div className="space-y-4 rounded-[28px] border border-[#e0e5d5] bg-white/80 p-6">
+          <NoteCard
+            title="What happens next"
+            icon={<RefreshCcw className="h-5 w-5" />}
+            tone="soft"
+          >
+            Resuming keeps your existing response row, refreshes the session
+            heartbeat, and starts a new call token without losing the current
+            interview lifecycle.
+          </NoteCard>
+          <NoteCard
+            title="Before you continue"
+            icon={<Headphones className="h-5 w-5" />}
+          >
+            Use the same tab, reconnect your microphone if needed, and keep a
+            quiet environment so the session remains stable.
+          </NoteCard>
+        </div>
       </div>
     );
   }
 
   if (phase === "expired") {
     return (
-      <div
-        className="px-8 pb-8 pt-2"
-        role="alert"
-      >
-        <div className="flex flex-col items-center max-w-md mx-auto space-y-4 text-center">
-          <Clock className="w-10 h-10 text-amber-500" aria-hidden="true" />
-          <h1 className="text-xl font-semibold text-gray-900">
-            Session window closed
-          </h1>
-          <p className="text-sm text-gray-600">
-            Your interview session timed out. Your progress up to that point
-            has been saved. Please contact the recruiter to continue.
-          </p>
-          <Button
-            variant="outline"
-            className="mt-2"
-            onClick={onCloseTab}
-          >
-            Close
-          </Button>
-        </div>
+      <div className="px-6 py-10 md:px-8">
+        <StatusPanel
+          title="This resume window has closed"
+          body="Your earlier progress was saved, but the reconnect window has expired. Please contact the recruiter if you need a new session link."
+          icon={<Clock3 className="h-9 w-9" />}
+          actions={
+            <Button
+              variant="outline"
+              className="h-12 rounded-full border-[#e0e5d5] bg-[#fbfdf6] px-6 text-[#0a1d08] hover:border-[#203b14] hover:text-[#203b14]"
+              onClick={onCloseTab}
+            >
+              Return to interview page
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   if (phase === "not_found") {
     return (
-      <div className="px-8 pb-8 pt-2" role="alert">
-        <div className="flex flex-col items-center max-w-md mx-auto space-y-4 text-center">
-          <HelpCircle className="w-10 h-10 text-gray-400" aria-hidden="true" />
-          <h1 className="text-xl font-semibold text-gray-900">
-            Interview link not recognized
-          </h1>
-          <p className="text-sm text-gray-600">
-            This link doesn&apos;t match an active interview session. Please
-            use the original link from your invitation email.
-          </p>
-          <Button variant="outline" onClick={onReturnHome}>
-            Go to interview page
-          </Button>
-        </div>
+      <div className="px-6 py-10 md:px-8">
+        <StatusPanel
+          title="We could not match this session token"
+          body="This resume link no longer maps to an active interview session. Use the original invitation link if you want to begin again."
+          icon={<HelpCircle className="h-9 w-9" />}
+          actions={
+            <Button
+              variant="outline"
+              className="h-12 rounded-full border-[#e0e5d5] bg-[#fbfdf6] px-6 text-[#0a1d08] hover:border-[#203b14] hover:text-[#203b14]"
+              onClick={onReturnHome}
+            >
+              Go to interview page
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   if (phase === "offline") {
     return (
-      <div className="px-8 pb-8 pt-2" role="alert">
-        <div className="flex flex-col items-center max-w-md mx-auto space-y-4 text-center">
-          <WifiOff className="w-10 h-10 text-red-500" aria-hidden="true" />
-          <h1 className="text-xl font-semibold text-gray-900">
-            You appear to be offline
-          </h1>
-          <p className="text-sm text-gray-600">
-            Please check your connection and reload the page to continue your
-            interview.
-          </p>
-          <Button onClick={onRetryCheck}>Try again</Button>
-        </div>
+      <div className="px-6 py-10 md:px-8">
+        <StatusPanel
+          title="You appear to be offline"
+          body="Reconnect to the internet and try the session check again. We only resume a call when the browser confirms the connection is live."
+          icon={<WifiOff className="h-9 w-9" />}
+          actions={
+            <Button
+              className="h-12 rounded-full bg-[#4a3212] px-6 text-[#fbfdf6] hover:bg-[#31200b]"
+              onClick={onRetryCheck}
+            >
+              Try again
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   if (phase === "check_failed") {
     return (
-      <div className="px-8 pb-8 pt-2" role="alert">
-        <div className="flex flex-col items-center max-w-md mx-auto space-y-4 text-center">
-          <AlertCircle className="w-10 h-10 text-red-500" aria-hidden="true" />
-          <h1 className="text-xl font-semibold text-gray-900">
-            We couldn&apos;t verify your session
-          </h1>
-          <p className="text-sm text-gray-600">
-            Please try refreshing, or use your original interview link.
-          </p>
-          <Button onClick={onRetryCheck}>Try again</Button>
-        </div>
+      <div className="px-6 py-10 md:px-8">
+        <StatusPanel
+          title="We could not verify the session"
+          body="The resume check did not complete successfully. Refresh the page or retry the check from here."
+          icon={<AlertCircle className="h-9 w-9" />}
+          actions={
+            <Button
+              className="h-12 rounded-full bg-[#4a3212] px-6 text-[#fbfdf6] hover:bg-[#31200b]"
+              onClick={onRetryCheck}
+            >
+              Retry session check
+            </Button>
+          }
+        />
       </div>
     );
   }
 
   if (phase === "register_failed") {
     return (
-      <div className="px-8 pb-8 pt-2" role="alert">
-        <div className="flex flex-col items-center max-w-md mx-auto space-y-4 text-center">
-          <AlertCircle className="w-10 h-10 text-red-500" aria-hidden="true" />
-          <h1 className="text-xl font-semibold text-gray-900">
-            Reconnection failed
-          </h1>
-          <p className="text-sm text-gray-600">
-            Your progress is saved — please try again or contact the
-            recruiter.
-          </p>
-          <Button onClick={onResume}>Try again</Button>
-        </div>
+      <div className="px-6 py-10 md:px-8">
+        <StatusPanel
+          title="We could not restart the interview call"
+          body="Your saved response still exists, but a new call token could not be registered. Try once more or contact the recruiter if the issue continues."
+          icon={<AlertCircle className="h-9 w-9" />}
+          actions={
+            <Button
+              className="h-12 rounded-full bg-[#4a3212] px-6 text-[#fbfdf6] hover:bg-[#31200b]"
+              onClick={onResume}
+            >
+              Try resume again
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -299,15 +456,548 @@ function ReconnectPanel({
   return null;
 }
 
+function PreflightView({
+  interview,
+  interviewerProfile,
+  email,
+  name,
+  loading,
+  isAnonymous,
+  isValidEmail,
+  micPermissionStatus,
+  micPermissionError,
+  onEmailChange,
+  onNameChange,
+  onCheckMicrophone,
+  onStart,
+  onExit,
+}: {
+  interview: Interview;
+  interviewerProfile: InterviewerProfile;
+  email: string;
+  name: string;
+  loading: boolean;
+  isAnonymous: boolean;
+  isValidEmail: boolean;
+  micPermissionStatus: PermissionState | "unknown";
+  micPermissionError: boolean;
+  onEmailChange: (value: string) => void;
+  onNameChange: (value: string) => void;
+  onCheckMicrophone: () => Promise<boolean>;
+  onStart: () => void;
+  onExit: () => Promise<void>;
+}) {
+  const canStart =
+    micPermissionStatus === "granted" &&
+    (isAnonymous || (isValidEmail && Boolean(name.trim()))) &&
+    !loading;
+
+  return (
+    <div className="grid gap-8 px-6 py-8 md:grid-cols-[1.05fr_0.95fr] md:px-8 md:py-10">
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MetaPill
+              icon={<Clock3 className="h-4 w-4" />}
+              label="Time reserved"
+              value={formatDurationLabel(interview.time_duration)}
+            />
+            <MetaPill
+              icon={<Mic className="h-4 w-4" />}
+              label="Audio"
+              value="Microphone required"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <NoteCard
+            title="What to expect"
+            icon={<ShieldCheck className="h-5 w-5" />}
+            tone="soft"
+          >
+            You will join a guided voice interview. Stay on this tab, keep your
+            volume on, and answer naturally as questions arrive.
+          </NoteCard>
+          <NoteCard
+            title="Environment check"
+            icon={<Volume2 className="h-5 w-5" />}
+          >
+            Choose a quiet place, keep headphones nearby if possible, and make
+            sure other browser audio apps are closed.
+          </NoteCard>
+        </div>
+
+        {!isAnonymous ? (
+          <div className="grid gap-4 rounded-[28px] border border-[#e0e5d5] bg-white/80 p-5">
+            <div className="space-y-1">
+              <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
+                Candidate details
+              </p>
+              <p className="text-sm leading-6 text-[#31200b]/72">
+                These details attach the session to your response record.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label
+                  htmlFor="candidate-email"
+                  className="text-sm font-medium text-[#0a1d08]"
+                >
+                  Email address
+                </label>
+                <Input
+                  id="candidate-email"
+                  value={email}
+                  type="email"
+                  placeholder="name@example.com"
+                  className="h-12 rounded-[20px] border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] placeholder:text-[#31200b]/45 focus-visible:ring-[#203b14]/20"
+                  onChange={(event) => onEmailChange(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="candidate-name"
+                  className="text-sm font-medium text-[#0a1d08]"
+                >
+                  First name
+                </label>
+                <Input
+                  id="candidate-name"
+                  value={name}
+                  type="text"
+                  placeholder="Your first name"
+                  className="h-12 rounded-[20px] border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] placeholder:text-[#31200b]/45 focus-visible:ring-[#203b14]/20"
+                  onChange={(event) => onNameChange(event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="space-y-4 rounded-[30px] border-2 border-[#d7e8b5] bg-[#d7e8b5]/75 bg-white/80 p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-[#e0e5d5] bg-[#f6f8ef]">
+            {interviewerProfile?.image ? (
+              <Image
+                src={interviewerProfile.image}
+                alt={interviewerProfile.name || "Interviewer"}
+                width={64}
+                height={64}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserRound className="h-8 w-8 text-[#203b14]" />
+            )}
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
+              Interview guide
+            </p>
+            <h2 className="text-2xl font-semibold tracking-[-0.04em] text-[#0a1d08]">
+              {interviewerProfile?.name || "Your interviewer"}
+            </h2>
+            {interviewerProfile?.description ? (
+              <p className="text-sm leading-6 text-[#31200b]/72">
+                {interviewerProfile.description}
+              </p>
+            ) : (
+              <p className="text-sm leading-6 text-[#31200b]/72">
+                A guided interviewer will walk you through the session and keep
+                the pace steady from start to finish.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <NoteCard
+            title="Readiness step"
+            icon={<Mic className="h-5 w-5" />}
+            tone="soft"
+          >
+            Check microphone access before you begin. The start action stays
+            locked until your browser confirms audio permission.
+          </NoteCard>
+
+          {(micPermissionStatus === "prompt" ||
+            micPermissionStatus === "unknown") && (
+            <Button
+              className="h-12 rounded-full bg-[#fbfdf6] hover:bg-[#fbfbfb]/75 text-[#0a1d08] ring-1 ring-[#e0e5d5] hover:border-[#203b14] hover:text-[#203b14]"
+              onClick={() => {
+                void onCheckMicrophone();
+              }}
+            >
+              Check microphone access
+            </Button>
+          )}
+
+          {micPermissionStatus === "granted" ? (
+            <div className="rounded-[22px] border border-[#d7e8b5] bg-[#f7faef] px-4 py-4 text-sm text-[#203b14]">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                Microphone connected
+              </div>
+              <p className="mt-2 leading-6 text-[#31200b]/72">
+                Audio access is ready. Start when you feel settled.
+              </p>
+            </div>
+          ) : null}
+
+          {micPermissionStatus === "denied" || micPermissionError ? (
+            <div className="rounded-[22px] border border-[#c5ccb6] bg-[#f6f8ef] px-4 py-4 text-sm text-[#31200b]/80">
+              <div className="flex items-center gap-2 font-medium text-[#203b14]">
+                <AlertCircle className="h-4 w-4" />
+                Microphone access is blocked
+              </div>
+              <p className="mt-2 leading-6">
+                Allow microphone access in your browser settings, then check
+                again from this page.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4 h-11 rounded-full border-[#e0e5d5] bg-[#fbfdf6] text-[#0a1d08] hover:border-[#203b14] hover:text-[#203b14]"
+                onClick={() => {
+                  void onCheckMicrophone();
+                }}
+              >
+                Retry microphone check
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="space-y-3 pt-2">
+          <Button
+            className="h-12 w-full rounded-full bg-[#4a3212] text-base font-medium text-[#fbfdf6] hover:bg-[#31200b] disabled:opacity-55"
+            disabled={!canStart}
+            onClick={onStart}
+          >
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              "Start interview"
+            )}
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-11 w-full rounded-full text-[#31200b]/72 hover:bg-[#f6f8ef] hover:text-[#0a1d08]"
+                disabled={loading}
+              >
+                Exit interview
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="border-[#c5ccb6] bg-[#fbfdf6] text-[#0a1d08]">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-2xl font-semibold tracking-[-0.04em]">
+                  Leave before starting?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm leading-6 text-[#31200b]/76">
+                  You can close this page now if you are not ready to begin the
+                  session.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-full border-[#e0e5d5] bg-[#fbfdf6] text-[#0a1d08] hover:border-[#203b14] hover:text-[#203b14]">
+                  Stay here
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className="rounded-full bg-[#4a3212] text-[#fbfdf6] hover:bg-[#31200b]"
+                  onClick={onExit}
+                >
+                  Exit page
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SpeakerPanel({
+  title,
+  transcript,
+  avatar,
+  active,
+  subtitle,
+}: {
+  title: string;
+  transcript: string;
+  avatar: ReactNode;
+  active: boolean;
+  subtitle: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-full flex-col justify-between rounded-[28px] border p-5 transition-colors",
+        active
+          ? "border-[#203b14] bg-[#f7faef]"
+          : "border-[#e0e5d5] bg-white/80",
+      )}
+    >
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
+              {title}
+            </p>
+            <p className="text-xs text-[#31200b]/62">{subtitle}</p>
+          </div>
+          <div
+            className={cn(
+              "rounded-full px-3 py-1 text-[12px] uppercase tracking-[0.14em]",
+              active
+                ? "bg-[#203b14] text-[#fbfdf6]"
+                : "border border-[#e0e5d5] bg-[#fbfdf6] text-[#31200b]/62",
+            )}
+          >
+            {active ? "Speaking" : "Waiting"}
+          </div>
+        </div>
+        <div className="min-h-[220px] rounded-[22px] border border-[#e0e5d5] bg-[#fbfdf6] px-5 py-4 text-[20px] leading-[1.45] text-[#0a1d08] md:text-[24px]">
+          {transcript || "Waiting for the next response..."}
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center gap-4">
+        <div
+          className={cn(
+            "flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border",
+            active ? "border-[#203b14]" : "border-[#e0e5d5]",
+          )}
+        >
+          {avatar}
+        </div>
+        <div>
+          <p className="text-base font-medium text-[#0a1d08]">{title}</p>
+          <p className="text-sm text-[#31200b]/62">{subtitle}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActiveSessionView({
+  interviewerProfile,
+  lastInterviewerResponse,
+  lastUserResponse,
+  activeTurn,
+  timeRemainingLabel,
+  progressPercent,
+  onEnd,
+  loading,
+}: {
+  interviewerProfile: InterviewerProfile;
+  lastInterviewerResponse: string;
+  lastUserResponse: string;
+  activeTurn: string;
+  timeRemainingLabel: string;
+  progressPercent: number;
+  onEnd: () => Promise<void>;
+  loading: boolean;
+}) {
+  return (
+    <div className="space-y-6 px-6 py-8 md:px-8 md:py-10">
+      <div className="grid gap-3 md:grid-cols-3">
+        <MetaPill
+          icon={<Clock3 className="h-4 w-4" />}
+          label="Session timer"
+          value={timeRemainingLabel}
+        />
+        <MetaPill
+          icon={<ShieldCheck className="h-4 w-4" />}
+          label="Focus signal"
+          value="Stay on this tab"
+        />
+        <MetaPill
+          icon={<Headphones className="h-4 w-4" />}
+          label="Guide"
+          value={interviewerProfile?.name || "Interviewer"}
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SpeakerPanel
+          title={interviewerProfile?.name || "Interviewer"}
+          subtitle="Questioning and pacing"
+          transcript={lastInterviewerResponse}
+          active={activeTurn === "agent"}
+          avatar={
+            interviewerProfile?.image ? (
+              <Image
+                src={interviewerProfile.image}
+                alt={interviewerProfile.name || "Interviewer"}
+                width={64}
+                height={64}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserRound className="h-7 w-7 text-[#203b14]" />
+            )
+          }
+        />
+        <SpeakerPanel
+          title="You"
+          subtitle="Your latest response"
+          transcript={lastUserResponse}
+          active={activeTurn === "user"}
+          avatar={
+            <Image
+              src="/user-icon.png"
+              alt="Candidate"
+              width={64}
+              height={64}
+              className="h-full w-full object-cover"
+            />
+          }
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <NoteCard
+          title="Session focus"
+          icon={<Sparkles className="h-5 w-5" />}
+          tone="soft"
+        >
+          Answer at a natural pace. The session automatically tracks progress
+          while the interviewer guides each turn.
+        </NoteCard>
+        <div className="rounded-[24px] border border-[#e0e5d5] bg-white/80 p-5">
+          <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
+            Progress
+          </p>
+          <p className="mt-3 text-sm leading-6 text-[#31200b]/76">
+            The bar at the top reflects the reserved interview window. Progress
+            is saved automatically while the call stays active.
+          </p>
+          <div className="mt-4 rounded-full bg-[#e0e5d5]">
+            <div
+              className="h-2 rounded-full bg-[#203b14] transition-all duration-500"
+              style={{ width: `${Math.min(progressPercent, 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-center">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              className="h-12 rounded-full border border-[#4a3212] bg-[#fbfdf6] px-6 text-[#4a3212] hover:bg-[#f6f8ef]"
+              disabled={loading}
+            >
+              End interview
+              <PhoneOff className="ml-2 h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="border-[#c5ccb6] bg-[#fbfdf6] text-[#0a1d08]">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-2xl font-semibold tracking-[-0.04em]">
+                End this interview now?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm leading-6 text-[#31200b]/76">
+                This closes the active call and moves the session into its
+                completion state.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-full border-[#e0e5d5] bg-[#fbfdf6] text-[#0a1d08] hover:border-[#203b14] hover:text-[#203b14]">
+                Keep going
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="rounded-full bg-[#4a3212] text-[#fbfdf6] hover:bg-[#31200b]"
+                onClick={onEnd}
+              >
+                End interview
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+}
+
+function CompletionView({
+  isStarted,
+  isFeedbackSubmitted,
+  isDialogOpen,
+  onOpenChange,
+  onFeedbackSubmit,
+  email,
+}: {
+  isStarted: boolean;
+  isFeedbackSubmitted: boolean;
+  isDialogOpen: boolean;
+  onOpenChange: (value: boolean) => void;
+  onFeedbackSubmit: (data: Omit<FeedbackData, "interview_id">) => Promise<void>;
+  email: string;
+}) {
+  return (
+    <div className="px-6 py-10 md:px-8 md:py-12">
+      <StatusPanel
+        title={
+          isStarted
+            ? "Thank you for completing this interview"
+            : "This interview session has been closed"
+        }
+        body={
+          isStarted
+            ? "Your responses have been recorded. You can close this tab whenever you are ready."
+            : "No additional action is needed from you here. You can close this tab whenever you are ready."
+        }
+        icon={<CheckCircle2 className="h-9 w-9" />}
+      />
+
+      {!isFeedbackSubmitted ? (
+        <div className="mt-4 flex justify-center">
+          <AlertDialog open={isDialogOpen} onOpenChange={onOpenChange}>
+            <AlertDialogTrigger asChild>
+              <Button className="h-12 rounded-full bg-[#4a3212] px-6 text-[#fbfdf6] hover:bg-[#31200b]">
+                Share feedback
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="border-[#c5ccb6] bg-[#fbfdf6] text-[#0a1d08]">
+              <FeedbackForm email={email} onSubmit={onFeedbackSubmit} />
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function IneligibleView() {
+  return (
+    <div className="px-6 py-10 md:px-8 md:py-12">
+      <StatusPanel
+        title="This response cannot be started again"
+        body="You have already completed this interview or this email address is not eligible for a fresh attempt. Please contact the recruiter if you expected a different result."
+        icon={<CheckCircleIcon className="h-9 w-9" />}
+      />
+    </div>
+  );
+}
+
 function Call({ interview, sessionToken }: InterviewProps) {
   const { createResponse } = useResponses();
   const router = useRouter();
   const pathname = usePathname();
+  const { isDialogOpen: isTabWarningOpen, tabSwitchCount, handleUnderstand } =
+    useTabSwitchPrevention();
   const [lastInterviewerResponse, setLastInterviewerResponse] =
     useState<string>("");
   const [lastUserResponse, setLastUserResponse] = useState<string>("");
   const [activeTurn, setActiveTurn] = useState<string>("");
-  const [Loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
@@ -316,45 +1006,47 @@ function Call({ interview, sessionToken }: InterviewProps) {
   const [isValidEmail, setIsValidEmail] = useState<boolean>(false);
   const [isOldUser, setIsOldUser] = useState<boolean>(false);
   const [callId, setCallId] = useState<string>("");
-  const { tabSwitchCount } = useTabSwitchPrevention();
   const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [interviewerImg, setInterviewerImg] = useState("");
+  const [interviewerProfile, setInterviewerProfile] =
+    useState<InterviewerProfile>(null);
   const [interviewTimeDuration, setInterviewTimeDuration] =
     useState<string>("1");
   const [time, setTime] = useState(0);
   const [micPermissionError, setMicPermissionError] = useState(false);
-  const [currentTimeDuration, setCurrentTimeDuration] = useState<string>("0");
-
-  // Reconnect flow state. `reconnectPhase` drives the welcome-back UI,
-  // session-expired UI, session-not-found UI, and all three loading
-  // micro-states. `reconnectName` is the candidate name pulled from the
-  // response row so the welcome-back banner can show "Welcome back, Jane".
-  // `priorCallId` is the old Retell call_id (from check-session) — needed
-  // so updateResponse() can target the right row after we mint a new call.
+  const [micPermissionStatus, setMicPermissionStatus] = useState<
+    PermissionState | "unknown"
+  >("unknown");
   const [reconnectPhase, setReconnectPhase] = useState<ReconnectPhase>(
     sessionToken ? "checking" : "idle",
   );
   const [reconnectName, setReconnectName] = useState<string>("");
   const [priorCallId, setPriorCallId] = useState<string>("");
   const [activeSessionToken, setActiveSessionToken] = useState<string>("");
-  // Ref mirrors of state used by visibility-change handlers — the handler
-  // closure captures stale state otherwise.
+
   const callIdRef = useRef<string>("");
   const tabSwitchCountRef = useRef<number>(0);
   const isCallingRef = useRef<boolean>(false);
 
+  const totalDurationSeconds = Number(interviewTimeDuration || "0") * 60;
+  const elapsedSeconds = Math.floor(time / 100);
+  const progressPercent =
+    totalDurationSeconds > 0
+      ? (elapsedSeconds / totalDurationSeconds) * 100
+      : 0;
+  const remainingSeconds = Math.max(totalDurationSeconds - elapsedSeconds, 0);
+
   useEffect(() => {
     callIdRef.current = callId;
   }, [callId]);
+
   useEffect(() => {
     tabSwitchCountRef.current = tabSwitchCount;
   }, [tabSwitchCount]);
+
   useEffect(() => {
     isCallingRef.current = isCalling;
   }, [isCalling]);
-
-  const lastUserResponseRef = useRef<HTMLDivElement | null>(null);
 
   const handleFeedbackSubmit = async (
     formData: Omit<FeedbackData, "interview_id">,
@@ -379,42 +1071,34 @@ function Call({ interview, sessionToken }: InterviewProps) {
   };
 
   useEffect(() => {
-    if (lastUserResponseRef.current) {
-      const { current } = lastUserResponseRef;
-      current.scrollTop = current.scrollHeight;
+    if (isCalling) {
+      const intervalId = window.setInterval(() => {
+        setTime((previous) => previous + 1);
+      }, 10);
+
+      return () => window.clearInterval(intervalId);
     }
-  }, [lastUserResponse]);
+
+    return undefined;
+  }, [isCalling]);
 
   useEffect(() => {
-    let intervalId: any;
-    if (isCalling) {
-      // setting time from 0 to 1 every 10 milisecond using javascript setInterval method
-      intervalId = setInterval(() => setTime(time + 1), 10);
-    }
-    setCurrentTimeDuration(String(Math.floor(time / 100)));
-    if (Number(currentTimeDuration) == Number(interviewTimeDuration) * 60) {
+    if (totalDurationSeconds > 0 && elapsedSeconds >= totalDurationSeconds) {
       webClient.stopCall();
       setIsEnded(true);
     }
-
-    return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCalling, time, currentTimeDuration]);
+  }, [elapsedSeconds, totalDurationSeconds]);
 
   useEffect(() => {
-    if (testEmail(email)) {
-      setIsValidEmail(true);
-    }
+    setIsValidEmail(testEmail(email));
   }, [email]);
 
   useEffect(() => {
     webClient.on("call_started", () => {
-      console.log("Call started");
       setIsCalling(true);
     });
 
     webClient.on("call_ended", () => {
-      console.log("Call ended");
       setIsCalling(false);
       setIsEnded(true);
     });
@@ -424,7 +1108,6 @@ function Call({ interview, sessionToken }: InterviewProps) {
     });
 
     webClient.on("agent_stop_talking", () => {
-      // Optional: Add any logic when agent stops talking
       setActiveTurn("user");
     });
 
@@ -437,21 +1120,19 @@ function Call({ interview, sessionToken }: InterviewProps) {
 
     webClient.on("update", (update) => {
       if (update.transcript) {
-        const transcripts: transcriptType[] = update.transcript;
-        const roleContents: { [key: string]: string } = {};
+        const transcripts: Transcript[] = update.transcript;
+        const roleContents: Record<string, string> = {};
 
         transcripts.forEach((transcript) => {
-          roleContents[transcript?.role] = transcript?.content;
+          roleContents[transcript.role] = transcript.content;
         });
 
-        setLastInterviewerResponse(roleContents["agent"]);
-        setLastUserResponse(roleContents["user"]);
+        setLastInterviewerResponse(roleContents.agent || "");
+        setLastUserResponse(roleContents.user || "");
       }
-      //TODO: highlight the newly uttered word in the UI
     });
 
     return () => {
-      // Clean up event listeners
       webClient.removeAllListeners();
     };
   }, []);
@@ -462,49 +1143,41 @@ function Call({ interview, sessionToken }: InterviewProps) {
       webClient.stopCall();
       setIsEnded(true);
       setLoading(false);
-    } else {
-      setIsEnded(true);
+
+      return;
     }
+
+    setIsEnded(true);
   };
 
   const checkMicrophonePermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Stop the tracks to release the microphone since we just want to check permission
       stream.getTracks().forEach((track) => track.stop());
-      
-return true;
-    } catch (err) {
-      console.error("Microphone permission denied:", err);
-      
-return false;
+      setMicPermissionError(false);
+      setMicPermissionStatus("granted");
+
+      return true;
+    } catch (error) {
+      console.error("Microphone permission denied:", error);
+      setMicPermissionError(true);
+      setMicPermissionStatus("denied");
+
+      return false;
     }
   };
 
-  const [micPermissionStatus, setMicPermissionStatus] = useState<PermissionState | "unknown">("unknown");
-
   useEffect(() => {
-    // Check permission on mount
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions
         .query({ name: "microphone" as PermissionName })
         .then((permissionStatus) => {
           setMicPermissionStatus(permissionStatus.state);
-          // If already denied, show error immediately
-          if (permissionStatus.state === "denied") {
-            setMicPermissionError(true);
-          } else {
-             // If prompt or granted, clear error (we'll check again on click)
-            setMicPermissionError(false);
-          }
+          setMicPermissionError(permissionStatus.state === "denied");
 
           permissionStatus.onchange = () => {
-             setMicPermissionStatus(permissionStatus.state);
-             if (permissionStatus.state === "denied") {
-                setMicPermissionError(true);
-             } else {
-                setMicPermissionError(false);
-             }
+            setMicPermissionStatus(permissionStatus.state);
+            setMicPermissionError(permissionStatus.state === "denied");
           };
         })
         .catch(console.error);
@@ -514,75 +1187,75 @@ return false;
   const startConversation = async ({
     isReconnect = false,
   }: { isReconnect?: boolean } = {}) => {
-    // If specifically denied, don't even try to start (button should be disabled anyway)
-    if (micPermissionError) {return;}
-
-    setMicPermissionError(false);
-    // basic validation — skipped on reconnect (we already have name/email
-    // on the existing response row).
-    if (!isReconnect && !interview?.is_anonymous && (!isValidEmail || !name)) {
+    if (micPermissionError) {
       return;
     }
 
-    // Check microphone permission first
+    setMicPermissionError(false);
+
+    if (!isReconnect && !interview.is_anonymous && (!isValidEmail || !name)) {
+      return;
+    }
+
     const hasPermission = await checkMicrophonePermission();
     if (!hasPermission) {
       setMicPermissionError(true);
-      
-return;
+
+      return;
     }
 
     const effectiveName = isReconnect ? reconnectName || "candidate" : name;
     const data = {
-      mins: interview?.time_duration,
-      objective: interview?.objective,
-      questions: interview?.questions.map((q) => q.question).join(", "),
+      mins: interview.time_duration,
+      objective: interview.objective,
+      questions: interview.questions.map((q) => q.question).join(", "),
       name: effectiveName || "not provided",
     };
-    setLoading(true);
-    if (isReconnect) {setReconnectPhase("reconnecting");}
 
-    // Skip the "already responded" check on a verified reconnect — the
-    // candidate is resuming their own in-flight session, not starting a
-    // fresh response.
-    let OldUser = false;
+    setLoading(true);
+    if (isReconnect) {
+      setReconnectPhase("reconnecting");
+    }
+
+    let oldUser = false;
     if (!isReconnect) {
       const oldUserEmails: string[] = (
         await ResponseService.getAllEmails(interview.id)
       ).map((item) => item.email);
-      OldUser =
+      oldUser =
         oldUserEmails.includes(email) ||
-        (interview?.respondents && !interview?.respondents.includes(email));
+        (interview.respondents && !interview.respondents.includes(email));
     }
 
-    if (OldUser) {
+    if (oldUser) {
       setIsOldUser(true);
       setLoading(false);
-      
-return;
+
+      return;
     }
 
     try {
-      const registerCallResponse: registerCallResponseType = await axios.post(
+      const registerCallResponse: RegisterCallResponse = await axios.post(
         "/api/register-call",
-        { dynamic_data: data, interviewer_id: interview?.interviewer_id },
+        { dynamic_data: data, interviewer_id: interview.interviewer_id },
       );
       const accessToken =
         registerCallResponse.data.registerCallResponse.access_token;
-      const newCallId =
-        registerCallResponse.data.registerCallResponse.call_id;
-      const newSessionToken =
-        registerCallResponse.data.session_token ?? "";
+      const newCallId = registerCallResponse.data.registerCallResponse.call_id;
+      const newSessionToken = registerCallResponse.data.session_token ?? "";
 
       if (!accessToken) {
-        console.log("Failed to register call");
-        if (isReconnect) {setReconnectPhase("register_failed");}
+        if (isReconnect) {
+          setReconnectPhase("register_failed");
+        }
         setLoading(false);
-        
-return;
+
+        return;
       }
 
-      if (isReconnect) {setReconnectPhase("starting");}
+      if (isReconnect) {
+        setReconnectPhase("starting");
+      }
 
       await webClient.startCall({ accessToken }).catch(console.error);
       setIsCalling(true);
@@ -591,9 +1264,6 @@ return;
       setActiveSessionToken(newSessionToken);
 
       if (isReconnect) {
-        // Reuse the existing response row — repoint call_id to the new
-        // Retell call and refresh last_active_at so the heartbeat /
-        // webhook keep targeting the same lifecycle record.
         if (priorCallId) {
           await ResponseService.updateResponse(
             {
@@ -606,51 +1276,41 @@ return;
         }
         setReconnectPhase("idle");
       } else {
-        // Fresh response row. Insert with status, session_token, and
-        // last_active_at populated so check-session.withinWindow can
-        // resolve correctly on a subsequent reload.
         await createResponse({
           interview_id: interview.id,
           call_id: newCallId,
-          email: email,
-          name: name,
+          email,
+          name,
           status: "ongoing",
           session_token: newSessionToken,
           last_active_at: new Date().toISOString(),
         } as never);
       }
 
-      // Append ?session=<token> to the URL without a reload so a
-      // refresh/tab-close within the 60s window can reconnect.
       if (pathname && newSessionToken) {
         router.replace(`${pathname}?session=${newSessionToken}`);
       }
-    } catch (err) {
-      console.error("startConversation error", err);
-      if (isReconnect) {setReconnectPhase("register_failed");}
+    } catch (error) {
+      console.error("startConversation error", error);
+      if (isReconnect) {
+        setReconnectPhase("register_failed");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (interview?.time_duration) {
-      setInterviewTimeDuration(interview?.time_duration);
+    if (interview.time_duration) {
+      setInterviewTimeDuration(interview.time_duration);
     }
   }, [interview]);
 
-  /**
-   * Reconnect bootstrap. If the page mounted with ?session=<token>:
-   *   1. If the browser is offline → show offline screen.
-   *   2. GET /api/check-session?token=... once (retry on first failure).
-   *   3. If withinWindow && status=ongoing → enter ready_to_resume,
-   *      pre-fill name, store priorCallId for later updateResponse.
-   *   4. If exists=false → not_found.
-   *   5. Otherwise → expired.
-   */
   const runSessionCheck = useCallback(
     async (allowRetry: boolean) => {
-      if (!sessionToken) {return;}
+      if (!sessionToken) {
+        return;
+      }
 
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
         setReconnectPhase("offline");
@@ -660,14 +1320,14 @@ return;
 
       setReconnectPhase("checking");
       try {
-        const res = await fetch(
+        const response = await fetch(
           `/api/check-session?token=${encodeURIComponent(sessionToken)}`,
           { cache: "no-store" },
         );
-        if (!res.ok) {
-          throw new Error(`check-session ${res.status}`);
+        if (!response.ok) {
+          throw new Error(`check-session ${response.status}`);
         }
-        const body = (await res.json()) as CheckSessionResponse;
+        const body = (await response.json()) as CheckSessionResponse;
 
         if (!body.exists) {
           setReconnectPhase("not_found");
@@ -685,10 +1345,9 @@ return;
           return;
         }
 
-        // Row exists but reconnect not allowed (out of window or already closed).
         setReconnectPhase("expired");
-      } catch (err) {
-        console.error("check-session failed", err);
+      } catch (error) {
+        console.error("check-session failed", error);
         if (allowRetry) {
           await runSessionCheck(false);
 
@@ -711,16 +1370,21 @@ return;
       const interviewer = await InterviewerService.getInterviewer(
         interview.interviewer_id,
       );
-      setInterviewerImg(interviewer.image);
+
+      setInterviewerProfile(
+        interviewer
+          ? {
+              image: interviewer.image,
+              name: interviewer.name,
+              description: interviewer.description,
+            }
+          : null,
+      );
     };
-    fetchInterviewer();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    void fetchInterviewer();
   }, [interview.interviewer_id]);
 
-  // Webhook owns end-state (status, is_ended, disconnection_reason). Client
-  // only flushes the final tab_switch_count via the heartbeat endpoint and
-  // strips the ?session= param from the URL so the completion screen
-  // doesn't expose a stale token.
   useEffect(() => {
     if (isEnded && callId) {
       const callIdSnapshot = callId;
@@ -733,30 +1397,26 @@ return;
           tab_switch_count: tabCountSnapshot,
         }),
         keepalive: true,
-      }).catch(() => {
-        // Heartbeat failure is non-blocking; webhook still records end-state.
-      });
+      }).catch(() => {});
     }
 
     if (isEnded && activeSessionToken && pathname) {
-      // Drop ?session=<token> from the URL so the completion / feedback
-      // screen doesn't leak the token into address-bar history.
       router.replace(pathname);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEnded]);
+  }, [activeSessionToken, callId, isEnded, pathname, router, tabSwitchCount]);
 
-  // Tab-switch heartbeat: when the candidate switches away from the tab,
-  // flush last_active_at and tab_switch_count via sendBeacon so the write
-  // survives the page being backgrounded or torn down.
   useEffect(() => {
     const flushHeartbeatBeacon = () => {
-      const id = callIdRef.current;
-      if (!id || !isCallingRef.current) {return;}
+      const currentCallId = callIdRef.current;
+      if (!currentCallId || !isCallingRef.current) {
+        return;
+      }
+
       const payload = JSON.stringify({
-        call_id: id,
+        call_id: currentCallId,
         tab_switch_count: tabSwitchCountRef.current,
       });
+
       try {
         const blob = new Blob([payload], { type: "application/json" });
         const sent = navigator.sendBeacon?.("/api/response-heartbeat", blob);
@@ -769,7 +1429,7 @@ return;
           }).catch(() => {});
         }
       } catch {
-        // Best-effort — failure is acceptable.
+        // Best effort only.
       }
     };
 
@@ -789,377 +1449,91 @@ return;
   }, []);
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-50/50">
-      {isStarted && <TabSwitchWarning />}
-      <div className="w-full max-w-3xl mx-auto p-4">
-        <Card className="bg-white shadow-xl rounded-2xl border-0 overflow-hidden">
-          <div>
-            {!isEnded && (
-               <div className="h-1.5 w-full bg-gray-100">
-                <div
-                  className="bg-brand-bold h-full transition-all duration-500 ease-in-out"
-                  style={{
-                    width: `${
-                        (Number(currentTimeDuration) /
-                          (Number(interviewTimeDuration) * 60)) *
-                        100
-                      }%`,
-                  }}
-                />
-              </div>
-            )}
-            
-            <CardHeader className="p-8 pb-0">
-              {!isEnded && (
-                <div className="flex flex-col gap-2 mb-6">
-                   <div className="flex items-center justify-between">
-                      <CardTitle className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
-                        {interview?.name}
-                      </CardTitle>
-                      
-                       <div className="flex items-center text-sm font-medium px-3 py-1 rounded-full bg-brand-subtlest text-brand-bolder">
-                        <AlarmClockIcon
-                          className="w-4 h-4 mr-2"
-                        />
-                        <span>{interviewTimeDuration} mins</span>
-                      </div>
-                   </div>
-                </div>
-              )}
-            </CardHeader>
-            {reconnectPhase !== "idle" && !isStarted && !isEnded && (
-              <ReconnectPanel
-                phase={reconnectPhase}
-                name={reconnectName}
-                themeColor={interview.theme_color ?? "#4F46E5"}
-                onResume={() => startConversation({ isReconnect: true })}
-                onRetryCheck={() => runSessionCheck(false)}
-                onCloseTab={() => {
-                  if (pathname) {router.replace(pathname);}
-                  setReconnectPhase("idle");
-                }}
-                onReturnHome={() => {
-                  if (pathname) {router.replace(pathname);}
-                  setReconnectPhase("idle");
-                }}
-              />
-            )}
-            {reconnectPhase === "idle" && !isStarted && !isEnded && !isOldUser && (
-              <div className="px-8 pb-8 pt-2">
-                <div className="flex flex-col items-center">
-                  {interview?.logo_url && (
-                    <div className="mb-6">
-                      <Image
-                        src={interview?.logo_url}
-                        alt="Logo"
-                        className="h-16 w-auto object-contain"
-                        width={120}
-                        height={120}
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="w-full max-w-md space-y-6">
-                    <div className="text-center space-y-4">
-                        <p className="text-gray-600 text-base leading-relaxed">
-                          {interview?.description}
-                        </p>
+    <>
+      <TabSwitchWarning
+        count={tabSwitchCount}
+        open={isStarted && isTabWarningOpen}
+        onUnderstand={handleUnderstand}
+      />
 
-                        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-left">
-                            <div className="flex gap-3">
-                                <div className="flex-shrink-0 mt-0.5">
-                                    <AlertCircle className="w-5 h-5 text-blue-600" />
-                                </div>
-                                <div className="text-sm text-blue-900 space-y-1">
-                                    <p className="font-medium">Before you start:</p>
-                                    <ul className="list-disc pl-4 space-y-1 text-blue-800/90">
-                                        <li>Ensure your volume is up</li>
-                                        <li>Check that you are in a quiet environment</li>
-                                        <li>Tab switching will be recorded</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+      <CandidateFrame
+        title={interview.name}
+        subtitle={interview.description}
+        progressPercent={isStarted && !isEnded ? progressPercent : undefined}
+      >
+        {reconnectPhase !== "idle" && !isStarted && !isEnded ? (
+          <ReconnectPanel
+            phase={reconnectPhase}
+            name={reconnectName}
+            onResume={() => {
+              void startConversation({ isReconnect: true });
+            }}
+            onRetryCheck={() => {
+              void runSessionCheck(false);
+            }}
+            onCloseTab={() => {
+              if (pathname) {
+                router.replace(pathname);
+              }
+              setReconnectPhase("idle");
+            }}
+            onReturnHome={() => {
+              if (pathname) {
+                router.replace(pathname);
+              }
+              setReconnectPhase("idle");
+            }}
+          />
+        ) : null}
 
-                    {!interview?.is_anonymous && (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Email Address</label>
-                          <input
-                            value={email}
-                            type="email"
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-brand-bold/20 focus:border-brand-bold transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder:text-gray-400"
-                            placeholder="name@example.com"
-                            onChange={(e) => setEmail(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">First Name</label>
-                          <input
-                            value={name}
-                             type="text"
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-brand-bold/20 focus:border-brand-bold transition-all bg-gray-50 focus:bg-white text-gray-900 placeholder:text-gray-400"
-                            placeholder="Your first name"
-                            onChange={(e) => setName(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    )}
+        {reconnectPhase === "idle" && !isStarted && !isEnded && !isOldUser ? (
+          <PreflightView
+            interview={interview}
+            interviewerProfile={interviewerProfile}
+            email={email}
+            name={name}
+            loading={loading}
+            isAnonymous={interview.is_anonymous}
+            isValidEmail={isValidEmail}
+            micPermissionStatus={micPermissionStatus}
+            micPermissionError={micPermissionError}
+            onEmailChange={setEmail}
+            onNameChange={setName}
+            onCheckMicrophone={checkMicrophonePermission}
+            onStart={() => {
+              void startConversation();
+            }}
+            onExit={onEndCallClick}
+          />
+        ) : null}
 
-                    <div className="pt-4 flex flex-col items-center gap-3">
-                        {/* Step 1: Check Microphone (if not granted) */}
-                        {(micPermissionStatus === "prompt" || micPermissionStatus === "unknown") && (
-                           <Button
-                            className="w-full h-12 rounded-xl text-base font-medium shadow-sm hover:shadow-md transition-all"
-                            style={{
-                              backgroundColor: "#F59E0B", // Amber-500
-                              color: "white",
-                            }}
-                            onClick={checkMicrophonePermission}
-                          >
-                            <AlertCircle className="w-5 h-5 mr-2" />
-                            Check Microphone Access
-                          </Button>
-                        )}
+        {isStarted && !isEnded && !isOldUser ? (
+          <ActiveSessionView
+            activeTurn={activeTurn}
+            interviewerProfile={interviewerProfile}
+            lastInterviewerResponse={lastInterviewerResponse}
+            lastUserResponse={lastUserResponse}
+            loading={loading}
+            progressPercent={progressPercent}
+            timeRemainingLabel={formatRemainingTime(remainingSeconds)}
+            onEnd={onEndCallClick}
+          />
+        ) : null}
 
-                        {/* Step 2: Start Interview (only if granted) */}
-                        {micPermissionStatus === "granted" && (
-                           <div className="w-full space-y-3">
-                            <div className="bg-green-50 text-green-700 text-sm py-2 px-4 rounded-lg flex items-center justify-center font-medium border border-green-100">
-                                <CheckCircleIcon className="w-4 h-4 mr-2" />
-                                Microphone Connected
-                            </div>
-                            <Button
-                              className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-brand-bold/30 hover:shadow-brand-bold/40 transition-all transform hover:-translate-y-0.5"
-                              style={{
-                                backgroundColor: interview.theme_color ?? "#4F46E5",
-                                color: isLightColor(interview.theme_color ?? "#4F46E5")
-                                  ? "black"
-                                  : "white",
-                              }}
-                              disabled={
-                                Loading ||
-                                (!interview?.is_anonymous && (!isValidEmail || !name))
-                              }
-                              onClick={() => startConversation()}
-                            >
-                              {!Loading ? "Start Interview" : <MiniLoader />}
-                            </Button>
-                          </div>
-                        )}
+        {isEnded && !isOldUser ? (
+          <CompletionView
+            email={email}
+            isStarted={isStarted}
+            isDialogOpen={isDialogOpen}
+            isFeedbackSubmitted={isFeedbackSubmitted}
+            onOpenChange={setIsDialogOpen}
+            onFeedbackSubmit={handleFeedbackSubmit}
+          />
+        ) : null}
 
-                        {/* Error State: Denied */}
-                        {micPermissionStatus === "denied" && (
-                          <div className="w-full bg-red-50 border border-red-100 rounded-xl p-4 text-center space-y-3">
-                              <div className="flex flex-col items-center text-red-600 font-medium">
-                                  <XCircleIcon className="w-8 h-8 mb-2 opacity-80" />
-                                  <span>Microphone Access Blocked</span>
-                              </div>
-                            <p className="text-sm text-red-600/80">
-                              Please allow microphone access in your browser settings (click the lock icon in the address bar).
-                            </p>
-                            <Button
-                              variant="outline"
-                              className="w-full border-red-200 text-red-700 hover:bg-red-100 hover:text-red-800"
-                              onClick={checkMicrophonePermission}
-                            >
-                              Try Again
-                            </Button>
-                          </div>
-                        )}
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button
-                        className="text-sm text-gray-400 hover:text-gray-600 font-medium py-2 transition-colors"
-                        disabled={Loading}
-                      >
-                        Exit Interview
-                      </button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure you want to exit?</AlertDialogTitle>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-brand-bold hover:bg-brand-bolder"
-                          onClick={async () => {
-                            await onEndCallClick();
-                          }}
-                        >
-                          Exit
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-                </div>
-              </div>
-            </div>
-            )}
-            {isStarted && !isEnded && !isOldUser && (
-              <div className="flex flex-row p-2 grow">
-                <div className="border-x-2 border-grey w-[50%] my-auto min-h-[70%]">
-                  <div className="flex flex-col justify-evenly">
-                    <div
-                      className={`text-[22px] w-[80%] md:text-[26px] mt-4 min-h-[250px] mx-auto px-6`}
-                    >
-                      {lastInterviewerResponse}
-                    </div>
-                    <div className="flex flex-col mx-auto justify-center items-center align-middle">
-                      <Image
-                        src={interviewerImg}
-                        alt="Image of the interviewer"
-                        width={120}
-                        height={120}
-                        className={`object-cover object-center mx-auto my-auto ${
-                          activeTurn === "agent"
-                            ? `border-4 border-[${interview.theme_color}] rounded-full`
-                            : ""
-                        }`}
-                      />
-                      <div className="font-semibold">Interviewer</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col justify-evenly w-[50%]">
-                  <div
-                    ref={lastUserResponseRef}
-                    className={`text-[22px] w-[80%] md:text-[26px] mt-4 mx-auto h-[250px] px-6 overflow-y-auto`}
-                  >
-                    {lastUserResponse}
-                  </div>
-                  <div className="flex flex-col mx-auto justify-center items-center align-middle">
-                    <Image
-                      src={`/user-icon.png`}
-                      alt="Picture of the user"
-                      width={120}
-                      height={120}
-                      className={`object-cover object-center mx-auto my-auto ${
-                        activeTurn === "user"
-                          ? `border-4 border-[${interview.theme_color}] rounded-full`
-                          : ""
-                      }`}
-                    />
-                    <div className="font-semibold">You</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {isStarted && !isEnded && !isOldUser && (
-              <div className="items-center p-2">
-                <AlertDialog>
-                  <AlertDialogTrigger className="w-full">
-                    <Button
-                      className=" bg-white text-black border  border-brand-bold h-10 mx-auto flex flex-row justify-center mb-8"
-                      disabled={Loading}
-                    >
-                      End Interview{" "}
-                      <XCircleIcon className="h-[1.5rem] ml-2 w-[1.5rem] rotate-0 scale-100  dark:-rotate-90 dark:scale-0 text-red" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone. This action will end the
-                        call.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-brand-bold hover:bg-brand-bolder"
-                        onClick={async () => {
-                          await onEndCallClick();
-                        }}
-                      >
-                        Continue
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-
-            {isEnded && !isOldUser && (
-              <div className="w-fit min-w-[400px] max-w-[400px] mx-auto mt-2  border border-brand-subtle rounded-md p-2 m-2 bg-slate-50  absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-                <div>
-                  <div className="p-2 font-normal text-base mb-4 whitespace-pre-line">
-                    <CheckCircleIcon className="h-[2rem] w-[2rem] mx-auto my-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-brand-bold " />
-                    <p className="text-lg font-semibold text-center">
-                      {isStarted
-                        ? `Thank you for taking the time to participate in this interview`
-                        : "Thank you very much for considering."}
-                    </p>
-                    <p className="text-center">
-                      {"\n"}
-                      You can close this tab now.
-                    </p>
-                  </div>
-
-                  {!isFeedbackSubmitted && (
-                    <AlertDialog
-                      open={isDialogOpen}
-                      onOpenChange={setIsDialogOpen}
-                    >
-                      <AlertDialogTrigger className="w-full flex justify-center">
-                        <Button
-                          className="bg-brand-bold text-white h-10 mt-4 mb-4"
-                          onClick={() => setIsDialogOpen(true)}
-                        >
-                          Provide Feedback
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <FeedbackForm
-                          email={email}
-                          onSubmit={handleFeedbackSubmit}
-                        />
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-              </div>
-            )}
-            {isOldUser && (
-              <div className="w-fit min-w-[400px] max-w-[400px] mx-auto mt-2  border border-brand-subtle rounded-md p-2 m-2 bg-slate-50  absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2">
-                <div>
-                  <div className="p-2 font-normal text-base mb-4 whitespace-pre-line">
-                    <CheckCircleIcon className="h-[2rem] w-[2rem] mx-auto my-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-brand-bold " />
-                    <p className="text-lg font-semibold text-center">
-                      You have already responded in this interview or you are
-                      not eligible to respond. Thank you!
-                    </p>
-                    <p className="text-center">
-                      {"\n"}
-                      You can close this tab now.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-        <a
-          className="flex flex-row justify-center align-middle mt-3"
-          href={process.env.NEXT_PUBLIC_MARKETING_URL || "https://robustagency.co"}
-          target="_blank"
-        >
-          <div className="text-center text-md font-semibold mr-2  ">
-            Powered by{" "}
-            <span className="font-bold">
-              Robust <span className="text-brand-bold">Devs</span>
-            </span>
-          </div>
-          <ArrowUpRightSquareIcon className="h-[1.5rem] w-[1.5rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 text-brand-bold " />
-        </a>
-      </div>
-    </div>
+        {isOldUser ? <IneligibleView /> : null}
+      </CandidateFrame>
+    </>
   );
 }
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, type ReactNode } from "react";
 import Image from "next/image";
-import { Monitor } from "lucide-react";
+import { ArrowRight, Monitor, Sparkles } from "lucide-react";
 
 import { useInterviews } from "@/contexts/interviews.context";
 import Call from "@/components/call";
@@ -20,81 +20,135 @@ interface Props {
   }>;
 }
 
-/**
- * Centered focus shell for the candidate flow. Single column, max-w-3xl,
- * generous vertical rhythm. The brand attribution now lives in the
- * (user) layout's CandidateFooter, so this shell only owns vertical
- * centering of the active card.
- */
-function CandidateShell({ children }: { children: React.ReactNode }) {
+function CandidateCanvas({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-1 items-center justify-center bg-background px-4 py-8">
-      <div className="w-full max-w-3xl">{children}</div>
+    <div className="relative flex min-h-screen flex-1 items-center justify-center overflow-hidden bg-[#fbfdf6] px-4 py-8 md:px-8">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[-8rem] top-[-7rem] h-64 w-64 rounded-full bg-[#d7e8b5]/55 blur-3xl" />
+        <div className="absolute bottom-[-10rem] right-[-6rem] h-80 w-80 rounded-full bg-[#e0e5d5]/80 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-[#d7e8b5]/30 to-transparent" />
+      </div>
+      <div className="relative w-full max-w-6xl">{children}</div>
     </div>
   );
 }
 
-/**
- * Branded status card — used for not-found / inactive / loading states.
- */
-function StatusCard({
+function StatusSurface({
   title,
   description,
+  detail,
   image,
+  icon,
 }: {
   title: string;
   description: string;
+  detail: string;
   image?: string;
+  icon?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border bg-card p-10 text-center shadow-[var(--ds-shadow-overlay)]">
-      <div className="flex flex-col items-center gap-4">
-        {image ? (
-          <Image
-            src={image}
-            alt=""
-            width={180}
-            height={180}
-            className="mb-2"
-          />
-        ) : null}
-        <h1 className="text-xl font-semibold">{title}</h1>
-        <p className="max-w-md text-sm text-muted-foreground">{description}</p>
+    <div className="overflow-hidden rounded-[32px] border border-[#c5ccb6] bg-[#fbfdf6]/95 shadow-[rgba(99,143,61,0.1)_0px_0px_0px_1px]">
+      <div className="grid gap-10 px-6 py-8 md:grid-cols-[1.2fr_0.8fr] md:px-10 md:py-10">
+        <div className="space-y-5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-[12px] font-medium uppercase tracking-[0.18em] text-[#203b14]">
+            <Sparkles className="h-3.5 w-3.5" />
+            Candidate session
+          </div>
+          <div className="space-y-3">
+            <h1 className="max-w-2xl text-3xl font-semibold tracking-[-0.04em] text-[#0a1d08] md:text-[3.3rem] md:leading-[1.05]">
+              {title}
+            </h1>
+            <p className="max-w-2xl text-base leading-7 text-[#31200b]/78 md:text-lg">
+              {description}
+            </p>
+          </div>
+          <div className="rounded-[24px] border border-[#e0e5d5] bg-[#f6f8ef] p-5 text-sm leading-6 text-[#31200b]/82">
+            {detail}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center">
+          <div className="flex min-h-[280px] w-full max-w-sm flex-col items-center justify-center rounded-[28px] border border-[#e0e5d5] bg-white/70 p-8 text-center">
+            {image ? (
+              <Image
+                src={image}
+                alt=""
+                width={188}
+                height={188}
+                className="mb-6 h-auto w-40 object-contain"
+              />
+            ) : (
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-[#e0e5d5] bg-[#d7e8b5]/45 text-[#203b14]">
+                {icon}
+              </div>
+            )}
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-[#203b14]">
+              Guided experience
+            </p>
+            <p className="mt-3 text-sm leading-6 text-[#31200b]/72">
+              The candidate flow stays focused on clarity, readiness, and a
+              calm next step.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function LoadingCard() {
+function LoadingSurface() {
   return (
-    <div className="rounded-2xl border bg-card p-10 shadow-[var(--ds-shadow-overlay)]">
-      <div className="flex h-[60vh] flex-col items-center justify-center">
+    <div className="overflow-hidden rounded-[32px] border border-[#c5ccb6] bg-[#fbfdf6]/95 shadow-[rgba(99,143,61,0.1)_0px_0px_0px_1px]">
+      <div className="flex min-h-[520px] flex-col items-center justify-center px-6 py-10 text-center">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-white/70 px-4 py-2 text-[12px] font-medium uppercase tracking-[0.18em] text-[#203b14]">
+          <Sparkles className="h-3.5 w-3.5" />
+          Preparing your interview
+        </div>
         <LoaderWithText />
       </div>
     </div>
   );
 }
 
-/**
- * Mobile fallback (md:hidden). Candidates on phones can't use the WebRTC
- * Retell call reliably, so we ask them to switch to desktop.
- */
 function MobileFallback({ interviewName }: { interviewName?: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-10">
-      <div className="w-full max-w-sm rounded-2xl border bg-card p-8 text-center shadow-[var(--ds-shadow-overlay)]">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-subtlest text-brand-bold">
-          <Monitor className="h-7 w-7" />
+    <CandidateCanvas>
+      <div className="mx-auto w-full max-w-xl overflow-hidden rounded-[32px] border border-[#c5ccb6] bg-[#fbfdf6]/95 shadow-[rgba(99,143,61,0.1)_0px_0px_0px_1px]">
+        <div className="space-y-6 px-6 py-8 text-center md:px-10 md:py-10">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-[#e0e5d5] bg-[#d7e8b5]/45 text-[#203b14]">
+            <Monitor className="h-9 w-9" />
+          </div>
+          <div className="space-y-3">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-[#203b14]">
+              Desktop required
+            </p>
+            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-[#0a1d08]">
+              Use a laptop or desktop to continue
+            </h1>
+            <p className="mx-auto max-w-lg text-base leading-7 text-[#31200b]/78">
+              This interview session needs a larger screen and reliable browser
+              audio controls. Please reopen the link from a desktop browser.
+            </p>
+          </div>
+
+          <div className="rounded-[24px] border border-[#e0e5d5] bg-white/70 p-5 text-left">
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-[#203b14]">
+              Next step
+            </p>
+            <p className="mt-3 text-sm leading-6 text-[#31200b]/78">
+              Send this link to your desktop browser and return when your
+              microphone is ready.
+            </p>
+            {interviewName ? (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm text-[#0a1d08]">
+                <ArrowRight className="h-4 w-4 text-[#203b14]" />
+                {interviewName}
+              </div>
+            ) : null}
+          </div>
         </div>
-        {interviewName ? (
-          <p className="mt-4 text-base font-semibold">{interviewName}</p>
-        ) : null}
-        <p className="mt-2 text-sm text-muted-foreground">
-          Please use a desktop browser to complete this interview. Apologies
-          for the inconvenience.
-        </p>
       </div>
-    </div>
+    </CandidateCanvas>
   );
 }
 
@@ -112,12 +166,12 @@ function InterviewInterface({
 
   useEffect(() => {
     if (interview) {
-      setIsActive(interview?.is_active === true);
+      setIsActive(interview.is_active === true);
     }
   }, [interview, params.interviewId]);
 
   useEffect(() => {
-    const fetchinterview = async () => {
+    const fetchInterview = async () => {
       try {
         const response = await getInterviewById(params.interviewId);
         if (response) {
@@ -132,41 +186,39 @@ function InterviewInterface({
       }
     };
 
-    fetchinterview();
+    fetchInterview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.interviewId]);
 
-  let desktopContent: React.ReactNode;
+  let desktopContent: ReactNode;
   if (!interview) {
     desktopContent = interviewNotFound ? (
-      <StatusCard
-        title="Invalid interview link"
-        description="The link you used doesn't match any interview. Please check the URL with the person who sent it to you."
+      <StatusSurface
+        title="This interview link could not be verified"
+        description="The session link does not match an available interview. Please return to the original invitation or contact the person who shared it with you."
+        detail="Interview links are sometimes copied with extra characters or opened after they have been replaced. Use the original invitation to avoid that mismatch."
         image="/invalid-url.png"
       />
     ) : (
-      <LoadingCard />
+      <LoadingSurface />
     );
   } else if (!isActive) {
     desktopContent = (
-      <StatusCard
-        title="This interview is closed"
-        description="We're not currently accepting responses. Please contact the person who shared this link for more information."
+      <StatusSurface
+        title="This interview is no longer accepting responses"
+        description="The recruiter has closed this interview, so new candidate sessions cannot begin from this link right now."
+        detail="If you expected to continue an active session, contact the recruiter and ask them to confirm whether the interview window has been reopened for you."
         image="/closed.png"
       />
     );
   } else {
-    desktopContent = (
-      <div className="rounded-2xl border bg-card shadow-[var(--ds-shadow-overlay)]">
-        <Call interview={interview} sessionToken={sessionToken} />
-      </div>
-    );
+    desktopContent = <Call interview={interview} sessionToken={sessionToken} />;
   }
 
   return (
     <>
       <div className="hidden md:block">
-        <CandidateShell>{desktopContent}</CandidateShell>
+        <CandidateCanvas>{desktopContent}</CandidateCanvas>
       </div>
       <div className="md:hidden">
         <MobileFallback interviewName={interview?.name} />

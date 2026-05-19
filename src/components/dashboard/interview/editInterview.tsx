@@ -1,9 +1,13 @@
 "use client";
 
-import { Interview, Question } from "@/types/interview";
 import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Plus, SaveIcon, TrashIcon } from "lucide-react";
+import { ArrowLeft, Plus, SaveIcon, TrashIcon } from "lucide-react";
+import Image from "next/image";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+import type { Interview, Question } from "@/types/interview";
 import { useInterviewers } from "@/contexts/interviewers.context";
 import QuestionCard from "@/components/dashboard/interview/create-popup/QuestionCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,10 +16,6 @@ import { Switch } from "@/components/ui/switch";
 import { useInterviews } from "@/contexts/interviews.context";
 import { InterviewService } from "@/services/interviews.service";
 import { CardTitle } from "../../ui/card";
-import Image from "next/image";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,9 +32,25 @@ type EditInterviewProps = {
   interview: Interview | undefined;
 };
 
+function FieldLabel({
+  title,
+  note,
+}: {
+  title: string;
+  note?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-sm font-semibold text-[#0a1d08]">{title}</p>
+      {note ? <p className="text-xs text-[#6f7866]">{note}</p> : null}
+    </div>
+  );
+}
+
 function EditInterview({ interview }: EditInterviewProps) {
   const { interviewers } = useInterviewers();
   const { fetchInterviews } = useInterviews();
+  const router = useRouter();
 
   const [description, setDescription] = useState<string>(
     interview?.description || "",
@@ -45,7 +61,7 @@ function EditInterview({ interview }: EditInterviewProps) {
   const [numQuestions, setNumQuestions] = useState<number>(
     interview?.question_count || 1,
   );
-  const [duration, setDuration] = useState<Number>(
+  const [duration, setDuration] = useState<number>(
     Number(interview?.time_duration),
   );
   const [questions, setQuestions] = useState<Question[]>(
@@ -57,12 +73,10 @@ function EditInterview({ interview }: EditInterviewProps) {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(
     interview?.is_anonymous || false,
   );
-
   const [isClicked, setIsClicked] = useState(false);
 
   const endOfListRef = useRef<HTMLDivElement>(null);
   const prevQuestionLengthRef = useRef(questions.length);
-  const router = useRouter();
 
   const handleInputChange = (id: string, newQuestion: Question) => {
     setQuestions(
@@ -82,8 +96,9 @@ function EditInterview({ interview }: EditInterviewProps) {
         })),
       );
 
-      return;
+return;
     }
+
     setQuestions(questions.filter((question) => question.id !== id));
     setNumQuestions(numQuestions - 1);
   };
@@ -102,12 +117,12 @@ function EditInterview({ interview }: EditInterviewProps) {
       questions.length < numQuestions ? questions.length : numQuestions;
 
     const interviewData = {
-      objective: objective,
-      questions: questions,
+      objective,
+      questions,
       interviewer_id: Number(selectedInterviewer),
       question_count: questionCount,
       time_duration: Number(duration),
-      description: description,
+      description,
       is_anonymous: isAnonymous,
     };
 
@@ -115,19 +130,17 @@ function EditInterview({ interview }: EditInterviewProps) {
       if (!interview) {
         return;
       }
-      const response = await InterviewService.updateInterview(
-        interviewData,
-        interview?.id,
-      );
+
+      await InterviewService.updateInterview(interviewData, interview.id);
       setIsClicked(false);
       fetchInterviews();
       toast.success("Interview updated successfully.", {
         position: "bottom-right",
         duration: 3000,
       });
-      router.push(`/interviews/${interview?.id}`);
+      router.push(`/interviews/${interview.id}`);
     } catch (error) {
-      console.error("Error creating interview:", error);
+      console.error("Error updating interview:", error);
     }
   };
 
@@ -156,58 +169,68 @@ function EditInterview({ interview }: EditInterviewProps) {
   }, [questions.length]);
 
   return (
-    <div className=" h-screen z-[10] mx-2">
-      <div className="flex flex-col bg-gray-200 rounded-md min-h-[120px] p-2 pl-4">
-        <div>
-          <div
-            className="mt-2 ml-1 pr-2 inline-flex items-center text-brand-bold hover:cursor-pointer"
-            onClick={() => {
-              router.push(`/interviews/${interview?.id}`);
-            }}
-          >
-            <ArrowLeft className="mr-2" />
-            <p className="text-sm font-semibold">Back to Summary</p>
+    <div className="space-y-6 text-[#0a1d08]">
+      <div className="rounded-[28px] border border-[#e0e5d5] bg-[#f6f8ef] p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-3">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#203b14] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
+              onClick={() => {
+                router.push(`/interviews/${interview?.id}`);
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to workspace
+            </button>
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
+                Job settings
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.05em]">
+                Refine the interview workflow
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#53614d]">
+                Update the role context, interviewer, candidate anonymity, and question flow without leaving the workspace.
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-row justify-between">
-          <p className="mt-3 mb-1 ml-2 font-medium">
-            Interview Description{" "}
-            <span className="text-xs ml-2 font-normal">
-              (Your respondents will see this.)
-            </span>
-          </p>
-          <div className="flex flex-row gap-3">
+
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               disabled={isClicked}
-              className="bg-brand-bold hover:bg-brand-bolder mt-2"
+              className="rounded-full bg-[#4a3212] px-5 text-[#fbfdf6] hover:bg-[#3d2910]"
               onClick={() => {
                 setIsClicked(true);
                 onSave();
               }}
             >
-              Save <SaveIcon size={16} className="ml-2" />
+              Save changes
+              <SaveIcon className="ml-2 h-4 w-4" />
             </Button>
+
             <AlertDialog>
-              <AlertDialogTrigger>
+              <AlertDialogTrigger asChild>
                 <Button
                   disabled={isClicked}
-                  className="bg-red-500 hover:bg-red-600 mr-5 mt-2 p-2"
+                  className="rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-5 text-[#6b3f31] hover:bg-[#f0dfd8]"
+                  variant="ghost"
                 >
-                  <TrashIcon size={16} className="" />
+                  <TrashIcon className="mr-2 h-4 w-4" />
+                  Delete workflow
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Delete this interview?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    this interview.
+                    This permanently removes the interview and its workspace.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    className="bg-brand-bold hover:bg-brand-bolder"
+                    className="bg-[#4a3212] text-[#fbfdf6] hover:bg-[#3d2910]"
                     onClick={async () => {
                       await onDeleteInterviewClick();
                     }}
@@ -219,159 +242,194 @@ function EditInterview({ interview }: EditInterviewProps) {
             </AlertDialog>
           </div>
         </div>
-        <textarea
-          value={description}
-          className="h-fit mt-3 ml-2 py-2 border-2 rounded-md w-[75%] px-2 border-gray-400"
-          placeholder="Enter your interview description here."
-          rows={3}
-          onChange={(e) => {
-            setDescription(e.target.value);
-          }}
-          onBlur={(e) => {
-            setDescription(e.target.value.trim());
-          }}
-        />
-        <p className="mt-3 mb-1 ml-2 font-medium">Objective</p>
-        <textarea
-          value={objective}
-          className="h-fit mt-3 ml-2 py-2 border-2 rounded-md w-[75%] px-2 border-gray-400"
-          placeholder="Enter your interview objective here."
-          rows={3}
-          onChange={(e) => setObjective(e.target.value)}
-          onBlur={(e) => setObjective(e.target.value.trim())}
-        />
-        <div className="flex flex-row gap-3">
-          <div>
-            <p className="mt-3 mb-1 ml-2 font-medium">Interviewer</p>
-            <div className=" flex items-center mt-1">
-              <div
-                id="slider-3"
-                className=" h-32 pt-1 ml-2 overflow-x-scroll scroll whitespace-nowrap scroll-smooth scrollbar-hide w-[27.5rem]"
-              >
-                {interviewers.map((item) => (
-                  <div
-                    className=" p-0 inline-block cursor-pointer hover:scale-105 ease-in-out duration-300  ml-1 mr-3 rounded-xl shrink-0 overflow-hidden"
-                    key={item.id}
-                  >
-                    <div
-                      className={`w-[96px] overflow-hidden rounded-full ${
-                        selectedInterviewer === item.id
-                          ? "border-4 border-brand-bold"
-                          : ""
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-6">
+          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+            <FieldLabel
+              title="Interview description"
+              note="Candidates will see this before they begin."
+            />
+            <textarea
+              value={description}
+              className="mt-4 min-h-[140px] w-full rounded-[22px] border border-[#d8ddd0] bg-[#f8faf3] px-4 py-4 text-sm leading-6 text-[#0a1d08] outline-none"
+              placeholder="Describe the role, the purpose of the interview, and what a candidate should expect."
+              rows={5}
+              onChange={(event) => setDescription(event.target.value)}
+              onBlur={(event) => setDescription(event.target.value.trim())}
+            />
+          </div>
+
+          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+            <FieldLabel
+              title="Interview objective"
+              note="Use this as the internal hiring brief for the AI interviewer."
+            />
+            <textarea
+              value={objective}
+              className="mt-4 min-h-[140px] w-full rounded-[22px] border border-[#d8ddd0] bg-[#f8faf3] px-4 py-4 text-sm leading-6 text-[#0a1d08] outline-none"
+              placeholder="Explain what strong performance looks like and what the interviewer should probe for."
+              rows={5}
+              onChange={(event) => setObjective(event.target.value)}
+              onBlur={(event) => setObjective(event.target.value.trim())}
+            />
+          </div>
+
+          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <FieldLabel
+                title="Question flow"
+                note="Set the session length, question count, and the prompts the AI interviewer will use."
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <label className="rounded-[20px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3 text-sm">
+                  <span className="block text-xs uppercase tracking-[0.12em] text-[#6f7866]">
+                    Questions
+                  </span>
+                  <input
+                    type="number"
+                    step="1"
+                    max="5"
+                    min={questions.length.toString()}
+                    className="mt-2 w-full bg-transparent text-lg font-semibold outline-none"
+                    value={numQuestions}
+                    onChange={(event) => {
+                      let value = event.target.value;
+                      if (
+                        value === "" ||
+                        (Number.isInteger(Number(value)) && Number(value) > 0)
+                      ) {
+                        if (Number(value) > 5) {
+                          value = "5";
+                        }
+                        setNumQuestions(Number(value));
+                      }
+                    }}
+                  />
+                </label>
+                <label className="rounded-[20px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3 text-sm">
+                  <span className="block text-xs uppercase tracking-[0.12em] text-[#6f7866]">
+                    Duration (mins)
+                  </span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    className="mt-2 w-full bg-transparent text-lg font-semibold outline-none"
+                    value={Number(duration)}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (
+                        value === "" ||
+                        (Number.isInteger(Number(value)) && Number(value) > 0)
+                      ) {
+                        setDuration(Number(value));
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <ScrollArea className="mt-5 max-h-[560px] rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] p-4">
+              {questions.map((question, index) => (
+                <QuestionCard
+                  key={question.id}
+                  questionNumber={index + 1}
+                  questionData={question}
+                  onDelete={handleDeleteQuestion}
+                  onQuestionChange={handleInputChange}
+                />
+              ))}
+              <div ref={endOfListRef} />
+              {questions.length < numQuestions ? (
+                <button
+                  type="button"
+                  className="mx-auto mt-2 flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-[#c5ccb6] bg-[#fbfdf6] text-[#203b14] transition-colors hover:border-[#203b14] hover:bg-[#eef4e1]"
+                  onClick={handleAddQuestion}
+                >
+                  <Plus className="h-6 w-6" />
+                </button>
+              ) : null}
+            </ScrollArea>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+            <FieldLabel
+              title="Interviewer persona"
+              note="Choose the interviewer who should represent this job during the candidate session."
+            />
+            <ScrollArea className="mt-5 whitespace-nowrap">
+              <div className="flex gap-3 pb-2">
+                {interviewers.map((item) => {
+                  const isSelected = selectedInterviewer === item.id;
+
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      className={`min-w-[180px] rounded-[24px] border p-4 text-left transition-colors ${
+                        isSelected
+                          ? "border-[#203b14] bg-[#eef4e1]"
+                          : "border-[#e0e5d5] bg-[#f8faf3] hover:border-[#c5ccb6]"
                       }`}
                       onClick={() => {
                         setSelectedInterviewer(item.id);
                       }}
                     >
-                      <Image
-                        src={item.image}
-                        alt="Picture of the interviewer"
-                        width={70}
-                        height={70}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <CardTitle className="mt-0 text-xs text-center">
-                      {item.name}
-                    </CardTitle>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3">
+                        <div className="h-14 w-14 overflow-hidden rounded-full border border-[#d8ddd0]">
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            width={56}
+                            height={56}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="truncate text-base">
+                            {item.name}
+                          </CardTitle>
+                          <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#53614d]">
+                            {item.description}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+
+          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+            <FieldLabel
+              title="Candidate identity"
+              note="Decide whether the workflow should collect candidate names and emails."
+            />
+            <div className="mt-5 rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[#0a1d08]">
+                    Collect anonymous responses
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[#53614d]">
+                    When enabled, the candidate journey hides name and email collection.
+                  </p>
+                </div>
+                <Switch
+                  checked={isAnonymous}
+                  className={isAnonymous ? "bg-[#4a3212]" : "bg-white"}
+                  onCheckedChange={(checked) => setIsAnonymous(checked)}
+                />
               </div>
             </div>
           </div>
         </div>
-        <label className="flex-col mt-2 ml-2 w-full">
-          <div className="flex items-center cursor-pointer">
-            <span className="text-sm font-medium">
-              Do you prefer the interviewees&apos; responses to be anonymous?
-            </span>
-            <Switch
-              checked={isAnonymous}
-              className={`ml-4 mt-1 border-2 border-gray-300 ${
-                isAnonymous ? "bg-brand-bold" : "bg-white"
-              }`}
-              onCheckedChange={(checked) => setIsAnonymous(checked)}
-            />
-          </div>
-          <span
-            style={{ fontSize: "0.7rem", lineHeight: "0.66rem" }}
-            className="font-light text-xs italic w-full text-left block"
-          >
-            Note: If not anonymous, the interviewee&apos;s email and name will
-            be collected.
-          </span>
-        </label>
-        <div className="flex flex-row justify-between w-[75%] gap-3 ml-2">
-          <div className="flex flex-row justify-center items-center mt-5 ">
-            <h3 className="font-medium ">No. of Questions:</h3>
-            <input
-              type="number"
-              step="1"
-              max="5"
-              min={questions.length.toString()}
-              className="border-2 text-center focus:outline-none  bg-slate-100 rounded-md border-gray-500 w-14 px-2 py-0.5 ml-3"
-              value={numQuestions}
-              onChange={(e) => {
-                let value = e.target.value;
-                if (
-                  value === "" ||
-                  (Number.isInteger(Number(value)) && Number(value) > 0)
-                ) {
-                  if (Number(value) > 5) {
-                    value = "5";
-                  }
-                  setNumQuestions(Number(value));
-                }
-              }}
-            />
-          </div>
-          <div className="flex flex-row items-center mt-5">
-            <h3 className="font-medium ">Duration (mins):</h3>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              className="border-2 text-center focus:outline-none bg-slate-100 rounded-md border-gray-500 w-14 px-2 py-0.5 ml-3"
-              value={Number(duration)}
-              onChange={(e) => {
-                let value = e.target.value;
-                if (
-                  value === "" ||
-                  (Number.isInteger(Number(value)) && Number(value) > 0)
-                ) {
-                  setDuration(Number(value));
-                }
-              }}
-            />
-          </div>
-        </div>
-        <p className="mt-3 mb-1 ml-2 font-medium">Questions</p>
-        <ScrollArea className="flex ml-2 p-2 pr-4 mb-4 flex-col justify-center items-center w-[75%] max-h-[500px] bg-slate-100 rounded-md text-sm mt-3">
-          {questions.map((question, index) => (
-            <QuestionCard
-              key={question.id}
-              questionNumber={index + 1}
-              questionData={question}
-              onDelete={handleDeleteQuestion}
-              onQuestionChange={handleInputChange}
-            />
-          ))}
-          <div ref={endOfListRef} />
-          {questions.length < numQuestions ? (
-            <div
-              className="border-brand-bold opacity-75 hover:opacity-100 w-fit text-center rounded-full mx-auto"
-              onClick={handleAddQuestion}
-            >
-              <Plus
-                size={45}
-                strokeWidth={2.2}
-                className="text-brand-bold text-center cursor-pointer"
-              />
-            </div>
-          ) : (
-            <></>
-          )}
-        </ScrollArea>
       </div>
     </div>
   );
