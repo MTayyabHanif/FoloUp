@@ -52,19 +52,23 @@ export function ClientProvider({ children }: ClientProviderProps) {
     setClientLoading(false);
   };
 
+  // Single ordered effect: the user row's organization_id FKs to
+  // organization(id), so the org must be upserted FIRST. Previously these
+  // ran as two independent effects and raced — the user INSERT could fire
+  // before the org INSERT committed, producing a FK violation on the
+  // very first sign-in for a new (user, org) pair.
   useEffect(() => {
-    if (user?.id) {
-      fetchClient();
+    if (!user?.id) {
+      return;
     }
+    (async () => {
+      if (organization?.id) {
+        await fetchOrganization();
+      }
+      await fetchClient();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (organization?.id) {
-      fetchOrganization();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organization?.id]);
+  }, [user?.id, organization?.id]);
 
   return (
     <ClientContext.Provider
