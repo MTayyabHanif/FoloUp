@@ -2,16 +2,35 @@
 
 import React, { useState, useEffect } from "react";
 import { useOrganization } from "@clerk/nextjs";
+import { Gem, Plus } from "lucide-react";
+import Image from "next/image";
+
 import InterviewCard from "@/components/dashboard/interview/interviewCard";
 import CreateInterviewCard from "@/components/dashboard/interview/createInterviewCard";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { InterviewService } from "@/services/interviews.service";
 import { ClientService } from "@/services/clients.service";
 import { ResponseService } from "@/services/responses.service";
 import { useInterviews } from "@/contexts/interviews.context";
 import Modal from "@/components/dashboard/Modal";
-import { Gem, Plus } from "lucide-react";
-import Image from "next/image";
+import {
+  PageShell,
+  PageHeader,
+  Section,
+  DataGrid,
+} from "@/components/ui/page-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Banner } from "@/components/ui/banner";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function InterviewsLoader() {
+  return (
+    <DataGrid cols="3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-60 w-full rounded-xl" />
+      ))}
+    </DataGrid>
+  );
+}
 
 function Interviews() {
   const { interviews, interviewsLoading } = useInterviews();
@@ -21,18 +40,6 @@ function Interviews() {
   const [allowedResponsesCount, setAllowedResponsesCount] =
     useState<number>(10);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
-  function InterviewsLoader() {
-    return (
-      <>
-        <div className="flex flex-row">
-          <div className="h-60 w-56 ml-1 mr-3 mt-3 flex-none animate-pulse rounded-xl bg-gray-300" />
-          <div className="h-60 w-56 ml-1 mr-3  mt-3 flex-none animate-pulse rounded-xl bg-gray-300" />
-          <div className="h-60 w-56 ml-1 mr-3 mt-3 flex-none animate-pulse rounded-xl bg-gray-300" />
-        </div>
-      </>
-    );
-  }
 
   useEffect(() => {
     const fetchOrganizationData = async () => {
@@ -88,99 +95,129 @@ function Interviews() {
     fetchResponsesCount();
   }, [organization, currentPlan, allowedResponsesCount]);
 
-  return (
-    <main className="p-8 pt-0 ml-12 mr-auto rounded-md">
-      <div className="flex flex-col items-left">
-        <h2 className="mr-2 text-2xl font-semibold tracking-tight mt-8">
-          My Interviews
-        </h2>
-        <h3 className=" text-sm tracking-tight text-gray-600 font-medium ">
-          Start getting responses now!
-        </h3>
-        <div className="relative flex items-center mt-1 flex-wrap">
-          {currentPlan == "free_trial_over" ? (
-            <Card className=" flex bg-gray-200 items-center border-dashed border-gray-700 border-2 hover:scale-105 ease-in-out duration-300 h-60 w-56 ml-1 mr-3 mt-4 rounded-xl shrink-0 overflow-hidden shadow-md">
-              <CardContent className="flex items-center flex-col mx-auto">
-                <div className="flex flex-col justify-center items-center w-full overflow-hidden">
-                  <Plus size={90} strokeWidth={0.5} className="text-gray-700" />
-                </div>
-                <CardTitle className="p-0 text-md text-center">
-                  You cannot create any more interviews unless you upgrade
-                </CardTitle>
-              </CardContent>
-            </Card>
-          ) : (
-            <CreateInterviewCard />
-          )}
-          {interviewsLoading || loading ? (
-            <InterviewsLoader />
-          ) : (
-            <>
-              {isModalOpen && (
-                <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
-                  <div className="flex flex-col space-y-4">
-                    <div className="flex justify-center text-brand-bold">
-                      <Gem />
-                    </div>
-                    <h3 className="text-xl font-semibold text-center">
-                      Upgrade to Pro
-                    </h3>
-                    <p className="text-l text-center">
-                      You have reached your limit for the free trial. Please
-                      upgrade to pro to continue using our features.
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="flex justify-center items-center">
-                        <Image
-                          src={"/premium-plan-icon.png"}
-                          alt="Graphic"
-                          width={299}
-                          height={300}
-                        />
-                      </div>
+  const isOverQuota = currentPlan === "free_trial_over";
+  const isLoading = interviewsLoading || loading;
+  const hasNoInterviews = !isLoading && interviews.length === 0 && !isOverQuota;
 
-                      <div className="grid grid-rows-2 gap-2">
-                        <div className="p-4 border rounded-lg">
-                          <h4 className="text-lg font-medium">Free Plan</h4>
-                          <ul className="list-disc pl-5 mt-2">
-                            <li>10 Responses</li>
-                            <li>Basic Support</li>
-                            <li>Limited Features</li>
-                          </ul>
-                        </div>
-                        <div className="p-4 border rounded-lg">
-                          <h4 className="text-lg font-medium">Pro Plan</h4>
-                          <ul className="list-disc pl-5 mt-2">
-                            <li>Flexible Pay-Per-Response</li>
-                            <li>Priority Support</li>
-                            <li>All Features</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-l text-center">
-                      Contact{" "}
-                      <span className="font-semibold">founders@folo-up.co</span>{" "}
-                      to upgrade your plan.
-                    </p>
-                  </div>
-                </Modal>
-              )}
-              {interviews.map((item) => (
-                <InterviewCard
-                  id={item.id}
-                  interviewerId={item.interviewer_id}
-                  key={item.id}
-                  name={item.name}
-                  url={item.url ?? ""}
-                  readableSlug={item.readable_slug}
+  return (
+    <PageShell>
+      <PageHeader
+        eyebrow="Dashboard"
+        title="My interviews"
+        description="Create and share AI-powered interviews — track responses, scores, and insights in one place."
+      />
+
+      {isOverQuota ? (
+        <Banner
+          tone="warning"
+          title="Free trial limit reached"
+          description={`You have hit ${allowedResponsesCount} responses. Upgrade to keep collecting candidate data.`}
+          action={
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="rounded-md bg-brand-bold px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-bolder focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-brand-bold)]"
+            >
+              Upgrade
+            </button>
+          }
+        />
+      ) : null}
+
+      <Section
+        title="Interviews"
+        description={
+          interviews.length > 0
+            ? `${interviews.length} ${interviews.length === 1 ? "interview" : "interviews"}`
+            : undefined
+        }
+      >
+        {isLoading ? (
+          <InterviewsLoader />
+        ) : hasNoInterviews ? (
+          <EmptyState
+            icon={<Plus className="h-6 w-6" />}
+            title="No interviews yet"
+            description="Create your first interview to start collecting candidate responses."
+            action={<CreateInterviewCard />}
+          />
+        ) : (
+          <DataGrid cols="3">
+            {isOverQuota ? (
+              <div className="flex h-60 flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-gray-700 bg-gray-200 p-6 text-center shadow-md">
+                <Plus size={64} strokeWidth={0.5} className="text-gray-700" />
+                <p className="text-sm font-medium">
+                  Upgrade to create more interviews
+                </p>
+              </div>
+            ) : (
+              <CreateInterviewCard />
+            )}
+            {interviews.map((item) => (
+              <InterviewCard
+                id={item.id}
+                interviewerId={item.interviewer_id}
+                key={item.id}
+                name={item.name}
+                url={item.url ?? ""}
+                readableSlug={item.readable_slug}
+              />
+            ))}
+          </DataGrid>
+        )}
+      </Section>
+
+      {/* Upgrade modal — width-constrained inside the new Dialog wrapper */}
+      {isModalOpen && (
+        <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+          <div className="flex w-full max-w-xl flex-col space-y-4">
+            <div className="flex justify-center text-brand-bold">
+              <Gem />
+            </div>
+            <h3 className="text-center text-xl font-semibold">
+              Upgrade to Pro
+            </h3>
+            <p className="text-center text-sm text-muted-foreground">
+              You have reached your limit for the free trial. Please upgrade to
+              Pro to continue using our features.
+            </p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="flex items-center justify-center">
+                <Image
+                  src={"/premium-plan-icon.png"}
+                  alt="Premium plan"
+                  width={240}
+                  height={240}
                 />
-              ))}
-            </>
-          )}
-        </div>
-      </div>
-    </main>
+              </div>
+
+              <div className="grid grid-rows-2 gap-2">
+                <div className="rounded-lg border p-4">
+                  <h4 className="text-base font-medium">Free Plan</h4>
+                  <ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground">
+                    <li>10 Responses</li>
+                    <li>Basic Support</li>
+                    <li>Limited Features</li>
+                  </ul>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <h4 className="text-base font-medium">Pro Plan</h4>
+                  <ul className="mt-2 list-disc pl-5 text-sm text-muted-foreground">
+                    <li>Flexible Pay-Per-Response</li>
+                    <li>Priority Support</li>
+                    <li>All Features</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <p className="text-center text-sm">
+              Contact{" "}
+              <span className="font-semibold">founders@folo-up.co</span> to
+              upgrade your plan.
+            </p>
+          </div>
+        </Modal>
+      )}
+    </PageShell>
   );
 }
 
