@@ -1,8 +1,11 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 
 import type { Organization } from "@/types/organization";
 
-const supabase = createClientComponentClient();
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 const updateOrganization = async (payload: Partial<Organization>, id: string) => {
   const { data, error } = await supabase

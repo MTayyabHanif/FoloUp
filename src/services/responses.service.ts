@@ -1,8 +1,11 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 
 import type { Response } from "@/types/response";
 
-const supabase = createClientComponentClient();
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 /**
  * Change #3 wave 2: services re-throw on errors.

@@ -1,0 +1,8 @@
+{
+  "changeName": "fix-context-fetch-failures",
+  "currentPhase": "ship",
+  "agreedOptionalSteps": ["cgc", "plan_eng_review", "qa", "review", "ship", "archive"],
+  "skippedSteps": ["brainstorming", "plan_design_review"],
+  "completedGates": ["cgc", "propose", "plan_eng_review", "apply", "qa", "review"],
+  "lastUpdated": "2026-05-19T13:30:00Z"
+}

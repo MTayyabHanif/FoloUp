@@ -1,5 +1,4 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import type { Interviewer } from "@/types/interviewer";
 
@@ -7,7 +6,12 @@ const getAllInterviewers = async (
   _clientId: string = "",
   client?: SupabaseClient,
 ) => {
-  const supabase = client ?? createClientComponentClient();
+  const supabase =
+    client ??
+    createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
   const { data, error } = await supabase.from("interviewer").select(`*`);
 
   if (error) {
@@ -21,7 +25,12 @@ const createInterviewer = async (
   payload: Partial<Interviewer> & { name: string; agent_id: string },
   client?: SupabaseClient,
 ) => {
-  const supabase = client ?? createClientComponentClient();
+  const supabase =
+    client ??
+    createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
 
   // Idempotency check: a name + agent_id pair must be unique.
   const { data: existingInterviewer, error: checkError } = await supabase
@@ -58,7 +67,12 @@ const getInterviewer = async (
   interviewerId: bigint,
   client?: SupabaseClient,
 ) => {
-  const supabase = client ?? createClientComponentClient();
+  const supabase =
+    client ??
+    createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
   const { data, error } = await supabase
     .from("interviewer")
     .select("*")
