@@ -1,3 +1,9 @@
+export type ResponseStatus =
+  | "ongoing"
+  | "completed"
+  | "interrupted"
+  | "abandoned";
+
 export interface Response {
   id: bigint;
   created_at: Date;
@@ -13,6 +19,11 @@ export interface Response {
   analytics: any;
   candidate_status: string;
   tab_switch_count: number;
+  status: ResponseStatus;
+  disconnection_reason: string | null;
+  questions_covered: number | null;
+  last_active_at: string | null;
+  session_token: string | null;
 }
 
 export interface Analytics {

@@ -17,6 +17,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/create-interviewer(.*)",
   "/api/analyze-communication(.*)",
   "/api/response-webhook(.*)",
+  "/api/check-session(.*)",
+  "/api/response-heartbeat(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

@@ -17,9 +17,14 @@ export async function POST(req: Request) {
 
   let callSummaries = "";
   if (responses) {
-    responses.forEach((response) => {
-      callSummaries += response.details?.call_analysis?.call_summary;
-    });
+    // Only feed fully-analysed rows to the LLM. Ongoing rows have no
+    // transcript yet, and interrupted/abandoned rows without analysis
+    // would dilute the insights with noise.
+    responses
+      .filter((response) => response.is_analysed === true)
+      .forEach((response) => {
+        callSummaries += response.details?.call_analysis?.call_summary;
+      });
   }
 
   const openai = new OpenAI({

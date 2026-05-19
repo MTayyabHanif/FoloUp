@@ -195,6 +195,7 @@ export type Database = {
           candidate_status: string | null;
           created_at: string;
           details: Json | null;
+          disconnection_reason: string | null;
           duration: number | null;
           email: string | null;
           id: number;
@@ -202,7 +203,11 @@ export type Database = {
           is_analysed: boolean | null;
           is_ended: boolean | null;
           is_viewed: boolean | null;
+          last_active_at: string | null;
           name: string | null;
+          questions_covered: number | null;
+          session_token: string | null;
+          status: string;
           tab_switch_count: number | null;
         };
         Insert: {
@@ -211,6 +216,7 @@ export type Database = {
           candidate_status?: string | null;
           created_at?: string;
           details?: Json | null;
+          disconnection_reason?: string | null;
           duration?: number | null;
           email?: string | null;
           id?: number;
@@ -218,7 +224,11 @@ export type Database = {
           is_analysed?: boolean | null;
           is_ended?: boolean | null;
           is_viewed?: boolean | null;
+          last_active_at?: string | null;
           name?: string | null;
+          questions_covered?: number | null;
+          session_token?: string | null;
+          status?: string;
           tab_switch_count?: number | null;
         };
         Update: {
@@ -227,6 +237,7 @@ export type Database = {
           candidate_status?: string | null;
           created_at?: string;
           details?: Json | null;
+          disconnection_reason?: string | null;
           duration?: number | null;
           email?: string | null;
           id?: number;
@@ -234,7 +245,11 @@ export type Database = {
           is_analysed?: boolean | null;
           is_ended?: boolean | null;
           is_viewed?: boolean | null;
+          last_active_at?: string | null;
           name?: string | null;
+          questions_covered?: number | null;
+          session_token?: string | null;
+          status?: string;
           tab_switch_count?: number | null;
         };
         Relationships: [

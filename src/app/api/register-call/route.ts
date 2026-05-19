@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+
 import { logger } from "@/lib/logger";
 import { InterviewerService } from "@/services/interviewers.service";
 import { NextResponse } from "next/server";
@@ -20,11 +22,17 @@ export async function POST(req: Request) {
     retell_llm_dynamic_variables: body.dynamic_data,
   });
 
+  // Mint a per-attempt session token. The client appends ?session=<token>
+  // to the URL after Start; on reload within 60s the client uses
+  // /api/check-session to reconnect to the same response row.
+  const sessionToken = randomUUID();
+
   logger.info("Call registered successfully");
 
   return NextResponse.json(
     {
       registerCallResponse,
+      session_token: sessionToken,
     },
     { status: 200 },
   );

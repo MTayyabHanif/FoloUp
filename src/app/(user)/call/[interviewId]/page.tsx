@@ -14,8 +14,9 @@ interface Props {
     interviewId: string;
   }>;
   searchParams: Promise<{
-    call: string;
-    edit: boolean;
+    call?: string;
+    edit?: boolean;
+    session?: string;
   }>;
 }
 
@@ -97,8 +98,13 @@ function MobileFallback({ interviewName }: { interviewName?: string }) {
   );
 }
 
-function InterviewInterface({ params: paramsPromise }: Props) {
+function InterviewInterface({
+  params: paramsPromise,
+  searchParams: searchParamsPromise,
+}: Props) {
   const params = use(paramsPromise);
+  const searchParams = use(searchParamsPromise);
+  const sessionToken = searchParams.session;
   const [interview, setInterview] = useState<Interview>();
   const [isActive, setIsActive] = useState(true);
   const { getInterviewById } = useInterviews();
@@ -152,7 +158,7 @@ function InterviewInterface({ params: paramsPromise }: Props) {
   } else {
     desktopContent = (
       <div className="rounded-2xl border bg-card shadow-[var(--ds-shadow-overlay)]">
-        <Call interview={interview} />
+        <Call interview={interview} sessionToken={sessionToken} />
       </div>
     );
   }

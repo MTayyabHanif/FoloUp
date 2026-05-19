@@ -24,7 +24,7 @@ import { toast } from "sonner";
 // 8-swatch palette mirrors the donut chart palette in summaryInfo.tsx for
 // design-language consistency. Brand color always first.
 const BRAND_COLOR_PALETTE = [
-  "#4F46E5", // Robust Devs Hiring brand (--ds-brand-bold)
+  "#4F46E5", // Robust Devs brand (--ds-brand-bold)
   "#2684FF", // ADS blue
   "#FFAB00", // ADS yellow
   "#36B37E", // ADS green
@@ -94,6 +94,9 @@ function InterviewHome({
   const [themeColor, setThemeColor] = useState<string>("#4F46E5");
   const { organization } = useOrganization();
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  // Show in-progress (status='ongoing') responses by default — recruiters
+  // most urgently want to see live sessions happening. Toggle to hide.
+  const [showLiveSessions, setShowLiveSessions] = useState<boolean>(true);
 
   const seeInterviewPreviewPage = () => {
     const protocol = base_url?.includes("localhost") ? "http" : "https";
@@ -276,13 +279,17 @@ function InterviewHome({
     if (!responses) {
       return [];
     }
-    if (filterStatus == "ALL") {
-      return responses;
+    let next = responses;
+    if (filterStatus !== "ALL") {
+      next = next.filter(
+        (response) => response?.candidate_status == filterStatus,
+      );
+    }
+    if (!showLiveSessions) {
+      next = next.filter((response) => response?.status !== "ongoing");
     }
 
-    return responses?.filter(
-      (response) => response?.candidate_status == filterStatus,
-    );
+    return next;
   };
 
   if (loading) {
@@ -305,11 +312,11 @@ function InterviewHome({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Share interview"
               onClick={(e) => {
                 e.stopPropagation();
                 openSharePopup();
               }}
-              aria-label="Share interview"
             >
               <Share2 className="h-4 w-4" />
             </Button>
@@ -321,11 +328,11 @@ function InterviewHome({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Preview interview as a candidate"
               onClick={(e) => {
                 e.stopPropagation();
                 seeInterviewPreviewPage();
               }}
-              aria-label="Preview interview as a candidate"
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -337,11 +344,11 @@ function InterviewHome({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Change theme color"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowColorPicker(!showColorPicker);
               }}
-              aria-label="Change theme color"
             >
               <Palette className="h-4 w-4" />
             </Button>
@@ -353,10 +360,10 @@ function InterviewHome({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Edit interview"
               onClick={() =>
                 router.push(`/interviews/${params.interviewId}?edit=true`)
               }
-              aria-label="Edit interview"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -381,8 +388,8 @@ function InterviewHome({
               </span>
               <Switch
                 checked={isActive}
-                onCheckedChange={handleToggle}
                 aria-label="Toggle interview active"
+                onCheckedChange={handleToggle}
               />
             </>
           )}
@@ -420,12 +427,11 @@ function InterviewHome({
       <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
         <aside className="w-full shrink-0 lg:w-72 xl:w-80">
           <Section
-            compact
             title="Responses"
             actions={
               <Select
-                onValueChange={(v) => setFilterStatus(v)}
                 defaultValue="ALL"
+                onValueChange={(v) => setFilterStatus(v)}
               >
                 <SelectTrigger className="h-8 w-[140px]" aria-label="Filter responses">
                   <Filter className="mr-1 h-3.5 w-3.5 text-muted-foreground" />
@@ -448,7 +454,19 @@ function InterviewHome({
                 </SelectContent>
               </Select>
             }
+            compact
           >
+            <div className="mb-2 flex items-center justify-end gap-2 text-xs">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 accent-brand-bold"
+                  checked={showLiveSessions}
+                  onChange={(e) => setShowLiveSessions(e.target.checked)}
+                />
+                Show live sessions
+              </label>
+            </div>
             <div className="rounded-lg border bg-card">
               {filtered.length > 0 ? (
                 <ScrollArea className="h-[calc(100vh-260px)]">
@@ -464,19 +482,20 @@ function InterviewHome({
                             : response.candidate_status === "SELECTED"
                               ? "bg-green-500"
                               : "bg-gray-400";
-                      return (
+                      
+return (
                         <li key={response?.id}>
                           <button
                             type="button"
+                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-brand-subtlest focus-visible:outline-none focus-visible:bg-brand-subtlest ${
+                              isActiveRow ? "bg-brand-subtle" : ""
+                            }`}
                             onClick={() => {
                               router.push(
                                 `/interviews/${params.interviewId}?call=${response.call_id}`,
                               );
                               handleResponseClick(response);
                             }}
-                            className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-brand-subtlest focus-visible:outline-none focus-visible:bg-brand-subtlest ${
-                              isActiveRow ? "bg-brand-subtle" : ""
-                            }`}
                           >
                             <span
                               className={`h-8 w-1 shrink-0 rounded-full ${statusColor}`}
@@ -495,7 +514,29 @@ function InterviewHome({
                               </span>
                             </span>
                             <span className="flex shrink-0 items-center gap-1">
-                              {!response.is_viewed ? (
+                              {response.status === "ongoing" ? (
+                                <span
+                                  role="status"
+                                  aria-live="polite"
+                                  aria-label="Live interview in progress"
+                                  className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200"
+                                >
+                                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                                  Live
+                                </span>
+                              ) : null}
+                              {response.status === "interrupted" ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
+                                  Interrupted
+                                </span>
+                              ) : null}
+                              {response.status === "abandoned" ? (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">
+                                  Never started
+                                </span>
+                              ) : null}
+                              {!response.is_viewed &&
+                              response.status !== "ongoing" ? (
                                 <span
                                   className="inline-block h-2 w-2 rounded-full bg-brand-bold"
                                   aria-label="Unviewed"
@@ -574,20 +615,21 @@ function InterviewHome({
           >
             {BRAND_COLOR_PALETTE.map((hex) => {
               const selected = themeColor.toLowerCase() === hex.toLowerCase();
-              return (
+              
+return (
                 <button
                   key={hex}
                   type="button"
                   role="radio"
                   aria-checked={selected}
                   aria-label={`Theme color ${hex}`}
-                  onClick={() => handleColorChange(hex)}
                   className={`relative h-10 w-10 rounded-md transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-brand-bold)] focus-visible:ring-offset-2 ${
                     selected
                       ? "ring-2 ring-[var(--ds-brand-bold)] ring-offset-2"
                       : ""
                   }`}
                   style={{ backgroundColor: hex }}
+                  onClick={() => handleColorChange(hex)}
                 />
               );
             })}

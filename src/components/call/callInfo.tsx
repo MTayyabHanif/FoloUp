@@ -9,6 +9,8 @@ import { DownloadIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ResponseService } from "@/services/responses.service";
+import { InterviewService } from "@/services/interviews.service";
+import { humanizeDisconnectionReason } from "@/lib/disconnectionReasons";
 import { useRouter } from "next/navigation";
 import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -35,7 +37,8 @@ function ScoreGauge({
   const circumference = 2 * Math.PI * radius;
   const pct = Math.max(0, Math.min(1, value / maxValue));
   const dash = circumference * pct;
-  return (
+  
+return (
     <div
       className="relative inline-flex items-center justify-center drop-shadow-md"
       style={{ width: size, height: size }}
@@ -102,6 +105,71 @@ type CallProps = {
   onCandidateStatusChange: (callId: string, newStatus: string) => void;
 };
 
+/**
+ * Question-coverage + disconnection-reason row in the response detail header.
+ *
+ * Null-state    — "Coverage: analyzing..."
+ * Zero-state    — amber text-amber-600 (meaningful low-coverage signal)
+ * Full coverage — green text-green-600
+ * Partial       — default text color
+ *
+ * For interrupted/abandoned rows the row also shows the humanized
+ * disconnection reason, joined by a · separator.
+ */
+function SessionCoverageRow({
+  status,
+  questionsCovered,
+  questionCount,
+  disconnectionReason,
+}: {
+  status: string | null;
+  questionsCovered: number | null;
+  questionCount: number | null;
+  disconnectionReason: string | null;
+}) {
+  if (!status) {return null;}
+
+  const reasonLabel = humanizeDisconnectionReason(disconnectionReason);
+  const isInterruptedLike =
+    status === "interrupted" || status === "abandoned";
+
+  let coverageNode: React.ReactNode = null;
+  if (questionsCovered === null) {
+    coverageNode = (
+      <span className="text-sm text-muted-foreground">
+        Coverage: analyzing…
+      </span>
+    );
+  } else {
+    const cap = questionCount ?? questionsCovered;
+    const label = `${questionsCovered} of ${cap} questions covered`;
+    let color = "";
+    if (questionsCovered === 0) {color = "text-amber-600";}
+    else if (questionCount !== null && questionsCovered >= questionCount)
+      {color = "text-green-600";}
+    coverageNode = (
+      <span className={`text-sm font-semibold ${color}`}>{label}</span>
+    );
+  }
+
+  // For interrupted/abandoned, pair coverage with disconnection reason
+  // on the same line using a · separator.
+  return (
+    <div className="px-2 pb-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+      {coverageNode}
+      {isInterruptedLike && reasonLabel ? (
+        <>
+          <span className="text-sm text-muted-foreground" aria-hidden="true">
+            ·
+          </span>
+          <span className="text-sm text-gray-700">{reasonLabel}</span>
+        </>
+      ) : null}
+      {!isInterruptedLike && reasonLabel && status === "completed" ? null : null}
+    </div>
+  );
+}
+
 function CallInfo({
   call_id,
   onDeleteResponse,
@@ -118,6 +186,12 @@ function CallInfo({
   const [candidateStatus, setCandidateStatus] = useState<string>("");
   const [interviewId, setInterviewId] = useState<string>("");
   const [tabSwitchCount, setTabSwitchCount] = useState<number>();
+  const [responseStatus, setResponseStatus] = useState<string | null>(null);
+  const [disconnectionReason, setDisconnectionReason] = useState<string | null>(
+    null,
+  );
+  const [questionsCovered, setQuestionsCovered] = useState<number | null>(null);
+  const [questionCount, setQuestionCount] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchResponses = async () => {
@@ -151,6 +225,28 @@ function CallInfo({
         setCandidateStatus(response.candidate_status);
         setInterviewId(response.interview_id);
         setTabSwitchCount(response.tab_switch_count);
+        setResponseStatus(response.status ?? null);
+        setDisconnectionReason(response.disconnection_reason ?? null);
+        setQuestionsCovered(
+          typeof response.questions_covered === "number"
+            ? response.questions_covered
+            : null,
+        );
+
+        if (response.interview_id) {
+          try {
+            const interview = await InterviewService.getInterviewById(
+              response.interview_id,
+            );
+            setQuestionCount(
+              typeof interview?.question_count === "number"
+                ? interview.question_count
+                : null,
+            );
+          } catch {
+            setQuestionCount(null);
+          }
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -243,6 +339,12 @@ function CallInfo({
                     </p>
                   )}
                 </div>
+                <SessionCoverageRow
+                  status={responseStatus}
+                  questionsCovered={questionsCovered}
+                  questionCount={questionCount}
+                  disconnectionReason={disconnectionReason}
+                />
               </div>
               <div className="flex flex-col justify-between gap-3 w-full">
                 <div className="flex flex-row justify-between">
