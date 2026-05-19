@@ -1,15 +1,13 @@
 "use client";
 
-import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
 const TooltipProvider = TooltipPrimitive.Provider;
 
-type TooltipProps = React.ComponentPropsWithoutRef<
-  typeof TooltipPrimitive.Root
->;
+type TooltipProps = React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Root>;
 
 function Tooltip(props: TooltipProps) {
   return <TooltipPrimitive.Root delayDuration={300} {...props} />;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -7,22 +7,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ColumnDef,
+  type ColumnDef,
+  type SortingState,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
-  SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
 import { ArrowUpDown, ExternalLink } from "lucide-react";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+import React, { useState, useCallback, useRef } from "react";
 
 export type TableData = {
   call_id: string;
@@ -38,9 +33,7 @@ interface DataTableProps {
 }
 
 function DataTable({ data, interviewId }: DataTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "overallScore", desc: true },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: "overallScore", desc: true }]);
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -105,10 +98,7 @@ function DataTable({ data, interviewId }: DataTableProps) {
                   />
                 </span>
               </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                className="bg-gray-500 text-white font-normal"
-              >
+              <TooltipContent side="top" className="bg-gray-500 text-white font-normal">
                 View Response
               </TooltipContent>
             </Tooltip>
@@ -226,10 +216,7 @@ function DataTable({ data, interviewId }: DataTableProps) {
                 <TableHead key={header.id} className="text-center">
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
@@ -243,10 +230,7 @@ function DataTable({ data, interviewId }: DataTableProps) {
               onMouseLeave={handleMouseLeave}
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell
-                  key={cell.id}
-                  className="text-justify align-top py-2"
-                >
+                <TableCell key={cell.id} className="text-justify align-top py-2">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

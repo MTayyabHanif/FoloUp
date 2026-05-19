@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useContext, ReactNode, useEffect } from "react";
-import { Interviewer } from "@/types/interviewer";
 import { InterviewerService } from "@/services/interviewers.service";
+import type { Interviewer } from "@/types/interviewer";
 import { useClerk } from "@clerk/nextjs";
+import React, { useState, useContext, type ReactNode, useEffect } from "react";
 
 interface InterviewerContextProps {
   interviewers: Interviewer[];
@@ -35,9 +35,7 @@ export function InterviewerProvider({ children }: InterviewerProviderProps) {
   const fetchInterviewers = async () => {
     try {
       setInterviewersLoading(true);
-      const response = await InterviewerService.getAllInterviewers(
-        user?.id as string,
-      );
+      const response = await InterviewerService.getAllInterviewers(user?.id as string);
       setInterviewers(response);
     } catch (error) {
       console.error(error);
@@ -54,6 +52,7 @@ export function InterviewerProvider({ children }: InterviewerProviderProps) {
     await fetchInterviewers();
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     if (user?.id) {
       fetchInterviewers();

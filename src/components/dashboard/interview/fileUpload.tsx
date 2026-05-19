@@ -1,10 +1,10 @@
 "use client";
 
-import { toast } from "sonner";
+import { parsePdf } from "@/actions/parse-pdf";
 import { Inbox } from "lucide-react";
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { parsePdf } from "@/actions/parse-pdf";
+import { toast } from "sonner";
 
 type Props = {
   isUploaded: boolean;
@@ -74,25 +74,22 @@ function FileUpload({
         >
           <input {...getInputProps()} />
           <>
-            <>
-              <Inbox className="w-8 h-8 text-blue-500" />
-              <p className="mt-2 text-sm text-slate-400">Drop PDF Here</p>
-            </>
+            <Inbox className="w-8 h-8 text-blue-500" />
+            <p className="mt-2 text-sm text-slate-400">Drop PDF Here</p>
           </>
         </div>
       ) : (
         <div className="text-left">
-          <p className="mt-2 text-sm text-slate-600">
-            File uploaded successfully. {fileName}
-          </p>
+          <p className="mt-2 text-sm text-slate-600">File uploaded successfully. {fileName}</p>
           <p className="mt-2 text-xs text-slate-600">
             Do you want to{" "}
-            <span
+            <button
+              type="button"
               className="underline text-slate-950 cursor-pointer font-semibold"
               onClick={() => setIsUploaded(false)}
             >
               Reupload?
-            </span>
+            </button>
           </p>
         </div>
       )}

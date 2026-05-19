@@ -3,15 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "check:ci": "biome check ."
   },
   "dependencies": {
     "@atlaskit/tokens": "^13.0.4",
     "@clerk/clerk-js": "^5",
-    "@clerk/nextjs": "^6",
+    "@clerk/nextjs": "^6.36.10",
     "@hookform/resolvers": "^3.3.2",
     "@prisma/client": "^5.6.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -76,14 +80,12 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/regenerator-runtime": "^0.13.5",
     "autoprefixer": "^10.0.1",
-    "eslint": "^8",
-    "eslint-config-next": "14.0.3",
-    "eslint-config-prettier": "^10.0.1",
     "postcss": "^8",
     "prisma": "^5.15.0",
     "tailwindcss": "^3.3.0",

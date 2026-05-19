@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useContext, ReactNode, useEffect } from "react";
-import { Interview } from "@/types/interview";
 import { InterviewService } from "@/services/interviews.service";
+import type { Interview } from "@/types/interview";
 import { useClerk, useOrganization } from "@clerk/nextjs";
+import React, { useState, useContext, type ReactNode, useEffect } from "react";
 
 interface InterviewContextProps {
   interviews: Interview[];
@@ -54,6 +54,7 @@ export function InterviewProvider({ children }: InterviewProviderProps) {
     return response;
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     if (organization?.id || user?.id) {
       fetchInterviews();

@@ -1,10 +1,10 @@
-import { OpenAI } from "openai";
-import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import {
   SYSTEM_PROMPT,
   getCommunicationAnalysisPrompt,
 } from "@/lib/prompts/communication-analysis";
+import { NextResponse } from "next/server";
+import { OpenAI } from "openai";
 
 export async function POST(req: Request) {
   logger.info("analyze-communication request received");
@@ -14,10 +14,7 @@ export async function POST(req: Request) {
     const { transcript } = body;
 
     if (!transcript) {
-      return NextResponse.json(
-        { error: "Transcript is required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Transcript is required" }, { status: 400 });
     }
 
     const openai = new OpenAI({
@@ -44,16 +41,10 @@ export async function POST(req: Request) {
 
     logger.info("Communication analysis completed successfully");
 
-    return NextResponse.json(
-      { analysis: JSON.parse(analysis || "{}") },
-      { status: 200 },
-    );
+    return NextResponse.json({ analysis: JSON.parse(analysis || "{}") }, { status: 200 });
   } catch (error) {
     logger.error("Error analyzing communication skills");
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

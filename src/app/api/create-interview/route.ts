@@ -1,7 +1,7 @@
+import { logger } from "@/lib/logger";
+import { InterviewService } from "@/services/interviews.service";
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
-import { InterviewService } from "@/services/interviews.service";
-import { logger } from "@/lib/logger";
 
 const base_url = process.env.NEXT_PUBLIC_LIVE_URL;
 
@@ -18,9 +18,7 @@ export async function POST(req: Request) {
     let readableSlug = null;
     if (body.organizationName) {
       const interviewNameSlug = payload.name?.toLowerCase().replace(/\s/g, "-");
-      const orgNameSlug = body.organizationName
-        ?.toLowerCase()
-        .replace(/\s/g, "-");
+      const orgNameSlug = body.organizationName?.toLowerCase().replace(/\s/g, "-");
       readableSlug = `${orgNameSlug}-${interviewNameSlug}`;
     }
 
@@ -33,16 +31,10 @@ export async function POST(req: Request) {
 
     logger.info("Interview created successfully");
 
-    return NextResponse.json(
-      { response: "Interview created successfully" },
-      { status: 200 },
-    );
+    return NextResponse.json({ response: "Interview created successfully" }, { status: 200 });
   } catch (err) {
     logger.error("Error creating interview");
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

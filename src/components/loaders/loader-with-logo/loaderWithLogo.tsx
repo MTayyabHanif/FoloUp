@@ -1,5 +1,5 @@
-import styles from "./loader.module.css";
 import Image from "next/image";
+import styles from "./loader.module.css";
 
 function LoaderWithLogo() {
   return (
