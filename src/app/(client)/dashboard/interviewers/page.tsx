@@ -1,25 +1,31 @@
 "use client";
 
-import React from "react";
-import { Users } from "lucide-react";
+import React, { useState } from "react";
 
 import { useInterviewers } from "@/contexts/interviewers.context";
 import InterviewerCard from "@/components/dashboard/interviewer/InterviewerCard";
-import CreateInterviewerButton from "@/components/dashboard/interviewer/createInterviewerButton";
+import NewInterviewerCard from "@/components/dashboard/interviewer/NewInterviewerCard";
+import CreateInterviewerModal from "@/components/dashboard/interviewer/CreateInterviewerModal";
 import {
   PageShell,
   PageHeader,
   Section,
   DataGrid,
 } from "@/components/ui/page-shell";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const LOADER_CARD_KEYS = [
+  "interviewer-loader-1",
+  "interviewer-loader-2",
+  "interviewer-loader-3",
+  "interviewer-loader-4",
+];
 
 function InterviewersLoader() {
   return (
     <DataGrid cols="4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Skeleton key={i} className="h-40 w-full rounded-xl" />
+      {LOADER_CARD_KEYS.map((key) => (
+        <Skeleton key={key} className="h-48 w-full rounded-xl" />
       ))}
     </DataGrid>
   );
@@ -27,6 +33,7 @@ function InterviewersLoader() {
 
 function Interviewers() {
   const { interviewers, interviewersLoading } = useInterviewers();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <PageShell>
@@ -46,24 +53,23 @@ function Interviewers() {
       >
         {interviewersLoading ? (
           <InterviewersLoader />
-        ) : interviewers.length === 0 ? (
-          <EmptyState
-            icon={<Users className="h-6 w-6" />}
-            title="No interviewers yet"
-            description="Bootstrap the default Lisa and Bob interviewers to start using Robust Devs Hiring."
-            action={<CreateInterviewerButton />}
-          />
         ) : (
           <DataGrid cols="4">
             {interviewers.map((interviewer) => (
               <InterviewerCard
-                key={interviewer.id}
+                key={String(interviewer.id)}
                 interviewer={interviewer}
               />
             ))}
+            <NewInterviewerCard onClick={() => setCreateOpen(true)} />
           </DataGrid>
         )}
       </Section>
+
+      <CreateInterviewerModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+      />
     </PageShell>
   );
 }

@@ -1,6 +1,5 @@
 export interface Interviewer {
   id: bigint;
-  user_id: string;
   created_at: Date;
   name: string;
   rapport: number;
@@ -11,4 +10,7 @@ export interface Interviewer {
   description: string;
   audio: string;
   agent_id: string;
+  prompt: string;
+  voice_id: string | null;
+  deleted_at: string | null;
 }

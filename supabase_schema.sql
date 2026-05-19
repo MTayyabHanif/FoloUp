@@ -29,7 +29,10 @@ CREATE TABLE interviewer (
     empathy INTEGER NOT NULL,
     exploration INTEGER NOT NULL,
     rapport INTEGER NOT NULL,
-    speed INTEGER NOT NULL
+    speed INTEGER NOT NULL,
+    prompt TEXT NOT NULL,
+    voice_id TEXT,
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE interview (
@@ -120,6 +123,60 @@ CREATE UNIQUE INDEX IF NOT EXISTS response_session_token_idx
 -- 4) Note: status DEFAULT 'ongoing' means new rows from the app will
 --    pick up the correct value automatically. is_ended is kept for
 --    backwards compatibility but is no longer authoritative.
+-- =====================================================================
+
+-- =====================================================================
+-- MIGRATION: add-interviewer-crud-mvp (apply manually via Supabase SQL
+-- editor for existing environments — no migrations folder exists).
+-- =====================================================================
+--
+-- 1) Add the three new columns to the interviewer table (idempotent —
+--    safe to re-run; the temporary default on `prompt` is dropped after
+--    the backfill via a conditional DO block):
+--
+--   ALTER TABLE interviewer ADD COLUMN IF NOT EXISTS prompt TEXT NOT NULL DEFAULT '';
+--   ALTER TABLE interviewer ADD COLUMN IF NOT EXISTS voice_id TEXT;
+--   ALTER TABLE interviewer ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
+--
+-- 2) Backfill `prompt` for the three existing seed interviewers. The
+--    prompts are dollar-quoted ($PROMPT$ ... $PROMPT$) so embedded
+--    apostrophes do NOT need escaping. Read the verbatim values from
+--    src/lib/constants.ts (RETELL_AGENT_GENERAL_PROMPT for Lisa+Bob;
+--    RETELL_AGENT_ROBUST_BOT_PROMPT for Robust Bot). Example shape:
+--
+--   UPDATE interviewer SET prompt = $PROMPT$<verbatim GENERAL prompt>$PROMPT$
+--     WHERE name IN ('Explorer Lisa', 'Empathetic Bob') AND prompt = '';
+--   UPDATE interviewer SET prompt = $PROMPT$<verbatim ROBUST BOT prompt>$PROMPT$
+--     WHERE name = 'Robust Bot' AND prompt = '';
+--
+-- 3) Backfill `voice_id` from what each interviewer is already using in
+--    Retell (visible in the agent record but never stored locally):
+--
+--   UPDATE interviewer SET voice_id = '11labs-Chloe'
+--     WHERE name = 'Explorer Lisa' AND voice_id IS NULL;
+--   UPDATE interviewer SET voice_id = '11labs-Brian'
+--     WHERE name IN ('Empathetic Bob', 'Robust Bot') AND voice_id IS NULL;
+--
+-- 4) Drop the temporary default on `prompt` only if it is still present.
+--    Wrapped in a DO block so the step is idempotent (DROP DEFAULT has
+--    no IF EXISTS form in Postgres):
+--
+--   DO $$
+--   BEGIN
+--     IF EXISTS (
+--       SELECT 1 FROM information_schema.columns
+--       WHERE table_name = 'interviewer'
+--         AND column_name = 'prompt'
+--         AND column_default IS NOT NULL
+--     ) THEN
+--       EXECUTE 'ALTER TABLE interviewer ALTER COLUMN prompt DROP DEFAULT';
+--     END IF;
+--   END $$;
+--
+-- 5) A runnable, ready-to-paste version with the verbatim prompt text
+--    inlined is bundled with the openspec change at
+--    openspec/changes/add-interviewer-crud-mvp/migration.sql (until the
+--    change is archived; the archive copy survives indefinitely).
 -- =====================================================================
 
 CREATE TABLE feedback (

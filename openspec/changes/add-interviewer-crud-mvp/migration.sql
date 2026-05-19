@@ -1,5 +1,20 @@
-/** @deprecated Seed source only — do not use in new code. Prompt text is now stored per-interviewer in the DB (`interviewer.prompt`). Kept here so the legacy GET /api/create-interviewer seed route still works and so the migration backfill can reference the original text. */
-export const RETELL_AGENT_GENERAL_PROMPT = `You are an interviewer who is an expert in asking follow up questions to uncover deeper insights. You have to keep the interview for {{mins}} or short.
+-- ===========================================================================
+-- add-interviewer-crud-mvp — runnable migration (paste into Supabase SQL editor)
+-- ===========================================================================
+-- Idempotent. Safe to re-run.
+-- Adds three columns to `interviewer` and backfills prompt + voice_id for the
+-- three seed interviewers (Explorer Lisa, Empathetic Bob, Robust Bot).
+-- The prompt text uses Postgres dollar-quoting ($PROMPT$ ... $PROMPT$) so
+-- apostrophes in the prompt body are NOT escaped — the literals are verbatim.
+-- ===========================================================================
+
+-- 1) Add new columns (idempotent)
+ALTER TABLE interviewer ADD COLUMN IF NOT EXISTS prompt TEXT NOT NULL DEFAULT '';
+ALTER TABLE interviewer ADD COLUMN IF NOT EXISTS voice_id TEXT;
+ALTER TABLE interviewer ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
+
+-- 2) Backfill `prompt` for Lisa + Bob (they share the original general prompt).
+UPDATE interviewer SET prompt = $PROMPT$You are an interviewer who is an expert in asking follow up questions to uncover deeper insights. You have to keep the interview for {{mins}} or short.
 
 The name of the person you are interviewing is {{name}}.
 
@@ -16,10 +31,11 @@ Follow the guidlines below when conversing.
 - The question word count should be 30 words or less
 - Make sure you do not repeat any of the questions.
 - Do not talk about anything not related to the objective and the given questions.
-- If the name is given, use it in the conversation.`;
+- If the name is given, use it in the conversation.$PROMPT$
+WHERE name IN ('Explorer Lisa', 'Empathetic Bob') AND prompt = '';
 
-/** @deprecated Seed source only — do not use in new code. Prompt text is now stored per-interviewer in the DB (`interviewer.prompt`). Kept here so the legacy GET /api/create-interviewer seed route still works and so the migration backfill can reference the original text. */
-export const RETELL_AGENT_ROBUST_BOT_PROMPT = `# Role
+-- 3) Backfill `prompt` for Robust Bot (the probing first-round screener prompt).
+UPDATE interviewer SET prompt = $PROMPT$# Role
 
 You are conducting a first-round screening interview for a role at Robust Devs, a custom web development agency. The specific role, the interview objective, and the questions are provided to you separately for each interview — read them and stay grounded in that role. You are an experienced interviewer who has screened many candidates and watched plenty of them overpromise. Your job is to find out whether this candidate can actually do the work. It is not to make them feel good.
 
@@ -63,66 +79,32 @@ Brief, no false warmth, no verdict: "That's everything from my side. We'll revie
 - Duration: keep the interview to roughly {{mins}} minutes
 - Role and objective: {{objective}}
 - The screening questions for this role (use these as your anchor — do not deviate from the objective):
-{{questions}}`;
+{{questions}}$PROMPT$
+WHERE name = 'Robust Bot' AND prompt = '';
 
-export const INTERVIEWERS = {
-  LISA: {
-    name: "Explorer Lisa",
-    rapport: 7,
-    exploration: 10,
-    empathy: 7,
-    speed: 5,
-    image: "/interviewers/Lisa.png",
-    description:
-      "Hi! I'm Lisa, an enthusiastic and empathetic interviewer who loves to explore. With a perfect balance of empathy and rapport, I delve deep into conversations while maintaining a steady pace. Let's embark on this journey together and uncover meaningful insights!",
-    audio: "Lisa.wav",
-  },
-  BOB: {
-    name: "Empathetic Bob",
-    rapport: 7,
-    exploration: 7,
-    empathy: 10,
-    speed: 5,
-    image: "/interviewers/Bob.png",
-    description:
-      "Hi! I'm Bob, your go-to empathetic interviewer. I excel at understanding and connecting with people on a deeper level, ensuring every conversation is insightful and meaningful. With a focus on empathy, I'm here to listen and learn from you. Let's create a genuine connection!",
-    audio: "Bob.wav",
-  },
-  ROBUST_BOT: {
-    name: "Robust Bot",
-    rapport: 4,
-    exploration: 10,
-    empathy: 3,
-    speed: 7,
-    image: "/interviewers/Bob.png",
-    description:
-      "Hi! I'm Robust Bot, your first-round screening interviewer. I'll walk through the role's screening questions and probe your answers to understand your experience. Let's get started.",
-    audio: "Bob.wav",
-  },
-};
+-- 4) Backfill `voice_id` for the three seed interviewers.
+UPDATE interviewer SET voice_id = '11labs-Chloe'
+  WHERE name = 'Explorer Lisa' AND voice_id IS NULL;
+UPDATE interviewer SET voice_id = '11labs-Brian'
+  WHERE name IN ('Empathetic Bob', 'Robust Bot') AND voice_id IS NULL;
 
-/**
- * Curated voice catalog for the New Interviewer create form. Each entry maps
- * a Retell-supported voice id to a human-readable label. Operator-controlled —
- * to expand the list, add entries here. v1 ships with the two voices already
- * in active use by the seed interviewers (Chloe = Lisa; Brian = Bob + Robust Bot).
- */
-export const VOICE_OPTIONS = [
-  { id: "11labs-Chloe", label: "Chloe (warm, articulate female)" },
-  { id: "11labs-Brian", label: "Brian (clear, neutral male)" },
-] as const;
+-- 5) Drop the temporary default on `prompt` (idempotent via DO block —
+--    Postgres does not support IF EXISTS on ALTER COLUMN DROP DEFAULT).
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'interviewer'
+      AND column_name = 'prompt'
+      AND column_default IS NOT NULL
+  ) THEN
+    EXECUTE 'ALTER TABLE interviewer ALTER COLUMN prompt DROP DEFAULT';
+  END IF;
+END $$;
 
-/**
- * Locked footer appended to every custom interviewer's prompt at submit time.
- * Contains the four Retell dynamic-variable placeholders ({{name}}, {{mins}},
- * {{objective}}, {{questions}}) so call-time substitution works regardless of
- * what the operator writes in the body. Server-side validation rejects any
- * submitted prompt where this footer is absent (after whitespace normalization).
- */
-export const PROMPT_FOOTER_TEMPLATE = `# Context for this interview
-
-- Candidate name: {{name}}
-- Duration: keep the interview to roughly {{mins}} minutes
-- Role and objective: {{objective}}
-- The screening questions for this role (use these as your anchor — do not deviate from the objective):
-{{questions}}`;
+-- ===========================================================================
+-- Done. Verify:
+--   SELECT id, name, voice_id, deleted_at, length(prompt) AS prompt_len
+--   FROM interviewer ORDER BY id;
+-- Expected: all 3 rows have non-empty prompt, voice_id set, deleted_at NULL.
+-- ===========================================================================

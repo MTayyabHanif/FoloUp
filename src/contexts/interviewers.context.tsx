@@ -8,8 +8,8 @@ import { useClerk } from "@clerk/nextjs";
 interface InterviewerContextProps {
   interviewers: Interviewer[];
   setInterviewers: React.Dispatch<React.SetStateAction<Interviewer[]>>;
-  createInterviewer: (payload: any) => void;
   fetchInterviewers: () => Promise<void>;
+  deleteInterviewer: (id: number) => Promise<void>;
   interviewersLoading: boolean;
   setInterviewersLoading: (interviewersLoading: boolean) => void;
 }
@@ -17,8 +17,8 @@ interface InterviewerContextProps {
 export const InterviewerContext = React.createContext<InterviewerContextProps>({
   interviewers: [],
   setInterviewers: () => {},
-  createInterviewer: () => {},
   fetchInterviewers: async () => {},
+  deleteInterviewer: async () => {},
   interviewersLoading: false,
   setInterviewersLoading: () => undefined,
 });
@@ -45,9 +45,13 @@ export function InterviewerProvider({ children }: InterviewerProviderProps) {
     setInterviewersLoading(false);
   };
 
-  const createInterviewer = async (payload: any) => {
-    await InterviewerService.createInterviewer({ ...payload });
-    fetchInterviewers();
+  const deleteInterviewer = async (id: number) => {
+    const res = await fetch(`/api/interviewers/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? `Delete failed (HTTP ${res.status})`);
+    }
+    await fetchInterviewers();
   };
 
   useEffect(() => {
@@ -62,8 +66,8 @@ export function InterviewerProvider({ children }: InterviewerProviderProps) {
       value={{
         interviewers,
         setInterviewers,
-        createInterviewer,
         fetchInterviewers,
+        deleteInterviewer,
         interviewersLoading,
         setInterviewersLoading,
       }}

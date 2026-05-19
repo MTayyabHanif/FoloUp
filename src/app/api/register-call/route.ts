@@ -17,8 +17,22 @@ export async function POST(req: Request) {
   const interviewerId = body.interviewer_id;
   const interviewer = await InterviewerService.getInterviewer(interviewerId);
 
+  // getInterviewer now returns null for unknown ids (PGRST116 swallowed
+  // in the service). Guard BEFORE the Retell call so we never pass an
+  // undefined agent_id and never invoke the Retell API on a 404 path.
+  // Note: getInterviewer intentionally does NOT filter on deleted_at,
+  // so soft-deleted interviewers can still serve in-flight interviews.
+  if (!interviewer) {
+    logger.info(`register-call: interviewer ${interviewerId} not found`);
+
+    return NextResponse.json(
+      { error: "Interviewer not found" },
+      { status: 404 },
+    );
+  }
+
   const registerCallResponse = await retellClient.call.createWebCall({
-    agent_id: interviewer?.agent_id,
+    agent_id: interviewer.agent_id,
     retell_llm_dynamic_variables: body.dynamic_data,
   });
 

@@ -13,11 +13,22 @@ const retellClient = new Retell({
   apiKey: process.env.RETELL_API_KEY || "",
 });
 
-// NOTE: This route is not idempotent — calling it multiple times will create
-// duplicate Retell agents and interviewer rows for Lisa, Bob, and Robust Bot.
-// Pre-existing issue; tracked for a future `fix-create-interviewer-idempotency`
-// change.
+/**
+ * @deprecated This seed-only route is replaced by POST /api/interviewers.
+ * Do not use in new code. The route remains so existing dev environments
+ * can still bootstrap the three seed interviewers (Lisa, Bob, Robust Bot)
+ * via a single GET. Runtime CRUD now goes through POST /api/interviewers
+ * (create) and DELETE /api/interviewers/[id] (soft-delete).
+ *
+ * Known issues (intentionally not fixed in this seed-only path):
+ * - Not idempotent at the Retell level — re-running creates duplicate LLMs
+ *   and agents. The DB layer is soft-protected by InterviewerService's
+ *   name+agent_id existence check.
+ */
 export async function GET(res: NextRequest) {
+  console.warn(
+    "[DEPRECATED] GET /api/create-interviewer — use POST /api/interviewers instead",
+  );
   logger.info("create-interviewer request received");
 
   const supabase = createClient(
