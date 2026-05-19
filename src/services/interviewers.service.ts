@@ -10,7 +10,7 @@ const getAllInterviewers = async (
     client ??
     createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     );
   const { data, error } = await supabase.from("interviewer").select(`*`);
 
@@ -29,7 +29,7 @@ const createInterviewer = async (
     client ??
     createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     );
 
   // Idempotency check: a name + agent_id pair must be unique.
@@ -71,7 +71,7 @@ const getInterviewer = async (
     client ??
     createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     );
   const { data, error } = await supabase
     .from("interviewer")
