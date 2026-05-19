@@ -1,8 +1,8 @@
 {
   "changeName": "fix-create-interviewer-error",
-  "currentPhase": "ship",
+  "currentPhase": "archived",
   "agreedOptionalSteps": ["brainstorming", "cgc", "plan_eng_review", "qa", "review", "ship", "archive"],
   "skippedSteps": ["plan_design_review"],
-  "completedGates": ["brainstorming", "cgc", "propose", "plan_eng_review", "apply", "qa", "review"],
-  "lastUpdated": "2026-05-19T13:00:00Z"
+  "completedGates": ["brainstorming", "cgc", "propose", "plan_eng_review", "apply", "qa", "review", "ship", "archive"],
+  "lastUpdated": "2026-05-19T13:05:00Z"
 }
