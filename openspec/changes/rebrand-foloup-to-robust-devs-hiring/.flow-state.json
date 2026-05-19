@@ -1,8 +1,0 @@
-{
-  "changeName": "rebrand-foloup-to-robust-devs-hiring",
-  "currentPhase": "ship",
-  "agreedOptionalSteps": ["cgc"],
-  "skippedSteps": ["brainstorming", "plan_design_review"],
-  "completedGates": ["cgc", "propose", "plan_eng_review", "apply", "qa", "review"],
-  "lastUpdated": "2026-05-19T10:42:00Z"
-}
