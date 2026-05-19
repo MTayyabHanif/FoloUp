@@ -1,101 +1,87 @@
 import Image from "next/image";
+import ReactAudioPlayer from "react-audio-player";
+
 import { CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import ReactAudioPlayer from "react-audio-player";
 import { Interviewer } from "@/types/interviewer";
 
 interface Props {
   interviewer: Interviewer | undefined;
 }
 
+/**
+ * Per-trait control row. Slider + numeric value to the right.
+ */
+function TraitControl({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | undefined;
+}) {
+  const normalized = (value ?? 10) / 10;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-24 shrink-0 text-sm font-medium text-foreground">
+        {label}
+      </span>
+      <div className="flex-1">
+        <Slider value={[normalized]} max={1} step={0.1} />
+      </div>
+      <span className="w-10 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
+        {normalized.toFixed(1)}
+      </span>
+    </div>
+  );
+}
+
 function InterviewerDetailsModal({ interviewer }: Props) {
   return (
-    <div className="text-center w-[40rem]">
-      <CardTitle className="text-3xl text mt-0 p-0 font-semibold ">
-        {interviewer?.name}
-      </CardTitle>
-      <div className="mt-1 p-2 flex flex-col justify-center items-center">
-        <div className="flex flex-row justify-center space-x-10 items-center">
-          <div className=" flex items-center justify-center border-4 overflow-hidden border-gray-500 rounded-xl h-48 w-44">
-            <Image
-              src={interviewer?.image || ""}
-              alt="Picture of the interviewer"
-              width={180}
-              height={30}
-              className="w-full h-full object-cover object-center"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <p className="text-sm leading-relaxed  mt-0 whitespace-normal w-[25rem] text-justify">
-              {interviewer?.description}
-            </p>
-            {interviewer?.audio && (
-              <ReactAudioPlayer src={`/audio/${interviewer.audio}`} controls />
-            )}
-          </div>
+    <div className="flex w-full flex-col gap-6">
+      {/* Header */}
+      <header className="text-center">
+        <CardTitle className="text-2xl font-semibold">
+          {interviewer?.name}
+        </CardTitle>
+      </header>
+
+      {/* Portrait + description side-by-side at md+, stacked on mobile */}
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
+        <div className="h-40 w-36 shrink-0 overflow-hidden rounded-xl border-2 border-border bg-secondary">
+          <Image
+            src={interviewer?.image || ""}
+            alt={`${interviewer?.name ?? "Interviewer"} portrait`}
+            width={180}
+            height={200}
+            className="h-full w-full object-cover object-center"
+          />
         </div>
-        <h3 className="text-mg m-0 p-0 mt-5 ml-0 font-medium">
-          Interviewer Settings:
-        </h3>
-        <div className="flex flex-row space-x-14 justify-center items-start">
-          <div className=" mt-2 flex flex-col justify-start items-start">
-            <div className="flex flex-row justify-between items-center mb-2">
-              <h4 className="w-20 text-left">Empathy</h4>
-              <div className="w-40 space-x-3 ml-3 flex justify-between items-center">
-                <Slider
-                  value={[(interviewer?.empathy || 10) / 10]}
-                  max={1}
-                  step={0.1}
-                />
-                <span className="w-8 text-left">
-                  {(interviewer?.empathy || 10) / 10}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-row justify-between items-center ">
-              <h4 className="w-20 text-left">Rapport</h4>
-              <div className="w-40 space-x-3 ml-3 flex justify-between items-center">
-                <Slider
-                  value={[(interviewer?.rapport || 10) / 10]}
-                  max={1}
-                  step={0.1}
-                />
-                <span className="w-8 text-left">
-                  {(interviewer?.rapport || 10) / 10}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className=" mt-2 flex flex-col justify-start items-start">
-            <div className="flex flex-row justify-between items-center mb-2">
-              <h4 className="w-20 text-left">Exploration</h4>
-              <div className="w-40 space-x-3 ml-3 flex justify-between items-center">
-                <Slider
-                  value={[(interviewer?.exploration || 10) / 10]}
-                  max={1}
-                  step={0.1}
-                />
-                <span className="w-8 text-left">
-                  {(interviewer?.exploration || 10) / 10}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-row justify-between items-center ">
-              <h4 className="w-20 text-left">Speed</h4>
-              <div className="w-40 space-x-3 ml-3 flex justify-between items-center">
-                <Slider
-                  value={[(interviewer?.speed || 10) / 10]}
-                  max={1}
-                  step={0.1}
-                />
-                <span className="w-8 text-left">
-                  {(interviewer?.speed || 10) / 10}
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {interviewer?.description}
+          </p>
+          {interviewer?.audio && (
+            <ReactAudioPlayer
+              src={`/audio/${interviewer.audio}`}
+              controls
+              className="w-full"
+            />
+          )}
         </div>
       </div>
+
+      {/* Trait sliders */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Interviewer settings
+        </h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-3">
+          <TraitControl label="Empathy" value={interviewer?.empathy} />
+          <TraitControl label="Exploration" value={interviewer?.exploration} />
+          <TraitControl label="Rapport" value={interviewer?.rapport} />
+          <TraitControl label="Speed" value={interviewer?.speed} />
+        </div>
+      </section>
     </div>
   );
 }

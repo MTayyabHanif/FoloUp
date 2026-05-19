@@ -1,0 +1,18 @@
+{
+  "changeName": "relayout-with-page-shell",
+  "currentPhase": "archived",
+  "agreedOptionalSteps": ["brainstorming", "cgc", "qa"],
+  "skippedSteps": ["plan_eng_review", "plan_design_review", "review"],
+  "completedGates": ["brainstorming", "cgc", "propose", "apply", "qa", "ship", "archive"],
+  "lastUpdated": "2026-05-19T00:00:00Z",
+  "waveCommits": {
+    "wave0": "ee0fda0",
+    "wave1": "5d4ac0b",
+    "wave2": "857f599",
+    "wave3": "4826abe",
+    "wave4": "63525dc",
+    "wave5": "11a56fc",
+    "wave6": "0a35857",
+    "wave6b": "5807340"
+  }
+}
