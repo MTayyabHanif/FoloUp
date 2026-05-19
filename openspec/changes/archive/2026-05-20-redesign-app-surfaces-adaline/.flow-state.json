@@ -1,6 +1,6 @@
 {
   "changeName": "redesign-app-surfaces-adaline",
-  "currentPhase": "ship",
+  "currentPhase": "archive",
   "agreedOptionalSteps": [
     "brainstorming",
     "cgc",
@@ -22,7 +22,8 @@
     "plan_design_review",
     "apply",
     "qa",
-    "review"
+    "review",
+    "ship"
   ],
   "lastUpdated": "2026-05-20T00:00:00Z"
 }
