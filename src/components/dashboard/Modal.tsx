@@ -1,8 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl";
@@ -35,6 +36,20 @@ interface ModalProps {
    * lets Radix Dialog handle both natively (focus trap, ARIA, restore focus).
    */
   closeOnOutsideClick?: boolean;
+  /**
+   * Accessible name for the dialog. Announced to screen readers via Radix's
+   * DialogTitle (required for a11y — Radix logs a warning if absent).
+   * Defaults to "Dialog" but callers SHOULD pass a descriptive string
+   * (e.g., "Interviewer details", "Create interview").
+   */
+  title?: string;
+  /**
+   * When `true` (default), the title is rendered visually hidden — only
+   * available to screen readers. Set `false` to render the title visibly
+   * above the dialog content. Use the visible mode when the dialog content
+   * doesn't already include its own heading.
+   */
+  titleHidden?: boolean;
 }
 
 /**
@@ -48,22 +63,31 @@ export default function Modal({
   onClose,
   closeOnOutsideClick = true,
   size = "md",
+  title = "Dialog",
+  titleHidden = true,
   children,
 }: ModalProps) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
+        className={cn(
+          "max-h-[90vh] w-full overflow-y-auto p-6",
+          SIZE_CLASSES[size],
+        )}
         onInteractOutside={
           closeOnOutsideClick ? undefined : (e) => e.preventDefault()
         }
         onEscapeKeyDown={
           closeOnOutsideClick ? undefined : (e) => e.preventDefault()
         }
-        className={cn(
-          "max-h-[90vh] w-full overflow-y-auto p-6",
-          SIZE_CLASSES[size],
-        )}
       >
+        {titleHidden ? (
+          <VisuallyHidden>
+            <DialogTitle>{title}</DialogTitle>
+          </VisuallyHidden>
+        ) : (
+          <DialogTitle>{title}</DialogTitle>
+        )}
         {children}
       </DialogContent>
     </Dialog>
