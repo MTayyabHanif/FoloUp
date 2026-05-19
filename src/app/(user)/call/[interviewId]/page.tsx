@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Image from "next/image";
-import { ArrowUpRightSquareIcon, Monitor } from "lucide-react";
+import { Monitor } from "lucide-react";
 
 import { useInterviews } from "@/contexts/interviews.context";
 import Call from "@/components/call";
@@ -20,37 +20,15 @@ interface Props {
 }
 
 /**
- * Brand attribution row shown beneath every candidate-flow card.
- */
-function PoweredBy() {
-  return (
-    <a
-      className="mt-4 inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-muted-foreground transition-opacity hover:opacity-80"
-      href={process.env.NEXT_PUBLIC_MARKETING_URL || "https://folo-up.co/"}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <span>
-        Powered by{" "}
-        <span className="font-bold text-foreground">
-          Folo<span className="text-brand-bold">Up</span>
-        </span>
-      </span>
-      <ArrowUpRightSquareIcon className="h-4 w-4 text-brand-bold" />
-    </a>
-  );
-}
-
-/**
  * Centered focus shell for the candidate flow. Single column, max-w-3xl,
- * generous vertical rhythm. Replaces the old `absolute -translate-x-1/2`
- * centering trick with a real flex layout.
+ * generous vertical rhythm. The brand attribution now lives in the
+ * (user) layout's CandidateFooter, so this shell only owns vertical
+ * centering of the active card.
  */
 function CandidateShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-8">
+    <div className="flex flex-1 items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-3xl">{children}</div>
-      <PoweredBy />
     </div>
   );
 }
@@ -102,7 +80,7 @@ function LoadingCard() {
  */
 function MobileFallback({ interviewName }: { interviewName?: string }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-10">
+    <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-10">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 text-center shadow-[var(--ds-shadow-overlay)]">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-subtlest text-brand-bold">
           <Monitor className="h-7 w-7" />
@@ -115,7 +93,6 @@ function MobileFallback({ interviewName }: { interviewName?: string }) {
           for the inconvenience.
         </p>
       </div>
-      <PoweredBy />
     </div>
   );
 }
