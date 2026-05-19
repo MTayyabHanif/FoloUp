@@ -114,46 +114,54 @@ function InterviewCard({ name, interviewerId, id, url, readableSlug }: Props) {
         cursor: isFetching ? "default" : "pointer",
       }}
     >
-      <Card className="relative p-0 mt-4 inline-block cursor-pointer h-60 w-56 ml-1 mr-3 rounded-xl shrink-0 overflow-hidden shadow-md">
-        <CardContent className={`p-0 ${isFetching ? "opacity-60" : ""}`}>
-          <div className="w-full h-40 overflow-hidden bg-brand-bold flex items-center text-center">
-            <CardTitle className="w-full mt-3 mx-2 text-white text-lg">
+      <Card className="group relative flex h-60 cursor-pointer flex-col overflow-hidden rounded-xl p-0 transition-all hover:-translate-y-0.5 hover:shadow-[var(--ds-shadow-overflow)]">
+        <CardContent className={`flex h-full flex-col p-0 ${isFetching ? "opacity-60" : ""}`}>
+          {/* Header band — brand-bold tint with truncating title */}
+          <div className="flex h-32 w-full items-center justify-center bg-brand-bold px-4 py-3 text-center">
+            <CardTitle className="line-clamp-3 w-full text-base font-semibold text-white">
               {name}
               {isFetching && (
-                <div className="z-100 mt-[-5px]">
+                <div className="mt-1">
                   <MiniLoader />
                 </div>
               )}
             </CardTitle>
           </div>
-          <div className="flex flex-row items-center mx-4 ">
-            <div className="w-full overflow-hidden">
+          {/* Footer row — interviewer avatar + response count */}
+          <div className="flex flex-1 items-center justify-between gap-3 px-4 py-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary">
               <Image
                 src={img}
-                alt="Picture of the interviewer"
-                width={70}
-                height={70}
-                className="object-cover object-center"
+                alt="Interviewer"
+                width={48}
+                height={48}
+                className="h-full w-full object-cover object-center"
               />
             </div>
-            <div className="text-black text-sm font-semibold mt-2 mr-2 whitespace-nowrap">
-              Responses:{" "}
-              <span className="font-normal">
+            <div className="min-w-0 flex-1 text-right text-sm">
+              <p className="truncate font-semibold text-foreground">
                 {responseCount?.toString() || 0}
-              </span>
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {responseCount === 1 ? "response" : "responses"}
+              </p>
             </div>
           </div>
-          <div className="absolute top-2 right-2 flex gap-1">
+          {/* Floating actions in top-right */}
+          <div className="absolute right-2 top-2 flex gap-1">
             <Button
-              className="text-xs text-brand-bold px-1 h-6"
+              className="h-7 w-7 bg-white/90 p-0 text-brand-bold shadow-sm hover:bg-white"
               variant={"secondary"}
               onClick={handleJumpToInterview}
+              aria-label="Open interview"
             >
-              <ArrowUpRight size={16} />
+              <ArrowUpRight size={14} />
             </Button>
             <Button
-              className={`text-xs text-brand-bold px-1 h-6  ${
-                copied ? "bg-brand-subtle text-white" : ""
+              className={`h-7 w-7 p-0 shadow-sm ${
+                copied
+                  ? "bg-brand-subtle text-white hover:bg-brand-subtle"
+                  : "bg-white/90 text-brand-bold hover:bg-white"
               }`}
               variant={"secondary"}
               onClick={(event) => {
@@ -161,8 +169,9 @@ function InterviewCard({ name, interviewerId, id, url, readableSlug }: Props) {
                 event.preventDefault();
                 copyToClipboard();
               }}
+              aria-label={copied ? "Link copied" : "Copy interview link"}
             >
-              {copied ? <CopyCheck size={16} /> : <Copy size={16} />}
+              {copied ? <CopyCheck size={14} /> : <Copy size={14} />}
             </Button>
           </div>
         </CardContent>
