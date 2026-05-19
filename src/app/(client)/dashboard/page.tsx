@@ -267,7 +267,6 @@ return;
       <PageHeader
         eyebrow="Recruiter workspace"
         title="Hiring command center"
-        description="Keep live sessions, review bottlenecks, and shortlist momentum in one calm view."
       />
 
       {isOverQuota ? (

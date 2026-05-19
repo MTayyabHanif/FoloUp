@@ -16,7 +16,7 @@ export function AppFooter() {
           <p className="tracking-[-0.04em]">
             © {year}{" "}
             <span className="font-semibold text-foreground">
-              Foloup
+              Robust Devs
             </span>
             . All rights reserved.
           </p>
@@ -25,9 +25,6 @@ export function AppFooter() {
           </p>
         </div>
         <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="rounded-full border border-[color:rgba(197,204,182,0.82)] bg-[color:rgba(224,229,213,0.18)] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--color-valley-green)]">
-            Light-only Adaline
-          </span>
           <a
             href={marketingUrl}
             target="_blank"
@@ -84,7 +81,7 @@ export function CandidateFooter() {
             rel="noopener noreferrer"
             className="font-semibold text-foreground transition-colors hover:text-[var(--color-valley-green)]"
           >
-            Foloup
+            Robust Devs
           </a>
         </span>
         <span className="hidden text-muted-foreground/40 sm:inline">·</span>

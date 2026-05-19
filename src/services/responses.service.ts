@@ -7,6 +7,21 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
 );
 
+const LEGACY_VISIBLE_RESPONSES_FILTER =
+  "details.is.null, details->call_analysis.not.is.null";
+
+const isMissingResponseStatusColumn = (
+  error: { code?: string; message?: string } | null,
+): boolean =>
+  error?.code === "42703" &&
+  error.message?.includes("column response.status does not exist") === true;
+
+const normalizeLegacyResponses = (rows: Partial<Response>[]): Response[] =>
+  rows.map((row) => ({
+    ...row,
+    status: row.is_ended ? "completed" : "interrupted",
+  })) as Response[];
+
 /**
  * Change #3 wave 2: services re-throw on errors.
  *
@@ -57,11 +72,31 @@ const getAllResponses = async (interviewId: string) => {
     .in("status", ["completed", "interrupted", "abandoned", "ongoing"])
     .order("created_at", { ascending: false });
 
+  if (!error) {
+    return data ?? [];
+  }
+
+  if (isMissingResponseStatusColumn(error)) {
+    const { data: legacyData, error: legacyError } = await supabase
+      .from("response")
+      .select(`*`)
+      .eq("interview_id", interviewId)
+      .or(LEGACY_VISIBLE_RESPONSES_FILTER)
+      .eq("is_ended", true)
+      .order("created_at", { ascending: false });
+
+    if (legacyError) {
+      throw new Error(`getAllResponses failed: ${legacyError.message}`);
+    }
+
+    return normalizeLegacyResponses(legacyData ?? []);
+  }
+
   if (error) {
     throw new Error(`getAllResponses failed: ${error.message}`);
   }
 
-  return data ?? [];
+  return [];
 };
 
 const getResponseCountByOrganizationId = async (

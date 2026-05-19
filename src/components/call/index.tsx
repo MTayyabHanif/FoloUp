@@ -468,7 +468,6 @@ function PreflightView({
   micPermissionError,
   onEmailChange,
   onNameChange,
-  onCheckMicrophone,
   onStart,
   onExit,
 }: {
@@ -483,14 +482,11 @@ function PreflightView({
   micPermissionError: boolean;
   onEmailChange: (value: string) => void;
   onNameChange: (value: string) => void;
-  onCheckMicrophone: () => Promise<boolean>;
   onStart: () => void;
   onExit: () => Promise<void>;
 }) {
   const canStart =
-    micPermissionStatus === "granted" &&
-    (isAnonymous || (isValidEmail && Boolean(name.trim()))) &&
-    !loading;
+    (isAnonymous || (isValidEmail && Boolean(name.trim()))) && !loading;
 
   return (
     <div className="grid gap-8 px-6 py-8 md:grid-cols-[1.05fr_0.95fr] md:px-8 md:py-10">
@@ -528,56 +524,15 @@ function PreflightView({
           </NoteCard>
         </div>
 
-        {!isAnonymous ? (
-          <div className="grid gap-4 rounded-[28px] border border-[#e0e5d5] bg-white/80 p-5">
-            <div className="space-y-1">
-              <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
-                Candidate details
-              </p>
-              <p className="text-sm leading-6 text-[#31200b]/72">
-                These details attach the session to your response record.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label
-                  htmlFor="candidate-email"
-                  className="text-sm font-medium text-[#0a1d08]"
-                >
-                  Email address
-                </label>
-                <Input
-                  id="candidate-email"
-                  value={email}
-                  type="email"
-                  placeholder="name@example.com"
-                  className="h-12 rounded-[20px] border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] placeholder:text-[#31200b]/45 focus-visible:ring-[#203b14]/20"
-                  onChange={(event) => onEmailChange(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="candidate-name"
-                  className="text-sm font-medium text-[#0a1d08]"
-                >
-                  First name
-                </label>
-                <Input
-                  id="candidate-name"
-                  value={name}
-                  type="text"
-                  placeholder="Your first name"
-                  className="h-12 rounded-[20px] border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] placeholder:text-[#31200b]/45 focus-visible:ring-[#203b14]/20"
-                  onChange={(event) => onNameChange(event.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        ) : null}
       </div>
 
-      <div className="space-y-4 rounded-[30px] border-2 border-[#d7e8b5] bg-[#d7e8b5]/75 bg-white/80 p-6">
+      <form
+        className="space-y-4 rounded-[30px] border-2 border-[#d7e8b5] bg-[#d7e8b5]/55 p-6"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onStart();
+        }}
+      >
         <div className="flex items-start gap-4">
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-[#e0e5d5] bg-[#f6f8ef]">
             {interviewerProfile?.image ? (
@@ -613,38 +568,50 @@ function PreflightView({
         </div>
 
         <div className="grid gap-4">
-          <NoteCard
-            title="Readiness step"
-            icon={<Mic className="h-5 w-5" />}
-            tone="soft"
-          >
-            Check microphone access before you begin. The start action stays
-            locked until your browser confirms audio permission.
-          </NoteCard>
-
-          {(micPermissionStatus === "prompt" ||
-            micPermissionStatus === "unknown") && (
-            <Button
-              className="h-12 rounded-full bg-[#fbfdf6] hover:bg-[#fbfbfb]/75 text-[#0a1d08] ring-1 ring-[#e0e5d5] hover:border-[#203b14] hover:text-[#203b14]"
-              onClick={() => {
-                void onCheckMicrophone();
-              }}
-            >
-              Check microphone access
-            </Button>
-          )}
-
-          {micPermissionStatus === "granted" ? (
-            <div className="rounded-[22px] border border-[#d7e8b5] bg-[#f7faef] px-4 py-4 text-sm text-[#203b14]">
-              <div className="flex items-center gap-2 font-medium">
-                <CheckCircle2 className="h-4 w-4" />
-                Microphone connected
+          {!isAnonymous ? (
+            <div className="grid gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
+                  Candidate details
+                </p>
               </div>
-              <p className="mt-2 leading-6 text-[#31200b]/72">
-                Audio access is ready. Start when you feel settled.
-              </p>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="candidate-full-name"
+                  className="text-sm font-medium text-[#0a1d08]"
+                >
+                  Full name
+                </label>
+                <Input
+                  id="candidate-full-name"
+                  value={name}
+                  type="text"
+                  placeholder="Your full name"
+                  className="h-12 rounded-[20px] border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] placeholder:text-[#31200b]/45 focus-visible:ring-[#203b14]/20"
+                  onChange={(event) => onNameChange(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="candidate-email"
+                  className="text-sm font-medium text-[#0a1d08]"
+                >
+                  Email address
+                </label>
+                <Input
+                  id="candidate-email"
+                  value={email}
+                  type="email"
+                  placeholder="name@example.com"
+                  className="h-12 rounded-[20px] border-[#e0e5d5] bg-[#fbfdf6] px-4 text-[#0a1d08] placeholder:text-[#31200b]/45 focus-visible:ring-[#203b14]/20"
+                  onChange={(event) => onEmailChange(event.target.value)}
+                />
+              </div>
             </div>
           ) : null}
+
 
           {micPermissionStatus === "denied" || micPermissionError ? (
             <div className="rounded-[22px] border border-[#c5ccb6] bg-[#f6f8ef] px-4 py-4 text-sm text-[#31200b]/80">
@@ -653,27 +620,31 @@ function PreflightView({
                 Microphone access is blocked
               </div>
               <p className="mt-2 leading-6">
-                Allow microphone access in your browser settings, then check
-                again from this page.
+                Allow microphone access in your browser settings, then press
+                Start interview again from this page.
               </p>
-              <Button
-                variant="outline"
-                className="mt-4 h-11 rounded-full border-[#e0e5d5] bg-[#fbfdf6] text-[#0a1d08] hover:border-[#203b14] hover:text-[#203b14]"
-                onClick={() => {
-                  void onCheckMicrophone();
-                }}
-              >
-                Retry microphone check
-              </Button>
+            </div>
+          ) : null}
+
+          {micPermissionStatus === "granted" ? (
+            <div className="rounded-[22px] border border-[#d7e8b5] bg-[#f7faef] px-4 py-4 text-sm text-[#203b14]">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4" />
+                Microphone ready
+              </div>
+              <p className="mt-2 leading-6 text-[#31200b]/72">
+                Audio permission is already available, so Start interview will
+                take you straight into the session.
+              </p>
             </div>
           ) : null}
         </div>
 
         <div className="space-y-3 pt-2">
           <Button
+            type="submit"
             className="h-12 w-full rounded-full bg-[#4a3212] text-base font-medium text-[#fbfdf6] hover:bg-[#31200b] disabled:opacity-55"
             disabled={!canStart}
-            onClick={onStart}
           >
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -685,6 +656,7 @@ function PreflightView({
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
+                type="button"
                 variant="ghost"
                 className="h-11 w-full rounded-full text-[#31200b]/72 hover:bg-[#f6f8ef] hover:text-[#0a1d08]"
                 disabled={loading}
@@ -716,7 +688,7 @@ function PreflightView({
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
@@ -859,32 +831,6 @@ function ActiveSessionView({
             />
           }
         />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <NoteCard
-          title="Session focus"
-          icon={<Sparkles className="h-5 w-5" />}
-          tone="soft"
-        >
-          Answer at a natural pace. The session automatically tracks progress
-          while the interviewer guides each turn.
-        </NoteCard>
-        <div className="rounded-[24px] border border-[#e0e5d5] bg-white/80 p-5">
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#203b14]">
-            Progress
-          </p>
-          <p className="mt-3 text-sm leading-6 text-[#31200b]/76">
-            The bar at the top reflects the reserved interview window. Progress
-            is saved automatically while the call stays active.
-          </p>
-          <div className="mt-4 rounded-full bg-[#e0e5d5]">
-            <div
-              className="h-2 rounded-full bg-[#203b14] transition-all duration-500"
-              style={{ width: `${Math.min(progressPercent, 100)}%` }}
-            />
-          </div>
-        </div>
       </div>
 
       <div className="flex justify-center">
@@ -1187,13 +1133,13 @@ function Call({ interview, sessionToken }: InterviewProps) {
   const startConversation = async ({
     isReconnect = false,
   }: { isReconnect?: boolean } = {}) => {
-    if (micPermissionError) {
-      return;
-    }
-
     setMicPermissionError(false);
 
-    if (!isReconnect && !interview.is_anonymous && (!isValidEmail || !name)) {
+    if (
+      !isReconnect &&
+      !interview.is_anonymous &&
+      (!isValidEmail || !name.trim())
+    ) {
       return;
     }
 
@@ -1499,7 +1445,6 @@ function Call({ interview, sessionToken }: InterviewProps) {
             micPermissionError={micPermissionError}
             onEmailChange={setEmail}
             onNameChange={setName}
-            onCheckMicrophone={checkMicrophonePermission}
             onStart={() => {
               void startConversation();
             }}

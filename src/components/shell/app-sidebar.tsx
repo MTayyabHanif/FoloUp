@@ -60,21 +60,16 @@ export function AppSidebar({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:rgba(197,204,182,0.92)] bg-[color:rgba(215,232,181,0.28)] text-sm font-semibold uppercase tracking-[0.14em] text-[var(--color-valley-green)]">
-              F
+              RD
             </span>
             <div className="min-w-0">
               <p className="truncate text-lg font-semibold tracking-[-0.04em] text-[hsl(var(--foreground))]">
-                Foloup
+                Robust Devs
               </p>
               <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 Hiring workspace
               </p>
             </div>
-          </div>
-          <div className="rounded-[24px] border border-[color:rgba(197,204,182,0.82)] bg-[color:rgba(224,229,213,0.24)] px-3 py-2">
-            <p className="text-xs font-medium tracking-[-0.04em] text-[hsl(var(--foreground))]">
-              Calm, focused interview operations for recruiters and interviewers.
-            </p>
           </div>
         </div>
       </Link>
