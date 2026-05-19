@@ -15,7 +15,7 @@ export function AppFooter() {
         <p>
           © {year}{" "}
           <span className="font-semibold text-foreground">
-            Robust <span className="text-brand-bold">Devs Hiring</span>
+            Robust <span className="text-brand-bold">Devs</span>
           </span>
           . All rights reserved.
         </p>
@@ -58,7 +58,7 @@ export function AppFooter() {
 
 /**
  * CandidateFooter — minimal footer used in the candidate flow. Single
- * "Powered by Robust Devs Hiring" attribution + Privacy. Replaces the inline
+ * "Powered by Robust Devs" attribution + Privacy. Replaces the inline
  * <PoweredBy> component in /call/[id]/page.tsx.
  */
 export function CandidateFooter() {
@@ -76,7 +76,7 @@ export function CandidateFooter() {
             rel="noopener noreferrer"
             className="font-bold text-foreground transition-colors hover:opacity-80"
           >
-            Robust <span className="text-brand-bold">Devs Hiring</span>
+            Robust <span className="text-brand-bold">Devs</span>
           </a>
         </span>
         <span className="hidden text-muted-foreground/40 sm:inline">·</span>

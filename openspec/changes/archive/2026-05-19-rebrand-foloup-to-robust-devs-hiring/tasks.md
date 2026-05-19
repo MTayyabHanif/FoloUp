@@ -1,4 +1,4 @@
-# Tasks: Rebrand FoloUp → Robust Devs Hiring
+# Tasks: Rebrand FoloUp → Robust Devs
 
 ## package.json
 
@@ -6,39 +6,39 @@
 
 ## src/app/layout.tsx
 
-- [x] `src/app/layout.tsx:12` — change `title: "FoloUp"` → `title: "Robust Devs Hiring"`
-- [x] `src/app/layout.tsx:15` — change `title: "FoloUp"` (openGraph.title) → `"Robust Devs Hiring"`
-- [x] `src/app/layout.tsx:17` — change `siteName: "FoloUp"` → `"Robust Devs Hiring"`
+- [x] `src/app/layout.tsx:12` — change `title: "FoloUp"` → `title: "Robust Devs"`
+- [x] `src/app/layout.tsx:15` — change `title: "FoloUp"` (openGraph.title) → `"Robust Devs"`
+- [x] `src/app/layout.tsx:17` — change `siteName: "FoloUp"` → `"Robust Devs"`
 - [x] `src/app/layout.tsx:20` — change OG image url `"/foloup.png"` (or `"/FoloUp.png"`) → `"/robust-devs-hiring.png"`
 
 ## src/app/not-found.tsx
 
-- [x] `src/app/not-found.tsx:6` — change `title: "Page not found · FoloUp"` → `"Page not found · Robust Devs Hiring"`
+- [x] `src/app/not-found.tsx:6` — change `title: "Page not found · FoloUp"` → `"Page not found · Robust Devs"`
 
 ## src/app/error.tsx
 
-- [x] `src/app/error.tsx:29` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs Hiring</span>`
+- [x] `src/app/error.tsx:29` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs</span>`
 
 ## src/app/(user)/error.tsx
 
-- [x] `src/app/(user)/error.tsx:29` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs Hiring</span>`
-- [x] `src/app/(user)/error.tsx:9` — update comment mentioning "FoloUp users" to say "Robust Devs Hiring users"
+- [x] `src/app/(user)/error.tsx:29` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs</span>`
+- [x] `src/app/(user)/error.tsx:9` — update comment mentioning "FoloUp users" to say "Robust Devs users"
 
 ## src/components/auth-shell.tsx
 
-- [x] `src/components/auth-shell.tsx:30` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs Hiring</span>`
+- [x] `src/components/auth-shell.tsx:30` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs</span>`
 
 ## src/components/shell/app-sidebar.tsx
 
-- [x] `src/components/shell/app-sidebar.tsx:64` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs Hiring</span>`
+- [x] `src/components/shell/app-sidebar.tsx:64` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs</span>`
 
 ## src/components/shell/app-footer.tsx
 
 - [x] `src/components/shell/app-footer.tsx:9` — change hardcoded fallback `"https://folo-up.co/"` → `"https://robustagency.co"`
-- [x] `src/components/shell/app-footer.tsx:18` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs Hiring</span>`
-- [x] `src/components/shell/app-footer.tsx:61` — update comment mentioning "Powered by FoloUp" to say "Powered by Robust Devs Hiring"
+- [x] `src/components/shell/app-footer.tsx:18` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs</span>`
+- [x] `src/components/shell/app-footer.tsx:61` — update comment mentioning "Powered by FoloUp" to say "Powered by Robust Devs"
 - [x] `src/components/shell/app-footer.tsx:66` — change hardcoded fallback `"https://folo-up.co/"` → `"https://robustagency.co"`
-- [x] `src/components/shell/app-footer.tsx:79` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs Hiring</span>`
+- [x] `src/components/shell/app-footer.tsx:79` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs</span>`
 
 ## src/components/shell/app-header.tsx
 
@@ -47,11 +47,11 @@
 ## src/components/call/index.tsx
 
 - [x] `src/components/call/index.tsx:680` — change hardcoded fallback `"https://folo-up.co/"` → `"https://robustagency.co"`
-- [x] `src/components/call/index.tsx:686` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs Hiring</span>`
+- [x] `src/components/call/index.tsx:686` — replace `Folo<span className="text-brand-bold">Up</span>` → `Robust <span className="text-brand-bold">Devs</span>`
 
 ## src/app/(client)/dashboard/interviewers/page.tsx
 
-- [x] `src/app/(client)/dashboard/interviewers/page.tsx:53` — update description string mentioning "FoloUp" to say "Robust Devs Hiring"
+- [x] `src/app/(client)/dashboard/interviewers/page.tsx:53` — update description string mentioning "FoloUp" to say "Robust Devs"
 
 ## src/app/(client)/dashboard/page.tsx
 
@@ -59,7 +59,7 @@
 
 ## src/app/(client)/interviews/[interviewId]/page.tsx
 
-- [x] `src/app/(client)/interviews/[interviewId]/page.tsx:27` — update comment `// FoloUp brand (--ds-brand-bold)` → `// Robust Devs Hiring brand (--ds-brand-bold)`
+- [x] `src/app/(client)/interviews/[interviewId]/page.tsx:27` — update comment `// FoloUp brand (--ds-brand-bold)` → `// Robust Devs brand (--ds-brand-bold)`
 
 ## .env.example
 
@@ -97,7 +97,7 @@
 
 ## LICENSE
 
-- [x] `LICENSE:3` — change `Copyright (c) 2025 FoloUp` → `Copyright (c) 2025 Robust Devs Hiring`
+- [x] `LICENSE:3` — change `Copyright (c) 2025 FoloUp` → `Copyright (c) 2025 Robust Devs`
 
 ## Post-apply operator steps
 

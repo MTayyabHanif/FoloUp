@@ -1,19 +1,19 @@
-# Proposal: Rebrand FoloUp → Robust Devs Hiring
+# Proposal: Rebrand FoloUp → Robust Devs
 
 ## What
 
-A text-only brand swap that replaces every user-visible and configuration-level reference to "FoloUp" / "folo-up" with the new product identity "Robust Devs Hiring", scoped strictly to in-repo files. No functional logic changes. No database migrations. No cloud-resource renames.
+A text-only brand swap that replaces every user-visible and configuration-level reference to "FoloUp" / "folo-up" with the new product identity "Robust Devs", scoped strictly to in-repo files. No functional logic changes. No database migrations. No cloud-resource renames.
 
 ## Why
 
-The product is being rebranded. The old name ("FoloUp") is tied to the original open-source framing and the `folo-up.co` domain. The new identity ("Robust Devs Hiring") reflects the tool's purpose (internal hiring workflow) and the agency brand (`robustagency.co`). Keeping stale brand strings in metadata, OG tags, UI text, contact emails, and documentation creates inconsistency and potential embarrassment when demoing or handing off to a client.
+The product is being rebranded. The old name ("FoloUp") is tied to the original open-source framing and the `folo-up.co` domain. The new identity ("Robust Devs") reflects the tool's purpose (internal hiring workflow) and the agency brand (`robustagency.co`). Keeping stale brand strings in metadata, OG tags, UI text, contact emails, and documentation creates inconsistency and potential embarrassment when demoing or handing off to a client.
 
 ## Scope
 
 | Category | Items |
 |---|---|
 | `package.json` `name` field | `foloup-app` → `robust-devs-hiring-app` |
-| `<head>` metadata (title, OG title, OG siteName) | `FoloUp` → `Robust Devs Hiring` |
+| `<head>` metadata (title, OG title, OG siteName) | `FoloUp` → `Robust Devs` |
 | OG image asset | `public/FoloUp.png` → `public/robust-devs-hiring.png` (git mv) |
 | JSX brand spans (7 locations) | Rewrite using chosen split (see design.md) |
 | Plain-text UI strings | 1 description string in interviewers page |

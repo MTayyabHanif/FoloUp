@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
-  title: "Page not found · Robust Devs Hiring",
+  title: "Page not found · Robust Devs",
 };
 
 export default function NotFound() {

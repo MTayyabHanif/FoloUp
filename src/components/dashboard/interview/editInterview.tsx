@@ -330,7 +330,6 @@ function EditInterview({ interview }: EditInterviewProps) {
             <input
               type="number"
               step="1"
-              max="10"
               min="1"
               className="border-2 text-center focus:outline-none bg-slate-100 rounded-md border-gray-500 w-14 px-2 py-0.5 ml-3"
               value={Number(duration)}
@@ -340,9 +339,6 @@ function EditInterview({ interview }: EditInterviewProps) {
                   value === "" ||
                   (Number.isInteger(Number(value)) && Number(value) > 0)
                 ) {
-                  if (Number(value) > 10) {
-                    value = "10";
-                  }
                   setDuration(Number(value));
                 }
               }}

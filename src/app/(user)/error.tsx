@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Candidate-flow error boundary — different UX from the recruiter side:
- * - No "Back to dashboard" link (candidates aren't Robust Devs Hiring users)
+ * - No "Back to dashboard" link (candidates aren't Robust Devs users)
  * - Friendlier copy; assumes the candidate is in a high-stakes moment (interview)
  */
 export default function CandidateError({
@@ -26,7 +26,7 @@ export default function CandidateError({
       <div className="max-w-md w-full text-center space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">
-            Robust <span className="text-brand-bold">Devs Hiring</span>
+            Robust <span className="text-brand-bold">Devs</span>
           </h1>
           <p className="text-sm text-muted-foreground">
             Something went wrong loading your interview.

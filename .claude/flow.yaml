@@ -1,0 +1,102 @@
+# Flow orchestrator config — this repo (robust-agency-next).
+# Schema reference: openspec/changes/add-flow-orchestrator/design.md
+# Personal overrides go in .claude/flow.local.yaml (gitignored).
+
+project:
+  name: robust-agency-next
+  type: nextjs
+  branch_strategy: trunk
+  default_branch: main
+
+deploy:
+  target: vercel
+  production_url: https://robustagency.co
+  health_path: /
+
+# Canonical pipeline order. Steps not listed here are skipped by default
+# (the user can still force one inline at the announcement gate).
+pipeline:
+  - brainstorming
+  - cgc
+  - propose
+  - plan_eng_review
+  - plan_design_review
+  - apply
+  - qa
+  - review
+  - ship
+  - archive
+
+# Tool availability flags. Set false to omit from announced shape even when
+# the underlying tool is installed.
+tools:
+  openspec: true
+  gstack: true
+  code_context_analysis: true
+
+# Per-step model + dispatch mode.
+#   model:    sonnet | opus | haiku — passed to the Agent tool's `model` parameter when dispatch=subagent
+#   dispatch: subagent | main
+#     subagent — runs in an isolated Agent context; reads named artifacts from disk, returns a structured summary
+#     main     — executes inline in the /flow conversation (no isolation; main context grows)
+# Override per-invocation at the announcement gate with `model <step> <name>` or `dispatch <step> <mode>`.
+steps:
+  brainstorming:
+    model: sonnet
+    dispatch: subagent
+  cgc:
+    model: sonnet
+    dispatch: subagent
+  propose:
+    model: sonnet
+    dispatch: subagent
+  plan_eng_review:
+    model: sonnet
+    dispatch: subagent
+  plan_design_review:
+    model: sonnet
+    dispatch: subagent
+  apply:
+    model: opus
+    dispatch: main
+  qa:
+    model: sonnet
+    dispatch: subagent
+  review:
+    model: sonnet
+    dispatch: subagent
+  ship:
+    model: haiku
+    dispatch: subagent
+  archive:
+    model: haiku
+    dispatch: main
+
+# CGC scope inference. Keys are keywords the skill matches against request
+# text; values are paths (string or list) used as scope when matched.
+cgc_keyword_map:
+  hero: app/(marketing)/_components/hero/
+  positioning: app/(marketing)/
+  lead-magnet:
+    - app/api/resources/
+    - app/(marketing)/lead-magnet/
+  scanner: app/(marketing)/vibe-code-scanner/
+  marketing: app/(marketing)/
+  api: app/api/
+
+# Typo/bypass triggers. Request phrases that strongly suggest a trivial edit;
+# skill offers OpenSpec bypass on match. Generic heuristics also apply.
+bypass:
+  typo_patterns:
+    - fix typo
+    - typo in
+    - change copy
+    - update wording
+    - tweak copy
+
+# External system integrations. ClickUp is active; Linear remains reserved.
+integrations:
+  clickup:
+    enabled: true   # set false to disable ClickUp URL ingestion in /flow
+  linear:
+    enabled: false

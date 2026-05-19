@@ -1,4 +1,4 @@
-# Design: Rebrand FoloUp → Robust Devs Hiring
+# Design: Rebrand FoloUp → Robust Devs
 
 ## 1. Replacement Strategy
 
@@ -12,13 +12,13 @@ This is a strict text-swap-plus-rename with zero functional changes:
 
 ## 2. JSX Brand-Span Decision
 
-**Chosen: Option (b) — wrap "Devs Hiring" in `text-brand-bold`**
+**Chosen: Option (b) — wrap "Devs" in `text-brand-bold`**
 
 Rationale:
 - The original pattern `Folo<span className="text-brand-bold">Up</span>` uses the span to visually distinguish the suffix and give the name weight in headers and sidebars.
-- "Robust Devs Hiring" has a natural split: "Robust" as the brand qualifier, "Devs Hiring" as the product descriptor. Wrapping "Devs Hiring" in `text-brand-bold` mirrors the original intent — a lighter prefix + a heavier, more salient ending.
+- "Robust Devs" has a natural split: "Robust" as the brand qualifier, "Devs" as the product descriptor. Wrapping "Devs" in `text-brand-bold` mirrors the original intent — a lighter prefix + a heavier, more salient ending.
 - Option (a) (drop the span entirely) would flatten the visual hierarchy across 7 UI locations, requiring a CSS/design follow-up to restore weight. That is out of scope for this text-only change.
-- Result: `Robust <span className="text-brand-bold">Devs Hiring</span>` at all 7 JSX locations.
+- Result: `Robust <span className="text-brand-bold">Devs</span>` at all 7 JSX locations.
 
 ## 3. CONTRIBUTING.md Decision
 

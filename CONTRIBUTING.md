@@ -1,6 +1,6 @@
 # Contributing
 
-Internal contribution guide for the Robust Devs Hiring app.
+Internal contribution guide for the Robust Devs app.
 
 ## Branch naming
 

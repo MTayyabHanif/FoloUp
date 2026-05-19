@@ -9,12 +9,12 @@ import { cn } from "@/lib/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Robust Devs Hiring",
+  title: "Robust Devs",
   description: "AI-powered hiring interviews",
   openGraph: {
-    title: "Robust Devs Hiring",
+    title: "Robust Devs",
     description: "AI-powered hiring interviews",
-    siteName: "Robust Devs Hiring",
+    siteName: "Robust Devs",
     locale: "en_US",
     type: "website",
   },
