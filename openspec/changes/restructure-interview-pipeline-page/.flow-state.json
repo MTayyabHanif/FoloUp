@@ -1,0 +1,8 @@
+{
+  "changeName": "restructure-interview-pipeline-page",
+  "currentPhase": "apply",
+  "agreedOptionalSteps": ["cgc"],
+  "skippedSteps": ["brainstorming", "plan_eng_review", "plan_design_review"],
+  "completedGates": ["cgc", "propose"],
+  "lastUpdated": "2026-05-20T00:00:00Z"
+}

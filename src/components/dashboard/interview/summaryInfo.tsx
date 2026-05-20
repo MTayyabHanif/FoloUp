@@ -1,18 +1,13 @@
 "use client";
 
-import { AlertCircle, ArrowRight, Sparkles, TimerReset } from "lucide-react";
+import { AlertCircle, ArrowRight, Sparkles } from "lucide-react";
 
-import DataTable, {
-  type TableData,
-} from "@/components/dashboard/interview/dataTable";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   convertSecondstoMMSS,
 } from "@/lib/utils";
 import {
   formatDurationLabel,
-  formatResponseTime,
   getWorkflowToneClasses,
   type HiringWorkflowSummary,
 } from "@/lib/hiring-workflow";
@@ -45,14 +40,6 @@ function SummaryMetric({
 }
 
 function SummaryInfo({ workflow, onOpenCandidate }: SummaryProps) {
-  const tableData: TableData[] = workflow.responses.map((candidate) => ({
-    call_id: candidate.callId,
-    name: candidate.displayName,
-    overallScore: candidate.score ?? 0,
-    communicationScore: candidate.response.analytics?.communication?.score ?? 0,
-    callSummary: candidate.summary,
-  }));
-
   if (workflow.totalResponses === 0) {
     return (
       <div className="flex min-h-[420px] items-center justify-center rounded-[28px] border border-dashed border-[#d8ddd0] bg-[#f6f8ef] px-6 py-10">
@@ -234,51 +221,29 @@ function SummaryInfo({ workflow, onOpenCandidate }: SummaryProps) {
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
-        <div className="flex flex-col gap-3 border-b border-[#e0e5d5] pb-4 md:flex-row md:items-end md:justify-between">
-          <div>
+      {workflow.topCandidate ? (
+        <div className="flex items-center justify-between gap-4 rounded-[22px] border border-[#e0e5d5] bg-[#f6f8ef] px-5 py-5">
+          <div className="min-w-0">
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
-              Candidate table
+              Strongest current signal
             </p>
-            <p className="mt-2 text-sm leading-6 text-[#53614d]">
-              Sort candidates by score or communication, then jump straight into the full response detail.
+            <p className="mt-2 text-sm font-semibold text-[#0a1d08]">
+              {workflow.topCandidate.displayName}
+            </p>
+            <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#53614d]">
+              {workflow.topCandidate.summary}
             </p>
           </div>
-          {workflow.recentCandidate ? (
-            <p className="inline-flex items-center gap-2 text-sm text-[#53614d]">
-              <TimerReset className="h-4 w-4" />
-              Latest activity {formatResponseTime(workflow.recentCandidate.createdAt)}
-            </p>
-          ) : null}
+          <button
+            type="button"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#0a1d08] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
+            onClick={() => onOpenCandidate(workflow.topCandidate!.callId)}
+          >
+            Open candidate
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
-
-        <div className="mt-5 rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] p-2">
-          <ScrollArea className="max-h-[520px]">
-            <DataTable data={tableData} interviewId={workflow.interview.id} />
-          </ScrollArea>
-        </div>
-
-        {workflow.topCandidate ? (
-          <div className="mt-5 flex items-center justify-between gap-4 rounded-[22px] border border-[#e0e5d5] bg-[#f6f8ef] px-4 py-4">
-            <div>
-              <p className="text-sm font-semibold text-[#0a1d08]">
-                Strongest current signal: {workflow.topCandidate.displayName}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-[#53614d]">
-                {workflow.topCandidate.summary}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#0a1d08] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
-              onClick={() => onOpenCandidate(workflow.topCandidate!.callId)}
-            >
-              Open candidate
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }
