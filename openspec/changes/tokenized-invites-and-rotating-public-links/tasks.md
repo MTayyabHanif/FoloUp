@@ -122,17 +122,24 @@ This group consolidates the end-to-end chain that threads `invite_id` from `/api
 - [x] 13.1 "Share link" tab displays a human-readable time-remaining label derived from `public_token_expires_at` (e.g. "Expires in 23h 14m" or "Expires in 30 days" for grandfathered rows).
 - [x] 13.2 "Rotate link" button with destructive `AlertDialog` (matches the operator-locked copy from DD2). On confirm, POSTs to `/api/interviews/[id]/rotate-public-token` and updates the displayed URL + expiry in-place.
 - [x] 13.3 Expired state is surfaced via the expiry label text + `text-[#6b3f31]` warning color.
-- [x] 13.4 "Invites" tab added, not gated by `invite_only`. Includes an Info note: "Invites are single-use and expire in 24 hours. They work in both modes — enable invite-only in the interview settings to require an invite."
-- [x] 13.5 Invite list renders with email, created-at timestamp, status badge (Pending / Reserved / Used / Expired / Revoked), copy-link button (for pending), and conditional revoke. Revoke behavior:
-  - `pending`: single-click via the trash icon, no dialog
-  - `reserved`: opens an `AlertDialog` ("Revoke this invite? A candidate may be partway through…") before revoking
+- [x] 13.4 **Refactored (slice 4a):** The Invites tab in `sharePopup.tsx` was too cramped for what will become a long list (plus future CSV upload). Invite management was moved to a dedicated page at `src/app/(client)/interviews/[interviewId]/invites/page.tsx`. `sharePopup.tsx` now contains only "Share link" and "Embed" tabs and a "Manage invites →" link that routes to the new page. A "Manage invites" entry was added to the HeaderActions dropdown.
+- [x] 13.5 Invite list renders on the dedicated page with email, status badge (Pending / Reserved / Used / Expired / Revoked), created-at timestamp, expiry countdown, copy-link button (for pending), and conditional revoke. Revoke behavior unchanged:
+  - `pending`: single-click trash icon, no dialog
+  - `reserved`: opens an `AlertDialog` before revoking
   - `used`: revoke button hidden
-  - `expired`: single-click via the trash icon, no dialog
-  - Empty state: "No invites sent yet. Send one above to track individual candidates."
+  - `expired`: single-click trash icon, no dialog
+  - Empty state: "No invites sent yet" + helper copy pointing to the right-rail create form.
 - [x] 13.6 Create/revoke wired to `POST /api/interviews/[id]/invites` and `DELETE /api/interviews/[id]/invites/[id]` respectively.
-- [x] 13.7 Invite list is fetched on tab open and refreshes optimistically after create/revoke actions.
+- [x] 13.7 Invite list is fetched on page mount and refreshes optimistically after create/revoke actions.
 
 > Slice 3 callers note: `SharePopup` now requires `interviewId`, `publicToken`, and `publicTokenExpiresAt` props. The only caller (`src/app/(client)/interviews/[interviewId]/page.tsx`) updated to pass them.
+
+> Slice 4a additions:
+> - **Filter chips** at the top of the dedicated page (All / Pending / Reserved / Used / Expired / Revoked) with live counts.
+> - **Search by email** input alongside the filter chips.
+> - **Tabular layout** with column headers (Candidate email / Status / Created / Expires / Actions) and zebra-striped rows — scales to long lists.
+> - **Bulk import stub** (right rail, dashed border, "coming soon" copy) reserving design space for the future CSV upload feature mentioned by the operator. No code in the stub — purely visual placeholder.
+> - **Inline empty/loading/filtered-empty states** rather than separate components.
 
 ## 14. Interview Creation: Public Token Initialization
 

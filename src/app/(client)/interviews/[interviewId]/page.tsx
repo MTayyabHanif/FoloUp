@@ -299,6 +299,9 @@ function InterviewHome({
             onToggleActive={handleToggle}
             onPreview={seeInterviewPreviewPage}
             onOpenMarker={() => setShowColorPicker(true)}
+            onManageInvites={() =>
+              router.push(`/interviews/${params.interviewId}/invites`)
+            }
           />
         }
       />

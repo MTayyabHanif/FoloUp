@@ -2,6 +2,7 @@
 
 import {
   Eye,
+  MailPlus,
   MoreHorizontal,
   Palette,
   Pencil,
@@ -25,6 +26,7 @@ type HeaderActionsProps = {
   onToggleActive: () => void;
   onPreview: () => void;
   onOpenMarker: () => void;
+  onManageInvites: () => void;
 };
 
 export function HeaderActions({
@@ -35,6 +37,7 @@ export function HeaderActions({
   onToggleActive,
   onPreview,
   onOpenMarker,
+  onManageInvites,
 }: HeaderActionsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -82,7 +85,11 @@ export function HeaderActions({
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onSelect={onManageInvites}>
+            <MailPlus className="mr-2 h-4 w-4" />
+            Manage invites
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={onPreview}>
             <Eye className="mr-2 h-4 w-4" />
             Preview
