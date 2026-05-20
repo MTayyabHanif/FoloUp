@@ -56,7 +56,7 @@ const sendInviteEmail = async (
       html: rendered.html,
       text: rendered.text,
       ...(params.recruiterEmail
-        ? { reply_to: params.recruiterEmail }
+        ? { replyTo: params.recruiterEmail }
         : {}),
     });
 

@@ -63,8 +63,10 @@ function announceEmailOutcome(email: string, outcome: EmailOutcome | undefined) 
     return;
   }
   toast.error(
-    `Couldn't email ${email}. Copy the link and share it manually.`,
-    { position: "bottom-right", duration: 6000 },
+    outcome.detail
+      ? `Couldn't email ${email}: ${outcome.detail}. Copy the link and share it manually.`
+      : `Couldn't email ${email}. Copy the link and share it manually.`,
+    { position: "bottom-right", duration: 8000 },
   );
 }
 
@@ -307,7 +309,16 @@ export default function InvitesPage({ params: paramsPromise }: Props) {
         body: JSON.stringify({ email: trimmed }),
       });
       if (!res.ok) {
-        throw new Error(`status ${res.status}`);
+        const body = await res.json().catch(() => ({}));
+        const detail = (body as { detail?: string }).detail;
+        toast.error(
+          detail
+            ? `Could not create invite: ${detail}`
+            : `Could not create invite (status ${res.status}).`,
+          { position: "bottom-right", duration: 8000 },
+        );
+
+        return;
       }
       const data = (await res.json()) as {
         invite: InviteRow;

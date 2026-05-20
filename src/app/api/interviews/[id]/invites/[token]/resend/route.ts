@@ -77,23 +77,47 @@ export async function POST(
       });
     }
 
-    const emailOutcome = await EmailService.sendInviteEmail({
-      candidateEmail: invite.email,
-      interviewName: interview.name ?? "Interview",
-      inviteUrl,
-      organizationName: null,
-      recruiterName,
-      recruiterEmail,
-    });
+    let emailOutcome;
+    try {
+      emailOutcome = await EmailService.sendInviteEmail({
+        candidateEmail: invite.email,
+        interviewName: interview.name ?? "Interview",
+        inviteUrl,
+        organizationName: null,
+        recruiterName,
+        recruiterEmail,
+      });
+    } catch (emailErr) {
+      const message =
+        emailErr instanceof Error ? emailErr.message : String(emailErr);
+      logger.error("sendInviteEmail (resend) escaped its try/catch", {
+        interviewId: interview.id,
+        inviteId,
+        message,
+        stack: emailErr instanceof Error ? emailErr.stack : undefined,
+      });
+      emailOutcome = {
+        ok: false as const,
+        reason: "send-failed" as const,
+        detail: message,
+      };
+    }
 
     return NextResponse.json({ email: emailOutcome }, { status: 200 });
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     logger.error("resend invite failed", {
-      error: err instanceof Error ? err.message : String(err),
+      interviewId: id,
+      inviteId,
+      message,
+      stack: err instanceof Error ? err.stack : undefined,
     });
 
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "resend-failed",
+        detail: message,
+      },
       { status: 500 },
     );
   }

@@ -81,36 +81,60 @@ export async function POST(
     );
   }
 
+  // The invite row is the source of truth. If creation succeeds but the
+  // email send (or anything else after) throws, we still want the
+  // recruiter to have an invite they can copy manually. So we split the
+  // creation step from the post-creation work, and only return 500 if
+  // the DB write itself fails.
+  let invite;
   try {
-    const invite = await InviteService.createInvite(interview.id, email);
+    invite = await InviteService.createInvite(interview.id, email);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    logger.error("create invite — DB write failed", {
+      interviewId: interview.id,
+      email,
+      message,
+      stack,
+    });
 
-    // Best-effort email send. The invite row is the source of truth;
-    // a failed send must not leave the recruiter with no invite at all.
-    const baseUrl = getServerBaseUrl(req);
-    const candidateSlug = interview.readable_slug ?? interview.id;
-    const inviteUrl = `${baseUrl}/call/${candidateSlug}?token=${invite.token}`;
+    return NextResponse.json(
+      {
+        error: "create-invite-failed",
+        detail: message,
+      },
+      { status: 500 },
+    );
+  }
 
-    let recruiterName: string | null = null;
-    let recruiterEmail: string | null = null;
-    try {
-      const user = await currentUser();
-      if (user) {
-        recruiterName =
-          [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
-          null;
-        recruiterEmail =
-          user.emailAddresses.find(
-            (a) => a.id === user.primaryEmailAddressId,
-          )?.emailAddress ?? null;
-      }
-    } catch (clerkErr) {
-      logger.warn("Could not fetch recruiter context for invite email", {
-        error:
-          clerkErr instanceof Error ? clerkErr.message : String(clerkErr),
-      });
+  const baseUrl = getServerBaseUrl(req);
+  const candidateSlug = interview.readable_slug ?? interview.id;
+  const inviteUrl = `${baseUrl}/call/${candidateSlug}?token=${invite.token}`;
+
+  let recruiterName: string | null = null;
+  let recruiterEmail: string | null = null;
+  try {
+    const user = await currentUser();
+    if (user) {
+      recruiterName =
+        [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+        null;
+      recruiterEmail =
+        user.emailAddresses.find(
+          (a) => a.id === user.primaryEmailAddressId,
+        )?.emailAddress ?? null;
     }
+  } catch (clerkErr) {
+    logger.warn("Could not fetch recruiter context for invite email", {
+      error:
+        clerkErr instanceof Error ? clerkErr.message : String(clerkErr),
+    });
+  }
 
-    const emailOutcome = await EmailService.sendInviteEmail({
+  let emailOutcome;
+  try {
+    emailOutcome = await EmailService.sendInviteEmail({
       candidateEmail: invite.email,
       interviewName: interview.name ?? "Interview",
       inviteUrl,
@@ -118,25 +142,33 @@ export async function POST(
       recruiterName,
       recruiterEmail,
     });
-
-    return NextResponse.json(
-      {
-        invite: {
-          ...invite,
-          status: InviteService.deriveInviteStatus(invite),
-        },
-        email: emailOutcome,
-      },
-      { status: 201 },
-    );
-  } catch (err) {
-    logger.error("create invite failed", {
-      error: err instanceof Error ? err.message : String(err),
+  } catch (emailErr) {
+    // Defensive — EmailService.sendInviteEmail already catches internally
+    // and returns an outcome. This is a belt-and-suspenders log in case
+    // something escapes (e.g., a future SDK migration regression).
+    const message =
+      emailErr instanceof Error ? emailErr.message : String(emailErr);
+    logger.error("sendInviteEmail escaped its try/catch", {
+      interviewId: interview.id,
+      email,
+      message,
+      stack: emailErr instanceof Error ? emailErr.stack : undefined,
     });
-
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    emailOutcome = {
+      ok: false as const,
+      reason: "send-failed" as const,
+      detail: message,
+    };
   }
+
+  return NextResponse.json(
+    {
+      invite: {
+        ...invite,
+        status: InviteService.deriveInviteStatus(invite),
+      },
+      email: emailOutcome,
+    },
+    { status: 201 },
+  );
 }
