@@ -4,7 +4,15 @@ import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { useInterviewers } from "@/contexts/interviewers.context";
 import { InterviewBase, Question, Seniority } from "@/types/interview";
-import { ChevronRight, ChevronLeft, Info, X } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Info,
+  X,
+  Check,
+  ArrowRight,
+  ArrowLeft,
+} from "lucide-react";
 import Image from "next/image";
 import { CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +34,12 @@ const JD_MAX_LENGTH = 5000;
 const JD_COUNTER_VISIBLE_AT = 3500;
 const MUST_HAVES_CAP = 10;
 
+const STEPS = [
+  { id: 0, label: "Basics", help: "Name, interviewer, objective" },
+  { id: 1, label: "Hiring criteria", help: "JD, seniority, must-haves" },
+  { id: 2, label: "Questions", help: "Count, duration, generate" },
+] as const;
+
 interface Props {
   open: boolean;
   setLoading: (loading: boolean) => void;
@@ -36,6 +50,76 @@ interface Props {
   fileName: string;
   setFileName: (fileName: string) => void;
 }
+
+// ============================================================================
+// Stepper header — visible across all steps
+// ============================================================================
+
+function StepperHeader({
+  current,
+  reachable,
+  onJump,
+}: {
+  current: number;
+  reachable: number;
+  onJump: (step: number) => void;
+}) {
+  return (
+    <ol className="flex items-stretch justify-between gap-0 mt-4 w-full">
+      {STEPS.map((step, i) => {
+        const isDone = i < current;
+        const isCurrent = i === current;
+        const canJump = i <= reachable;
+        return (
+          <React.Fragment key={step.id}>
+            <li className="flex flex-col items-center flex-1 min-w-0">
+              <button
+                type="button"
+                disabled={!canJump}
+                onClick={() => canJump && onJump(i)}
+                className={`flex items-center justify-center h-8 w-8 rounded-full text-xs font-semibold transition-colors ${
+                  isCurrent
+                    ? "bg-brand-bold text-white shadow"
+                    : isDone
+                      ? "bg-brand-bold/80 text-white"
+                      : "bg-stone-200 text-stone-500"
+                } ${canJump ? "cursor-pointer hover:opacity-90" : "cursor-not-allowed"}`}
+                aria-current={isCurrent ? "step" : undefined}
+                aria-label={`Step ${i + 1}: ${step.label}`}
+              >
+                {isDone ? <Check className="h-4 w-4" /> : i + 1}
+              </button>
+              <div className="mt-1.5 text-center">
+                <p
+                  className={`text-xs font-medium leading-none ${
+                    isCurrent ? "text-[#0a1d08]" : "text-stone-500"
+                  }`}
+                >
+                  {step.label}
+                </p>
+                <p className="text-[10px] italic text-stone-400 mt-0.5 hidden sm:block">
+                  {step.help}
+                </p>
+              </div>
+            </li>
+            {i < STEPS.length - 1 ? (
+              <li
+                className={`flex-1 h-0.5 mt-4 mx-1 ${
+                  i < current ? "bg-brand-bold/60" : "bg-stone-200"
+                }`}
+                aria-hidden
+              />
+            ) : null}
+          </React.Fragment>
+        );
+      })}
+    </ol>
+  );
+}
+
+// ============================================================================
+// Main popup
+// ============================================================================
 
 function DetailsPopup({
   open,
@@ -51,6 +135,11 @@ function DetailsPopup({
   const [isClicked, setIsClicked] = useState(false);
   const [openInterviewerDetails, setOpenInterviewerDetails] = useState(false);
   const [interviewerDetails, setInterviewerDetails] = useState<Interviewer>();
+
+  // Stepper position. `reachable` tracks the furthest step the operator has
+  // unlocked — going Back doesn't lock the user out of forward jumps.
+  const [step, setStep] = useState(0);
+  const [reachable, setReachable] = useState(0);
 
   const [name, setName] = useState(interviewData.name);
   const [selectedInterviewer, setSelectedInterviewer] = useState(
@@ -81,9 +170,6 @@ function DetailsPopup({
     interviewData.must_haves ?? [],
   );
   const [mustHaveInput, setMustHaveInput] = useState<string>("");
-  // Dedicated PDF-upload state for the JD (separate from the generic-doc
-  // FileUpload below — the existing one feeds question generation, this one
-  // feeds the JD textarea).
   const [jdIsUploaded, setJdIsUploaded] = useState<boolean>(false);
   const [jdFileName, setJdFileName] = useState<string>("");
 
@@ -102,8 +188,7 @@ function DetailsPopup({
 
   const setJobDescriptionFromUpload = (parsed: string) => {
     if (parsed.length > JD_MAX_LENGTH) {
-      const truncated = parsed.slice(0, JD_MAX_LENGTH);
-      setJobDescription(truncated);
+      setJobDescription(parsed.slice(0, JD_MAX_LENGTH));
       toast.warning(
         "Job description trimmed to 5000 characters. Please review and edit if needed.",
         { position: "bottom-right", duration: 4000 },
@@ -114,17 +199,36 @@ function DetailsPopup({
   };
 
   const slideLeft = (id: string, value: number) => {
-    var slider = document.getElementById(`${id}`);
+    const slider = document.getElementById(id);
     if (slider) {
       slider.scrollLeft = slider.scrollLeft - value;
     }
   };
 
   const slideRight = (id: string, value: number) => {
-    var slider = document.getElementById(`${id}`);
+    const slider = document.getElementById(id);
     if (slider) {
       slider.scrollLeft = slider.scrollLeft + value;
     }
+  };
+
+  // ---- step validation ----
+  const step0Valid =
+    !!name.trim() &&
+    !!objective.trim() &&
+    selectedInterviewer !== BigInt(0);
+  const step2Valid = !!numQuestions && !!duration;
+  const canSubmit = step0Valid && step2Valid && !isClicked;
+
+  const advance = () => {
+    if (step < STEPS.length - 1) {
+      const next = step + 1;
+      setStep(next);
+      setReachable(Math.max(reachable, next));
+    }
+  };
+  const goBack = () => {
+    if (step > 0) {setStep(step - 1);}
   };
 
   const onGenrateQuestions = async () => {
@@ -202,344 +306,460 @@ function DetailsPopup({
       setNumQuestions("");
       setDuration("");
       setIsClicked(false);
-      // v2 fields — reset so stale values don't persist across modal reopens.
+      // v2 fields
       setJobDescription("");
       setSeniority("mid");
       setMustHaves([]);
       setMustHaveInput("");
       setJdIsUploaded(false);
       setJdFileName("");
+      // Stepper
+      setStep(0);
+      setReachable(0);
     }
   }, [open]);
 
   return (
     <>
-      <div className="text-center w-full">
-        <h1 className="text-xl font-semibold">Create an Interview</h1>
-        <div className="flex flex-col justify-center items-start mt-4 ml-10 mr-8">
-          <div className="flex flex-row justify-center items-center">
-            <h3 className="text-sm font-medium">Interview Name:</h3>
-            <input
-              type="text"
-              className="border-b-2 focus:outline-none border-gray-500 px-2 w-96 py-0.5 ml-3"
-              placeholder="e.g. Name of the Interview"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={(e) => setName(e.target.value.trim())}
-            />
-          </div>
-          <h3 className="text-sm mt-3 font-medium">Select an Interviewer:</h3>
-          <div className="relative flex items-center mt-1">
-            <div
-              id="slider-3"
-              className=" h-36 pt-1 overflow-x-scroll scroll whitespace-nowrap scroll-smooth scrollbar-hide w-full"
-            >
-              {interviewers.map((item, key) => (
-                <div
-                  className=" p-0 inline-block cursor-pointer ml-1 mr-5 rounded-xl shrink-0 overflow-hidden"
-                  key={item.id}
+      <div className="w-full">
+        {/* ===== Header ===== */}
+        <div className="text-center">
+          <h1 className="text-xl font-semibold text-[#0a1d08]">
+            Create an Interview
+          </h1>
+          <StepperHeader
+            current={step}
+            reachable={reachable}
+            onJump={(i) => {
+              if (i <= reachable) {setStep(i);}
+            }}
+          />
+        </div>
+
+        {/* ===== Step body ===== */}
+        <div className="mt-6 px-2 min-h-[24rem]">
+          {step === 0 ? (
+            <div className="flex flex-col gap-4">
+              {/* Interview Name */}
+              <div>
+                <label
+                  htmlFor="interview-name"
+                  className="text-sm font-medium text-[#0a1d08]"
                 >
-                  <button
-                    className="absolute ml-9"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setInterviewerDetails(item);
-                      setOpenInterviewerDetails(true);
-                    }}
-                  >
-                    <Info size={18} color="#4f46e5" strokeWidth={2.2} />
-                  </button>
-                  <div
-                    className={`w-[96px] overflow-hidden rounded-full ${
-                      selectedInterviewer === item.id
-                        ? "border-4 border-brand-bold"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedInterviewer(item.id)}
-                  >
-                    <Image
-                      src={item.image}
-                      alt="Picture of the interviewer"
-                      width={70}
-                      height={70}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <CardTitle className="mt-0 text-xs text-center">
-                    {item.name}
-                  </CardTitle>
-                </div>
-              ))}
-            </div>
-            {interviewers.length > 4 ? (
-              <div className="flex-row justify-center ml-3 mb-1 items-center space-y-6">
-                <ChevronRight
-                  className="opacity-50 cursor-pointer hover:opacity-100"
-                  size={27}
-                  onClick={() => slideRight("slider-3", 115)}
-                />
-                <ChevronLeft
-                  className="opacity-50 cursor-pointer hover:opacity-100"
-                  size={27}
-                  onClick={() => slideLeft("slider-3", 115)}
+                  Interview name
+                </label>
+                <input
+                  id="interview-name"
+                  type="text"
+                  className="border-b-2 focus:outline-none border-gray-500 px-2 py-1 w-full mt-1"
+                  placeholder="e.g. Senior Backend Engineer — screening"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={(e) => setName(e.target.value.trim())}
                 />
               </div>
-            ) : (
-              <></>
-            )}
-          </div>
-          <h3 className="text-sm font-medium">Objective:</h3>
-          <Textarea
-            value={objective}
-            className="h-24 mt-2 border-2 border-gray-500 w-full"
-            placeholder="e.g. Find best candidates based on their technical skills and previous projects."
-            onChange={(e) => setObjective(e.target.value)}
-            onBlur={(e) => setObjective(e.target.value.trim())}
-          />
-          <h3 className="text-sm font-medium mt-2">
-            Upload any documents related to the interview.
-          </h3>
-          <FileUpload
-            isUploaded={isUploaded}
-            setIsUploaded={setIsUploaded}
-            fileName={fileName}
-            setFileName={setFileName}
-            setUploadedDocumentContext={setUploadedDocumentContext}
-          />
 
-          {/* ============================================================ */}
-          {/* Hiring criteria — v2 hiring-grade analytics fields           */}
-          {/* (openspec analytics-v2-followups)                            */}
-          {/* ============================================================ */}
-          <hr className="my-4 border-t border-dashed border-stone-200 w-full" />
-          <p className="text-sm font-medium">Hiring criteria</p>
-          <p className="text-xs italic text-stone-500 mt-1 mb-2">
-            Used by the hiring-grade scoring rubric. All optional — strong
-            defaults apply.
-          </p>
+              {/* Interviewer carousel */}
+              <div>
+                <label className="text-sm font-medium text-[#0a1d08]">
+                  Select an interviewer
+                </label>
+                <div className="relative flex items-center mt-1">
+                  <div
+                    id="slider-3"
+                    className="h-28 pt-1 overflow-x-scroll whitespace-nowrap scroll-smooth scrollbar-hide w-full"
+                  >
+                    {interviewers.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-0 inline-block cursor-pointer ml-1 mr-4 rounded-xl shrink-0 overflow-hidden align-top"
+                      >
+                        <button
+                          className="absolute ml-9"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInterviewerDetails(item);
+                            setOpenInterviewerDetails(true);
+                          }}
+                          aria-label={`View ${item.name} details`}
+                        >
+                          <Info size={16} color="#4f46e5" strokeWidth={2.2} />
+                        </button>
+                        <div
+                          className={`w-[76px] h-[76px] overflow-hidden rounded-full ${
+                            selectedInterviewer === item.id
+                              ? "border-4 border-brand-bold"
+                              : "border border-stone-200"
+                          }`}
+                          onClick={() => setSelectedInterviewer(item.id)}
+                        >
+                          <Image
+                            src={item.image}
+                            alt={`Picture of ${item.name}`}
+                            width={70}
+                            height={70}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <CardTitle className="mt-1 text-[11px] text-center font-medium">
+                          {item.name}
+                        </CardTitle>
+                      </div>
+                    ))}
+                  </div>
+                  {interviewers.length > 4 ? (
+                    <div className="flex flex-col justify-center ml-2 items-center gap-1">
+                      <ChevronRight
+                        className="opacity-50 cursor-pointer hover:opacity-100"
+                        size={20}
+                        onClick={() => slideRight("slider-3", 115)}
+                      />
+                      <ChevronLeft
+                        className="opacity-50 cursor-pointer hover:opacity-100"
+                        size={20}
+                        onClick={() => slideLeft("slider-3", 115)}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
 
-          {/* JD PDF upload */}
-          <h3 className="text-sm font-medium mt-2">
-            Upload Job Description (PDF) — optional
-          </h3>
-          <FileUpload
-            isUploaded={jdIsUploaded}
-            setIsUploaded={setJdIsUploaded}
-            fileName={jdFileName}
-            setFileName={setJdFileName}
-            setUploadedDocumentContext={setJobDescriptionFromUpload}
-          />
+              {/* Objective */}
+              <div>
+                <label
+                  htmlFor="objective"
+                  className="text-sm font-medium text-[#0a1d08]"
+                >
+                  Objective
+                </label>
+                <Textarea
+                  id="objective"
+                  value={objective}
+                  className="h-20 mt-1 border-2 border-gray-500 w-full"
+                  placeholder="e.g. Find best candidates based on technical skills and previous projects."
+                  onChange={(e) => setObjective(e.target.value)}
+                  onBlur={(e) => setObjective(e.target.value.trim())}
+                />
+              </div>
 
-          {/* JD textarea (source of truth) */}
-          <label
-            htmlFor="job-description"
-            className="text-sm font-medium mt-3 block"
-          >
-            Job Description — optional
-          </label>
-          <Textarea
-            id="job-description"
-            value={jobDescription}
-            maxLength={JD_MAX_LENGTH}
-            className="h-24 mt-2 border-2 border-gray-500 w-full"
-            placeholder="Paste or upload a job description. You can edit after upload."
-            onChange={(e) => setJobDescription(e.target.value)}
-          />
-          {jobDescription.length > JD_COUNTER_VISIBLE_AT ? (
-            <p className="text-xs italic text-stone-500 mt-1 text-right">
-              {JD_MAX_LENGTH - jobDescription.length} characters remaining
-            </p>
+              {/* Anonymous toggle — compact inline row */}
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#0a1d08]">
+                    Anonymous responses
+                  </p>
+                  <p className="text-[11px] italic text-stone-500 mt-0.5">
+                    If off, the interviewee&apos;s email and name will be
+                    collected.
+                  </p>
+                </div>
+                <Switch
+                  checked={isAnonymous}
+                  className={
+                    isAnonymous ? "bg-brand-bold" : "bg-[#E6E7EB]"
+                  }
+                  onCheckedChange={(checked) => setIsAnonymous(checked)}
+                />
+              </div>
+            </div>
           ) : null}
 
-          {/* Seniority Select (flat-underline trigger per design OD-1) */}
-          <label
-            htmlFor="seniority-select"
-            className="text-sm font-medium mt-3 block"
-          >
-            Seniority level
-          </label>
-          <Select
-            value={seniority}
-            onValueChange={(v) => setSeniority(v as Seniority)}
-          >
-            <SelectTrigger
-              id="seniority-select"
-              className="border-0 border-b-2 border-gray-500 rounded-none bg-transparent h-9 px-0 mt-1 focus:ring-0 focus:ring-offset-0 text-sm"
-            >
-              <SelectValue placeholder="Select seniority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="junior">Junior</SelectItem>
-              <SelectItem value="mid">Mid</SelectItem>
-              <SelectItem value="senior">Senior</SelectItem>
-              <SelectItem value="staff">Staff</SelectItem>
-              <SelectItem value="principal">Principal</SelectItem>
-            </SelectContent>
-          </Select>
+          {step === 1 ? (
+            <div className="flex flex-col gap-4">
+              <p className="text-xs italic text-stone-500">
+                These fields power the hiring-grade scoring rubric. All
+                optional — strong defaults apply.
+              </p>
 
-          {/* Must-haves chip list */}
-          <label
-            htmlFor="must-have-input"
-            className="text-sm font-medium mt-3 block"
+              {/* Two-column row on desktop: JD upload | Seniority */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-[#0a1d08]">
+                    Upload JD (PDF)
+                  </label>
+                  <p className="text-[11px] italic text-stone-500 mb-1">
+                    Fills the textarea below — you can still edit.
+                  </p>
+                  <FileUpload
+                    isUploaded={jdIsUploaded}
+                    setIsUploaded={setJdIsUploaded}
+                    fileName={jdFileName}
+                    setFileName={setJdFileName}
+                    setUploadedDocumentContext={setJobDescriptionFromUpload}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="seniority-select"
+                    className="text-sm font-medium text-[#0a1d08]"
+                  >
+                    Seniority level
+                  </label>
+                  <p className="text-[11px] italic text-stone-500 mb-1">
+                    Drives how strictly we score depth-of-knowledge.
+                  </p>
+                  <Select
+                    value={seniority}
+                    onValueChange={(v) => setSeniority(v as Seniority)}
+                  >
+                    <SelectTrigger
+                      id="seniority-select"
+                      className="border-0 border-b-2 border-gray-500 rounded-none bg-transparent h-9 px-0 focus:ring-0 focus:ring-offset-0 text-sm"
+                    >
+                      <SelectValue placeholder="Select seniority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="junior">Junior</SelectItem>
+                      <SelectItem value="mid">Mid</SelectItem>
+                      <SelectItem value="senior">Senior</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="principal">Principal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* JD textarea — source of truth */}
+              <div>
+                <div className="flex items-baseline justify-between">
+                  <label
+                    htmlFor="job-description"
+                    className="text-sm font-medium text-[#0a1d08]"
+                  >
+                    Job Description
+                  </label>
+                  {jobDescription.length > JD_COUNTER_VISIBLE_AT ? (
+                    <span className="text-[11px] italic text-stone-500">
+                      {JD_MAX_LENGTH - jobDescription.length} chars left
+                    </span>
+                  ) : null}
+                </div>
+                <Textarea
+                  id="job-description"
+                  value={jobDescription}
+                  maxLength={JD_MAX_LENGTH}
+                  className="h-24 mt-1 border-2 border-gray-500 w-full"
+                  placeholder="Paste, upload, or type the JD. You can edit after uploading."
+                  onChange={(e) => setJobDescription(e.target.value)}
+                />
+              </div>
+
+              {/* Must-haves */}
+              <div>
+                <div className="flex items-baseline justify-between">
+                  <label
+                    htmlFor="must-have-input"
+                    className="text-sm font-medium text-[#0a1d08]"
+                  >
+                    Must-haves
+                  </label>
+                  <span className="text-[11px] italic text-stone-500">
+                    {mustHaves.length}/{MUST_HAVES_CAP}
+                  </span>
+                </div>
+                <div className="flex flex-row gap-2 mt-1">
+                  <input
+                    id="must-have-input"
+                    type="text"
+                    value={mustHaveInput}
+                    disabled={atMustHaveCap}
+                    placeholder={
+                      atMustHaveCap
+                        ? `Limit of ${MUST_HAVES_CAP} reached`
+                        : "e.g. 5+ years TypeScript"
+                    }
+                    className="border-b-2 focus:outline-none border-gray-500 px-2 py-1 flex-1 min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onChange={(e) => setMustHaveInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddMustHave();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    disabled={atMustHaveCap || !mustHaveInput.trim()}
+                    onClick={handleAddMustHave}
+                    className="bg-brand-bold hover:bg-brand-bolder h-8 px-3 text-xs"
+                  >
+                    Add
+                  </Button>
+                </div>
+                {mustHaves.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {mustHaves.map((item) => (
+                      <span
+                        key={item}
+                        className="inline-flex items-center gap-1 rounded-full bg-stone-100 border border-stone-300 text-xs px-2 py-0.5"
+                      >
+                        {item}
+                        <button
+                          type="button"
+                          aria-label={`Remove ${item}`}
+                          onClick={() => removeMustHave(item)}
+                          className="text-stone-500 hover:text-stone-900"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="flex flex-col gap-4">
+              {/* Question count + duration — inline row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="num-questions"
+                    className="text-sm font-medium text-[#0a1d08]"
+                  >
+                    Number of questions
+                  </label>
+                  <p className="text-[11px] italic text-stone-500 mb-1">
+                    Max 5 — keep the screen tight.
+                  </p>
+                  <input
+                    id="num-questions"
+                    type="number"
+                    step="1"
+                    max="5"
+                    min="1"
+                    className="border-b-2 focus:outline-none border-gray-500 w-20 px-2 py-1 text-center"
+                    value={numQuestions}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      if (
+                        value === "" ||
+                        (Number.isInteger(Number(value)) && Number(value) > 0)
+                      ) {
+                        if (Number(value) > 5) {value = "5";}
+                        setNumQuestions(value);
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="duration"
+                    className="text-sm font-medium text-[#0a1d08]"
+                  >
+                    Duration (mins)
+                  </label>
+                  <p className="text-[11px] italic text-stone-500 mb-1">
+                    Used to detect abandoned calls.
+                  </p>
+                  <input
+                    id="duration"
+                    type="number"
+                    step="1"
+                    min="1"
+                    className="border-b-2 focus:outline-none border-gray-500 w-20 px-2 py-1 text-center"
+                    value={duration}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (
+                        value === "" ||
+                        (Number.isInteger(Number(value)) && Number(value) > 0)
+                      ) {
+                        setDuration(value);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Optional supporting docs (kept here — feeds question generation) */}
+              <details className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 group">
+                <summary className="cursor-pointer text-sm font-medium text-[#0a1d08] list-none flex items-center justify-between">
+                  <span>Supporting documents (optional)</span>
+                  <span className="text-[11px] italic text-stone-500 group-open:hidden">
+                    Click to expand
+                  </span>
+                </summary>
+                <p className="text-[11px] italic text-stone-500 mt-2 mb-1">
+                  Anything else that helps shape the generated questions —
+                  not used in scoring.
+                </p>
+                <FileUpload
+                  isUploaded={isUploaded}
+                  setIsUploaded={setIsUploaded}
+                  fileName={fileName}
+                  setFileName={setFileName}
+                  setUploadedDocumentContext={setUploadedDocumentContext}
+                />
+              </details>
+
+              {/* Submit CTAs */}
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button
+                  disabled={!canSubmit}
+                  variant="secondary"
+                  className="h-10"
+                  onClick={() => {
+                    setIsClicked(true);
+                    onManual();
+                  }}
+                >
+                  I&apos;ll do it myself
+                </Button>
+                <Button
+                  disabled={!canSubmit}
+                  className="bg-brand-bold hover:bg-brand-bolder h-10"
+                  onClick={() => {
+                    setIsClicked(true);
+                    onGenrateQuestions();
+                  }}
+                >
+                  Generate questions →
+                </Button>
+              </div>
+              {!step0Valid ? (
+                <p className="text-[11px] italic text-stone-500 text-center">
+                  Complete the Basics step first to enable submission.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        {/* ===== Bottom nav (always visible — Back/Next; final step's submit is inline above) ===== */}
+        <div className="mt-6 flex items-center justify-between border-t border-stone-200 pt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={goBack}
+            disabled={step === 0}
+            className="text-stone-600 hover:text-[#0a1d08] disabled:opacity-30"
           >
-            Must-haves — optional, up to {MUST_HAVES_CAP}
-          </label>
-          <div className="flex flex-row gap-2 mt-1 w-full">
-            <input
-              id="must-have-input"
-              type="text"
-              value={mustHaveInput}
-              disabled={atMustHaveCap}
-              placeholder={
-                atMustHaveCap
-                  ? `Limit of ${MUST_HAVES_CAP} reached`
-                  : "e.g. 5+ years TypeScript"
-              }
-              className="border-b-2 focus:outline-none border-gray-500 px-2 py-0.5 flex-1 min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
-              onChange={(e) => setMustHaveInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddMustHave();
-                }
-              }}
-            />
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+
+          {step < STEPS.length - 1 ? (
             <Button
               type="button"
-              disabled={atMustHaveCap || !mustHaveInput.trim()}
-              onClick={handleAddMustHave}
-              className="bg-brand-bold hover:bg-brand-bolder h-8 px-3 text-xs"
+              onClick={advance}
+              disabled={step === 0 && !step0Valid}
+              className="bg-brand-bold hover:bg-brand-bolder text-white"
             >
-              Add
+              Next
+              <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
-          </div>
-          {mustHaves.length > 0 ? (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {mustHaves.map((item) => (
-                <span
-                  key={item}
-                  className="inline-flex items-center gap-1 rounded-full bg-stone-100 border border-stone-300 text-xs px-2 py-0.5"
-                >
-                  {item}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${item}`}
-                    onClick={() => removeMustHave(item)}
-                    className="text-stone-500 hover:text-stone-900"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <hr className="my-4 border-t border-dashed border-stone-200 w-full" />
-          {/* End: Hiring criteria */}
-          <label className="flex-col mt-7 w-full">
-            <div className="flex items-center cursor-pointer">
-              <span className="text-sm font-medium">
-                Do you prefer the interviewees&apos; responses to be anonymous?
-              </span>
-              <Switch
-                checked={isAnonymous}
-                className={`ml-4 mt-1 ${
-                  isAnonymous ? "bg-brand-bold" : "bg-[#E6E7EB]"
-                }`}
-                onCheckedChange={(checked) => setIsAnonymous(checked)}
-              />
-            </div>
-            <span
-              style={{ fontSize: "0.7rem", lineHeight: "0.66rem" }}
-              className="font-light text-xs italic w-full text-left block"
-            >
-              Note: If not anonymous, the interviewee&apos;s email and name will
-              be collected.
+          ) : (
+            <span className="text-[11px] italic text-stone-400">
+              Use the buttons above to generate or build manually.
             </span>
-          </label>
-          <div className="flex flex-row gap-3 justify-between w-full mt-3">
-            <div className="flex flex-row justify-center items-center ">
-              <h3 className="text-sm font-medium ">Number of Questions:</h3>
-              <input
-                type="number"
-                step="1"
-                max="5"
-                min="1"
-                className="border-b-2 text-center focus:outline-none  border-gray-500 w-14 px-2 py-0.5 ml-3"
-                value={numQuestions}
-                onChange={(e) => {
-                  let value = e.target.value;
-                  if (
-                    value === "" ||
-                    (Number.isInteger(Number(value)) && Number(value) > 0)
-                  ) {
-                    if (Number(value) > 5) {
-                      value = "5";
-                    }
-                    setNumQuestions(value);
-                  }
-                }}
-              />
-            </div>
-            <div className="flex flex-row justify-center items-center">
-              <h3 className="text-sm font-medium ">Duration (mins):</h3>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                className="border-b-2 text-center focus:outline-none  border-gray-500 w-14 px-2 py-0.5 ml-3"
-                value={duration}
-                onChange={(e) => {
-                  let value = e.target.value;
-                  if (
-                    value === "" ||
-                    (Number.isInteger(Number(value)) && Number(value) > 0)
-                  ) {
-                    setDuration(value);
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <div className="flex flex-row w-full justify-center items-center space-x-24 mt-5">
-            <Button
-              disabled={
-                (name &&
-                objective &&
-                numQuestions &&
-                duration &&
-                selectedInterviewer != BigInt(0)
-                  ? false
-                  : true) || isClicked
-              }
-              className="bg-brand-bold hover:bg-brand-bolder  w-40"
-              onClick={() => {
-                setIsClicked(true);
-                onGenrateQuestions();
-              }}
-            >
-              Generate Questions
-            </Button>
-            <Button
-              disabled={
-                (name &&
-                objective &&
-                numQuestions &&
-                duration &&
-                selectedInterviewer != BigInt(0)
-                  ? false
-                  : true) || isClicked
-              }
-              className="bg-brand-bold w-40 hover:bg-brand-bolder"
-              onClick={() => {
-                setIsClicked(true);
-                onManual();
-              }}
-            >
-              I&apos;ll do it myself
-            </Button>
-          </div>
+          )}
         </div>
       </div>
+
       <Modal
         open={openInterviewerDetails}
         size="xl"
