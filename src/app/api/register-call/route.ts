@@ -36,13 +36,42 @@ const retellClient = new Retell({
 export async function POST(req: Request) {
   logger.info("register-call request received");
 
-  const body = await req.json();
-  const interviewerId = body.interviewer_id;
-  const interviewId: string | undefined = body.interview_id;
-  const inviteToken: string | undefined = body.invite_token;
-  const candidateEmail: string | undefined = body.candidate_email;
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 },
+    );
+  }
+
+  const rawInterviewerId = body.interviewer_id;
+  const interviewerId =
+    typeof rawInterviewerId === "string" || typeof rawInterviewerId === "number"
+      ? rawInterviewerId
+      : null;
+  const interviewId =
+    typeof body.interview_id === "string" ? body.interview_id : undefined;
+  const inviteToken =
+    typeof body.invite_token === "string" ? body.invite_token : undefined;
+  const candidateEmail =
+    typeof body.candidate_email === "string" ? body.candidate_email : undefined;
+  const dynamicData =
+    body.dynamic_data && typeof body.dynamic_data === "object"
+      ? (body.dynamic_data as Record<string, unknown>)
+      : undefined;
+
+  if (interviewerId === null) {
+    return NextResponse.json(
+      { error: "interviewer_id is required" },
+      { status: 400 },
+    );
+  }
 
   let inviteId: string | null = null;
+
+  try {
 
   if (interviewId) {
     const interview = await InterviewService.getInterviewById(interviewId);
@@ -145,31 +174,43 @@ export async function POST(req: Request) {
     }
   }
 
-  const interviewer = await InterviewerService.getInterviewer(interviewerId);
-  if (!interviewer) {
-    logger.info(`register-call: interviewer ${interviewerId} not found`);
+    const interviewer = await InterviewerService.getInterviewer(
+      interviewerId as never,
+    );
+    if (!interviewer) {
+      logger.info(`register-call: interviewer ${interviewerId} not found`);
+
+      return NextResponse.json(
+        { error: "Interviewer not found" },
+        { status: 404 },
+      );
+    }
+
+    const registerCallResponse = await retellClient.call.createWebCall({
+      agent_id: interviewer.agent_id,
+      retell_llm_dynamic_variables: dynamicData,
+    });
+
+    const sessionToken = randomUUID();
+
+    logger.info("Call registered successfully", { inviteId });
 
     return NextResponse.json(
-      { error: "Interviewer not found" },
-      { status: 404 },
+      {
+        registerCallResponse,
+        session_token: sessionToken,
+        invite_id: inviteId,
+      },
+      { status: 200 },
+    );
+  } catch (err) {
+    logger.error("register-call unhandled error", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
-
-  const registerCallResponse = await retellClient.call.createWebCall({
-    agent_id: interviewer.agent_id,
-    retell_llm_dynamic_variables: body.dynamic_data,
-  });
-
-  const sessionToken = randomUUID();
-
-  logger.info("Call registered successfully", { inviteId });
-
-  return NextResponse.json(
-    {
-      registerCallResponse,
-      session_token: sessionToken,
-      invite_id: inviteId,
-    },
-    { status: 200 },
-  );
 }

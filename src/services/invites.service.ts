@@ -121,15 +121,29 @@ const listInvitesForInterview = async (
   return (data ?? []) as InterviewInvite[];
 };
 
-const revokeInvite = async (inviteId: string): Promise<void> => {
-  const { error } = await supabase
+const revokeInvite = async (
+  inviteId: string,
+  interviewId?: string,
+): Promise<{ revoked: boolean }> => {
+  let query = supabase
     .from("interview_invites")
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", inviteId);
 
+  // When interviewId is supplied, enforce least-privilege: a recruiter who
+  // owns interview A cannot revoke an invite belonging to interview B even
+  // if they somehow learn the invite_id UUID.
+  if (interviewId) {
+    query = query.eq("interview_id", interviewId);
+  }
+
+  const { data, error } = await query.select("id");
+
   if (error) {
     throw new Error(`revokeInvite failed: ${error.message}`);
   }
+
+  return { revoked: (data?.length ?? 0) > 0 };
 };
 
 const deriveInviteStatus = (invite: InterviewInvite): InviteStatus => {

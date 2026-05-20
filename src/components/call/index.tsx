@@ -35,7 +35,10 @@ import { ResponseService } from "@/services/responses.service";
 import { Interview } from "@/types/interview";
 import { FeedbackData } from "@/types/response";
 import { FeedbackForm } from "@/components/call/feedbackForm";
-import { InviteEmailMismatchSurface } from "@/components/call/accessSurfaces";
+import {
+  InviteEmailMismatchSurface,
+  InviteInvalidSurface,
+} from "@/components/call/accessSurfaces";
 import {
   TabSwitchWarning,
   useTabSwitchPrevention,
@@ -945,6 +948,9 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
   const [isOldUser, setIsOldUser] = useState<boolean>(false);
   const [inviteEmailMismatch, setInviteEmailMismatch] =
     useState<boolean>(false);
+  const [inviteAccessError, setInviteAccessError] = useState<string | null>(
+    null,
+  );
   const [callId, setCallId] = useState<string>("");
   const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -1236,18 +1242,48 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
       }
 
       if (pathname && newSessionToken) {
-        router.replace(`${pathname}?session=${newSessionToken}`);
+        // Preserve ?token= in the URL so a refresh during an invite-only
+        // session keeps the access gate in sync with the live session.
+        // Without this, the next page load would hit validate-access with
+        // no token and get bounced to InviteRequiredSurface even though
+        // a valid response row exists.
+        const tokenSuffix = inviteToken
+          ? `&token=${encodeURIComponent(inviteToken)}`
+          : "";
+        router.replace(`${pathname}?session=${newSessionToken}${tokenSuffix}`);
       }
     } catch (error) {
-      // INVITE_ID_THREADING_ATOMIC + ENG1: register-call returns 403 with
-      // error: "invite-email-mismatch" when the candidate's submitted
-      // email doesn't match the invite. Surface the dedicated mismatch
-      // view so the candidate can retry with a different email.
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
-        const code = (error.response.data as { error?: string } | undefined)
+      // register-call gate codes (ENG1 + INVITE_ID_THREADING_ATOMIC):
+      //   403 invite-email-mismatch  → dedicated mismatch surface (retry email)
+      //   403 invite-required / invite-invalid / invite-expired /
+      //       invite-already-used / expired-public → generic "invite no
+      //       longer valid" surface (no retry; recruiter must re-send)
+      //   409 invite-already-used → same generic surface (race-condition
+      //       second tab lost the reservation)
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const code = (error.response?.data as { error?: string } | undefined)
           ?.error;
-        if (code === "invite-email-mismatch") {
+
+        if (status === 403 && code === "invite-email-mismatch") {
           setInviteEmailMismatch(true);
+          setLoading(false);
+
+          return;
+        }
+
+        if (
+          (status === 403 || status === 409) &&
+          code &&
+          [
+            "invite-required",
+            "invite-invalid",
+            "invite-expired",
+            "invite-already-used",
+            "expired-public",
+          ].includes(code)
+        ) {
+          setInviteAccessError(code);
           setLoading(false);
 
           return;
@@ -1461,7 +1497,12 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
           />
         ) : null}
 
+        {!inviteEmailMismatch && inviteAccessError ? (
+          <InviteInvalidSurface />
+        ) : null}
+
         {!inviteEmailMismatch &&
+        !inviteAccessError &&
         reconnectPhase === "idle" &&
         !isStarted &&
         !isEnded &&

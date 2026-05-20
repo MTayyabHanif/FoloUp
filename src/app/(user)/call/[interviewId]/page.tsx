@@ -50,7 +50,7 @@ function StatusSurface({
 }: {
   title: string;
   description: string;
-  detail: string;
+  detail?: string;
   image?: string;
   icon?: ReactNode;
 }) {
@@ -70,9 +70,9 @@ function StatusSurface({
               {description}
             </p>
           </div>
-          <div className="rounded-[24px] border border-[#e0e5d5] bg-[#f6f8ef] p-5 text-sm leading-6 text-[#31200b]/82">
+          {detail && (<div className="rounded-[24px] border border-[#e0e5d5] bg-[#f6f8ef] p-5 text-sm leading-6 text-[#31200b]/82">
             {detail}
-          </div>
+          </div>)}
         </div>
 
         <div className="flex items-center justify-center">
@@ -207,6 +207,19 @@ function InterviewInterface({
       return;
     }
 
+    // Reconnect path: when ?session= is present, the candidate is resuming
+    // a previously-authorized session. /api/check-session is the authority
+    // for whether that token is still valid; the access gate would be a
+    // false negative because the URL may have lost ?token= during the
+    // initial register-call redirect. Skip validate-access and let <Call>
+    // render — its reconnect logic handles it from here.
+    if (sessionToken) {
+      setAccess({ state: "valid", access_mode: "public" });
+      setAccessChecking(false);
+
+      return;
+    }
+
     let cancelled = false;
     setAccessChecking(true);
     setAccessError(false);
@@ -247,7 +260,7 @@ function InterviewInterface({
     return () => {
       cancelled = true;
     };
-  }, [interview, inviteToken]);
+  }, [interview, inviteToken, sessionToken]);
 
   let desktopContent: ReactNode;
   if (!interview) {
@@ -255,7 +268,6 @@ function InterviewInterface({
       <StatusSurface
         title="This interview link could not be verified"
         description="The session link does not match an available interview. Please return to the original invitation or contact the person who shared it with you."
-        detail="Interview links are sometimes copied with extra characters or opened after they have been replaced. Use the original invitation to avoid that mismatch."
         image="/invalid-url.png"
       />
     ) : (

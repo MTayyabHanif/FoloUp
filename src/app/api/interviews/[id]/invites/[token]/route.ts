@@ -31,7 +31,12 @@ export async function DELETE(
   }
 
   try {
-    await InviteService.revokeInvite(inviteId);
+    const result = await InviteService.revokeInvite(inviteId, interview.id);
+    if (!result.revoked) {
+      // Either the invite doesn't exist, or it doesn't belong to this
+      // interview. Don't leak the difference.
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     logger.info("Revoked invite", { interviewId: interview.id, inviteId });
 
     return NextResponse.json({ ok: true }, { status: 200 });
