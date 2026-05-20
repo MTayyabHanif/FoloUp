@@ -120,14 +120,11 @@ export async function POST(req: Request) {
             );
           }
 
-          const reserved = await InviteService.markInviteReserved(invite.id);
-          if (!reserved.ok) {
-            return NextResponse.json(
-              { error: "invite-already-used" },
-              { status: 409 },
-            );
-          }
-
+          // Check email BEFORE reserving so a mismatch on a fat-fingered
+          // email doesn't strand the invite in a reserved state and lock
+          // the legitimate candidate out on their retry. The atomic
+          // reservation immediately below still protects against
+          // concurrent same-email starts.
           if (
             !candidateEmail ||
             invite.email.toLowerCase().trim() !==
@@ -136,6 +133,14 @@ export async function POST(req: Request) {
             return NextResponse.json(
               { error: "invite-email-mismatch" },
               { status: 403 },
+            );
+          }
+
+          const reserved = await InviteService.markInviteReserved(invite.id);
+          if (!reserved.ok) {
+            return NextResponse.json(
+              { error: "invite-already-used" },
+              { status: 409 },
             );
           }
 

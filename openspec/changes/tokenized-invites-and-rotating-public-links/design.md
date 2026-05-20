@@ -61,6 +61,8 @@ Key existing seams used:
 
 **Alternative considered:** Marking used at link-open or at response creation. Rejected: link-open is too weak (crawlers, accidental clicks); response creation (client-side) can fail silently if the network drops before the Supabase write completes.
 
+**Ordering correction (slice 6, post-review):** The email-binding check (ENG1) runs BEFORE `markInviteReserved`, not after. Original design implied reserve-then-check. Reserving first and then 403-ing on a mismatch strands the invite in `reserved` state and locks the legitimate candidate out of their retry. The reservation is the concurrency guard for two browser tabs racing with the SAME (valid) email — it does not need to guard against mismatched emails. Implementation: `src/app/api/register-call/route.ts:131-147`.
+
 ---
 
 ### D4 — New `/api/validate-access` preflight endpoint (implements CGC seam A)

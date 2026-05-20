@@ -499,6 +499,9 @@ export default function InvitesPage({ params: paramsPromise }: Props) {
             <p className="mt-1 text-sm leading-6 text-[#53614d]">
               Each invite is bound to the email you enter. The candidate&apos;s submitted email must match to start the interview.
             </p>
+            <p className="mt-3 rounded-[16px] border border-[#e0e5d5] bg-[#f8faf3] px-3 py-2 text-xs leading-5 text-[#53614d]">
+              Invites work regardless of invite-only mode. Enable invite-only in the interview settings to require an invite.
+            </p>
             <div className="mt-4 space-y-3">
               <input
                 type="email"
