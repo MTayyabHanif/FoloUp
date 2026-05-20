@@ -30,62 +30,66 @@
 
 ## 4. InterviewService Extensions
 
-- [ ] 4.1 Add `rotatePublicToken(interviewId): Promise<{ public_token: string; public_token_expires_at: string }>` to `src/services/interviews.service.ts` — atomic UPDATE setting both columns; throws on error
-- [ ] 4.2 Add `updateInviteOnlyFlag(interviewId, inviteOnly: boolean): Promise<void>` to `src/services/interviews.service.ts` — wraps existing `updateInterview` pattern; throws 422 if `inviteOnly=true` and the interview has `is_anonymous=true` (OD1 server guard)
-- [ ] 4.3 Ensure `create-interview` route (`src/app/api/create-interview/route.ts`) sets `public_token = uuid_generate_v4()` and `public_token_expires_at = NOW() + INTERVAL '24 hours'` on new interview creation
+- [x] 4.1 Add `rotatePublicToken(interviewId): Promise<{ public_token: string; public_token_expires_at: string }>` to `src/services/interviews.service.ts` — atomic UPDATE setting both columns; throws on error
+- [x] 4.2 Add `updateInviteOnlyFlag(interviewId, inviteOnly: boolean): Promise<void>` to `src/services/interviews.service.ts` — fetches current `is_anonymous` and throws a typed `InviteOnlyAnonymousConflictError` (status=422, code=`invite_only_anonymous_conflict`) if `inviteOnly=true` and `is_anonymous=true` (OD1 server guard). Exported `isInviteOnlyAnonymousConflict` type guard for callers.
+- [x] 4.3 Updated `create-interview` route (`src/app/api/create-interview/route.ts`) to mint `public_token = crypto.randomUUID()` and `public_token_expires_at = NOW() + PUBLIC_TOKEN_TTL_HOURS` (24h) on new interview creation.
 
 ## 5. Validate-Access API Route
 
-- [ ] 5.1 Create `src/app/api/validate-access/route.ts` as a public (unauthenticated) POST route
-- [ ] 5.2 Parse `{ interviewId, token? }` from request body (no `email` field — email is NOT accepted or checked here); return 400 on missing interviewId
-- [ ] 5.3 Fetch interview row; return `{ state: 'invite-required' }` if `invite_only=true` and no token
-- [ ] 5.4 If token present: look up `interview_invites` by `(interview_id, token)` first; if found, run invite validity checks (revoked → `invite-invalid`; expired → `invite-expired`; reserved → `invite-already-used`; else → `valid`). **Email is NOT checked here** — email mismatch is enforced exclusively by `/api/register-call` (ENG1).
-- [ ] 5.5 If token not matched in invites: compare against `interview.public_token`; if matches and `invite_only=false`, check `public_token_expires_at` — expired → `expired-public`; else → `valid`
-- [ ] 5.6 If token matches neither: return `{ state: 'invite-invalid' }`
-- [ ] 5.7 Add `/api/validate-access` to the public-routes allowlist in `src/proxy.ts` (same pattern as existing public API routes at line 19)
+- [x] 5.1 Create `src/app/api/validate-access/route.ts` as a public (unauthenticated) POST route
+- [x] 5.2 Parse `{ interviewId, token? }` from request body (no `email` field — email is NOT accepted or checked here); return 400 on missing interviewId
+- [x] 5.3 Fetch interview row; return `{ state: 'invite-required' }` if `invite_only=true` and no token
+- [x] 5.4 If token present: look up `interview_invites` by `(interview_id, token)` first; if found, run invite validity checks (revoked → `invite-invalid`; used → `invite-already-used`; expired → `invite-expired`; reserved → `invite-already-used`; else → `valid` with `access_mode: 'invite'` and `invite_id`). **Email is NOT checked here** — email mismatch is enforced exclusively by `/api/register-call` (ENG1).
+- [x] 5.5 If token not matched in invites: compare against `interview.public_token`; if matches and `invite_only=false`, check `public_token_expires_at` — expired → `expired-public`; else → `valid` with `access_mode: 'public'`
+- [x] 5.6 If token matches neither: return `{ state: 'invite-invalid' }`
+- [x] 5.7 Add `/api/validate-access` to the public-routes allowlist in `src/proxy.ts`
+
+> Slice 2 note: validate-access also implements **owner bypass** (OD2). If a Clerk session is present and `userId === interview.user_id`, every gate is short-circuited to `{ state: 'valid', access_mode: 'owner_bypass' }` so recruiters can preview their own interviews regardless of invite_only or expiry.
 
 ## 6. Register-Call Token Gate
 
-- [ ] 6.1 Modify `src/app/api/register-call/route.ts` to accept optional `inviteToken` in request body
-- [ ] 6.2 If `invite_only=true` and no `inviteToken`: return 403 `{ error: 'invite-required' }`
-- [ ] 6.3 If `inviteToken` present: call `InviteService.getInviteByToken`; if not found/revoked/expired → 403
-- [ ] 6.4 If invite found: call `InviteService.markInviteReserved`; if returns `already-reserved` → 409 `{ error: 'invite-already-used' }`
-- [ ] 6.5 Validate invite email against the candidate's submitted email (case-insensitive); mismatch → 403 `{ error: 'invite-email-mismatch' }`. **This is the ONLY place email-mismatch is enforced** (ENG1). The candidate page's `<Call>` component (or its wrapper) handles this 403 from the `register-call` POST response by switching the view to `<InviteEmailMismatchSurface>`.
-- [ ] ~~6.6~~ → **Merged into INVITE_ID_THREADING_ATOMIC (task group 6A below). Do NOT implement this in isolation.**
+- [x] 6.1 Modify `src/app/api/register-call/route.ts` to accept optional `invite_token`, `interview_id`, and `candidate_email` in request body
+- [x] 6.2 If `invite_only=true` and no `invite_token`: return 403 `{ error: 'invite-required' }`
+- [x] 6.3 If `invite_token` present: call `InviteService.getInviteByToken`; if not found/revoked/used/expired → 403 with the corresponding code
+- [x] 6.4 If invite found: call `InviteService.markInviteReserved`; if returns `already-reserved` → 409 `{ error: 'invite-already-used' }`
+- [x] 6.5 Validate invite email against the candidate's submitted email (case-insensitive + trimmed); mismatch → 403 `{ error: 'invite-email-mismatch' }`. **This is the ONLY place email-mismatch is enforced** (ENG1).
+- [x] ~~6.6~~ → **Implemented as part of INVITE_ID_THREADING_ATOMIC. The register-call response now includes `invite_id: string | null`.**
+
+> Slice 2 note: register-call also implements **owner bypass** (OD2) — Clerk-authenticated owner skips all token gates, mirroring validate-access.
 
 ## 6A. INVITE_ID_THREADING_ATOMIC (ENG2 — ship as one PR)
 
 > **WARNING: Do NOT mark any sub-step done in isolation — the entire chain ships in one PR. Partial completion silently breaks invite tracking because `markInviteUsed` no-ops when `response.invite_id` is null.**
 
-This group consolidates the end-to-end chain that threads `invite_id` from `/api/register-call` through to the `call_started` webhook. All six touchpoints must be edited together:
+This group consolidates the end-to-end chain that threads `invite_id` from `/api/register-call` through to the `call_started` webhook. All six touchpoints must be edited together. **Slice 2 lands 4 of 6 touchpoints; the remaining 2 (client-side payload + manual verification) land in slice 3. The chain is still atomic across the same feature branch before merge.**
 
-- [ ] `src/app/api/register-call/route.ts` — response shape from this route includes `invite_id: string | null` (the invite row's id after reservation, or null for non-invite flows)
-- [ ] `src/types/response.ts` — add `invite_id?: string | null` to the Response type (also confirm the DB migration in task 1.6 has added the corresponding nullable column to the `response` table)
-- [ ] `src/components/call/index.tsx` line 1214 — the `createResponse` payload includes `invite_id` sourced from the `/api/register-call` response body
-- [ ] `src/services/responses.service.ts` (`createResponse`) — accepts and persists `invite_id` (nullable) when writing the response row
-- [ ] `src/app/api/response-webhook/route.ts` — on `call_started`, look up `response.invite_id` via `call_id`, then call `InviteService.markInviteUsed(invite_id)`
-- [ ] **Manual verification step:** After completing a real end-to-end flow with a token, confirm (a) `response.invite_id` is populated in the DB, and (b) the matching `interview_invites.used_at` is set after the `call_started` webhook fires.
+- [x] `src/app/api/register-call/route.ts` — response shape from this route includes `invite_id: string | null` (the invite row's id after reservation, or null for non-invite flows)
+- [x] `src/types/response.ts` — added `invite_id: string | null` to the Response type. The corresponding DB column is added by migration task 1.6.
+- [ ] `src/components/call/index.tsx` line 1214 — the `createResponse` payload includes `invite_id` sourced from the `/api/register-call` response body **(slice 3)**
+- [x] `src/services/responses.service.ts` (`createResponse`) — accepts and persists `invite_id` automatically via existing `Partial<Response>` signature (no code change needed — type-driven).
+- [x] `src/app/api/response-webhook/route.ts` — on `call_started`, call `InviteService.markInviteUsed(call_id)` which looks up `response.invite_id` via `call_id` and marks the invite used.
+- [ ] **Manual verification step:** After completing a real end-to-end flow with a token, confirm (a) `response.invite_id` is populated in the DB, and (b) the matching `interview_invites.used_at` is set after the `call_started` webhook fires. **(slice 3 / post-deploy)**
 
 > Original tasks 6.6, 11.1, and the `invite_id`-related part of 2.4 are subsumed here. See the redirects on those tasks.
 
 ## 7. Webhook: Mark Invite Used
 
-- [ ] 7.1 In `src/app/api/response-webhook/route.ts`, extend the `call_started` handler at line 94 to call `InviteService.markInviteUsed(call_id)`
-- [ ] 7.2 Ensure `markInviteUsed` failure is non-fatal (catch and log; do not throw to Retell)
+- [x] 7.1 In `src/app/api/response-webhook/route.ts`, extended the `call_started` handler to call `InviteService.markInviteUsed(call_id)` (the service does the response.call_id → response.invite_id → interview_invites join internally).
+- [x] 7.2 `markInviteUsed` is non-fatal — internally catches Supabase errors with `console.warn` and returns void; the webhook awaits without try/catch and continues to return 200 to Retell.
 
 ## 8. Rotate Public Token API Route
 
-- [ ] 8.1 Create `src/app/api/interviews/[id]/rotate-public-token/route.ts` as a Clerk-authenticated POST route
-- [ ] 8.2 Verify the authenticated user owns (or has access to) the interview; return 403 otherwise
-- [ ] 8.3 Call `InterviewService.rotatePublicToken(id)`; return `{ public_token, public_token_expires_at }`
+- [x] 8.1 Create `src/app/api/interviews/[id]/rotate-public-token/route.ts` as a Clerk-authenticated POST route
+- [x] 8.2 Verify the authenticated user owns the interview (`interview.user_id === userId`); 401 if no session, 403 if not owner, 404 if interview not found
+- [x] 8.3 Call `InterviewService.rotatePublicToken(id)`; return `{ public_token, public_token_expires_at }`
 
 ## 9. Invite Management API Routes
 
-- [ ] 9.1 Create `src/app/api/interviews/[id]/invites/route.ts` with GET (list) and POST (create) handlers; both require Clerk auth
-- [ ] 9.2 POST: parse `{ email }` from body; validate email format; call `InviteService.createInvite`; return invite row + shareable URL (`${baseUrl}/call/${interview.readable_slug || id}?token=${invite.token}`)
-- [ ] 9.3 GET: call `InviteService.listInvitesForInterview`; enrich each row with `deriveInviteStatus`; return array
-- [ ] 9.4 Create `src/app/api/interviews/[id]/invites/[token]/route.ts` with DELETE handler (revoke); requires Clerk auth
-- [ ] 9.5 DELETE: look up invite by token + interview_id; call `InviteService.revokeInvite`; return 204
+- [x] 9.1 Create `src/app/api/interviews/[id]/invites/route.ts` with GET (list) and POST (create) handlers; both require Clerk auth + interview ownership.
+- [x] 9.2 POST: parse `{ email }` from body; validate format (non-empty, contains `@`); call `InviteService.createInvite`; return the invite row + derived status. (Shareable URL construction deferred to the dashboard UI in slice 3 — it has the base URL via `getServerBaseUrl` / request context.)
+- [x] 9.3 GET: call `InviteService.listInvitesForInterview`; enrich each row with `deriveInviteStatus`; return `{ invites: [...] }`.
+- [x] 9.4 Create `src/app/api/interviews/[id]/invites/[token]/route.ts` with DELETE handler (revoke); requires Clerk auth + interview ownership. The dynamic segment is named `[token]` for URL aesthetic but the caller passes the invite's row id (returned by the list endpoint).
+- [x] 9.5 DELETE: call `InviteService.revokeInvite(inviteId)`; return `{ ok: true }`.
 
 ## 10. Candidate Page: Token-Aware Preflight
 

@@ -24,6 +24,7 @@ export interface Response {
   questions_covered: number | null;
   last_active_at: string | null;
   session_token: string | null;
+  invite_id: string | null;
 }
 
 export interface Analytics {

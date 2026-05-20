@@ -1,11 +1,27 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { PUBLIC_TOKEN_TTL_HOURS } from "@/lib/access-control-constants";
 import type { Interview } from "@/types/interview";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
 );
+
+class InviteOnlyAnonymousConflictError extends Error {
+  status = 422 as const;
+  code = "invite_only_anonymous_conflict" as const;
+  constructor() {
+    super(
+      "invite_only=true is incompatible with is_anonymous=true; disable Anonymous first",
+    );
+  }
+}
+
+export const isInviteOnlyAnonymousConflict = (
+  err: unknown,
+): err is InviteOnlyAnonymousConflictError =>
+  err instanceof InviteOnlyAnonymousConflictError;
 
 /**
  * Change #3 wave 2: services re-throw on DB errors instead of
@@ -107,6 +123,67 @@ const deactivateInterviewsByOrgId = async (organizationId: string) => {
   }
 };
 
+const rotatePublicToken = async (
+  interviewId: string,
+): Promise<{ public_token: string; public_token_expires_at: string }> => {
+  // crypto.randomUUID is available in Node 16+ and the Edge runtime.
+  const newToken = crypto.randomUUID();
+  const newExpiresAt = new Date(
+    Date.now() + PUBLIC_TOKEN_TTL_HOURS * 60 * 60 * 1000,
+  ).toISOString();
+
+  const { data, error } = await supabase
+    .from("interview")
+    .update({
+      public_token: newToken,
+      public_token_expires_at: newExpiresAt,
+    })
+    .eq("id", interviewId)
+    .select("public_token, public_token_expires_at")
+    .single();
+
+  if (error || !data) {
+    throw new Error(`rotatePublicToken failed: ${error?.message ?? "unknown"}`);
+  }
+
+  return {
+    public_token: data.public_token as string,
+    public_token_expires_at: data.public_token_expires_at as string,
+  };
+};
+
+const updateInviteOnlyFlag = async (
+  interviewId: string,
+  inviteOnly: boolean,
+): Promise<void> => {
+  if (inviteOnly) {
+    const { data: existing, error: fetchError } = await supabase
+      .from("interview")
+      .select("is_anonymous")
+      .eq("id", interviewId)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error(
+        `updateInviteOnlyFlag fetch failed: ${fetchError?.message ?? "not found"}`,
+      );
+    }
+
+    if (existing.is_anonymous) {
+      throw new InviteOnlyAnonymousConflictError();
+    }
+  }
+
+  const { error } = await supabase
+    .from("interview")
+    .update({ invite_only: inviteOnly })
+    .eq("id", interviewId);
+
+  if (error) {
+    throw new Error(`updateInviteOnlyFlag failed: ${error.message}`);
+  }
+};
+
 export const InterviewService = {
   getAllInterviews,
   getInterviewById,
@@ -115,4 +192,6 @@ export const InterviewService = {
   getAllRespondents,
   createInterview,
   deactivateInterviewsByOrgId,
+  rotatePublicToken,
+  updateInviteOnlyFlag,
 };

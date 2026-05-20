@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import Retell from "retell-sdk";
 
 import { logger } from "@/lib/logger";
+import { countQuestionsCovered, needsRetellReviewRefresh } from "@/lib/retellReviewArtifacts";
 import { generateInterviewAnalytics } from "@/services/analytics.service";
 import { InterviewService } from "@/services/interviews.service";
+import { InviteService } from "@/services/invites.service";
 import { ResponseService } from "@/services/responses.service";
 import type { ResponseStatus } from "@/types/response";
 
@@ -93,6 +95,12 @@ export async function POST(req: NextRequest) {
   switch (event) {
     case "call_started":
       logger.info("Call started", { callId: call.call_id });
+      // Strong signal: the candidate's call actually connected. Mark the
+      // associated invite as used (if there is one). markInviteUsed is
+      // a silent no-op when response.invite_id is null (public-link or
+      // legacy flow) and never throws, so this is safe to await without
+      // a try/catch beyond what InviteService already does internally.
+      await InviteService.markInviteUsed(call.call_id);
       break;
 
     case "call_ended": {
@@ -150,7 +158,7 @@ export async function POST(req: NextRequest) {
 
     case "call_analyzed": {
       const stored = await ResponseService.getResponseByCallId(call.call_id);
-      if (stored?.is_analysed) {
+      if (!needsRetellReviewRefresh(stored)) {
         logger.info("Call already analysed; skipping", {
           callId: call.call_id,
         });
@@ -163,11 +171,13 @@ export async function POST(req: NextRequest) {
           Number(callOutput.start_timestamp) / 1000,
       );
 
-      const result = await generateInterviewAnalytics({
-        callId: call.call_id,
-        interviewId: stored.interview_id,
-        transcript: callOutput.transcript ?? "",
-      });
+      const result = stored.analytics
+        ? { analytics: stored.analytics, status: 200 }
+        : await generateInterviewAnalytics({
+            callId: call.call_id,
+            interviewId: stored.interview_id,
+            transcript: callOutput.transcript ?? "",
+          });
 
       // questions_covered = count of substantive user turns
       // (filters filler words like "yeah", "um" via 20-char threshold),
@@ -176,23 +186,13 @@ export async function POST(req: NextRequest) {
       try {
         const transcriptObject = (callOutput as { transcript_object?: unknown })
           .transcript_object as Array<{ role: string; content?: string }> | undefined;
-        if (Array.isArray(transcriptObject)) {
-          const userTurns = transcriptObject.filter(
-            (t) =>
-              t?.role === "user" &&
-              typeof t.content === "string" &&
-              t.content.trim().length > 20,
-          ).length;
-
-          const interview = await InterviewService.getInterviewById(
-            stored.interview_id,
-          );
-          const cap =
-            typeof interview?.question_count === "number"
-              ? interview.question_count
-              : userTurns;
-          questionsCovered = Math.min(userTurns, cap);
-        }
+        const interview = await InterviewService.getInterviewById(
+          stored.interview_id,
+        );
+        questionsCovered = countQuestionsCovered(
+          transcriptObject,
+          interview?.question_count ?? null,
+        );
       } catch (err) {
         logger.warn("questions_covered computation failed", {
           callId: call.call_id,

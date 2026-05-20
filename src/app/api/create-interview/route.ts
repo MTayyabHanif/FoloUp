@@ -1,3 +1,4 @@
+import { PUBLIC_TOKEN_TTL_HOURS } from "@/lib/access-control-constants";
 import { getServerBaseUrl } from "@/lib/base-url";
 import { logger } from "@/lib/logger";
 import { InterviewService } from "@/services/interviews.service";
@@ -30,11 +31,17 @@ export async function POST(req: Request) {
       }
     }
 
+    const publicTokenExpiresAt = new Date(
+      Date.now() + PUBLIC_TOKEN_TTL_HOURS * 60 * 60 * 1000,
+    ).toISOString();
+
     const newInterview = await InterviewService.createInterview({
       ...payload,
       url: url,
       id: url_id,
       readable_slug: readableSlug,
+      public_token: crypto.randomUUID(),
+      public_token_expires_at: publicTokenExpiresAt,
     });
 
     logger.info("Interview created successfully");
