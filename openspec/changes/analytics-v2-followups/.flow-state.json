@@ -1,0 +1,15 @@
+{
+  "changeName": "analytics-v2-followups",
+  "currentPhase": "review",
+  "agreedOptionalSteps": ["plan_design_review"],
+  "skippedSteps": ["brainstorming", "qa"],
+  "completedGates": [
+    "cgc",
+    "propose",
+    "plan_eng_review",
+    "plan_design_review",
+    "apply"
+  ],
+  "lastAmended": "2026-05-21T00:00:00Z",
+  "lastUpdated": "2026-05-21T00:00:00Z"
+}

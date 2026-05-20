@@ -15,7 +15,7 @@ import {
   HARD_CAPS,
   SUBSTANTIVE_TURN_MIN_CHARS,
   SUBSTANTIVE_TURN_MIN_WORDS,
-} from "@/lib/analytics-v2.constants";
+} from "./analytics-v2.constants.ts";
 import type { AnalyticsV2 } from "@/types/response";
 
 // ---------------------------------------------------------------------------
