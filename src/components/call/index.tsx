@@ -35,6 +35,7 @@ import { ResponseService } from "@/services/responses.service";
 import { Interview } from "@/types/interview";
 import { FeedbackData } from "@/types/response";
 import { FeedbackForm } from "@/components/call/feedbackForm";
+import { InviteEmailMismatchSurface } from "@/components/call/accessSurfaces";
 import {
   TabSwitchWarning,
   useTabSwitchPrevention,
@@ -45,6 +46,7 @@ const webClient = new RetellWebClient();
 type InterviewProps = {
   interview: Interview;
   sessionToken?: string;
+  inviteToken?: string;
 };
 
 type RegisterCallResponse = {
@@ -54,6 +56,7 @@ type RegisterCallResponse = {
       access_token: string;
     };
     session_token?: string;
+    invite_id?: string | null;
   };
 };
 
@@ -922,7 +925,7 @@ function IneligibleView() {
   );
 }
 
-function Call({ interview, sessionToken }: InterviewProps) {
+function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
   const { createResponse } = useResponses();
   const router = useRouter();
   const pathname = usePathname();
@@ -940,6 +943,8 @@ function Call({ interview, sessionToken }: InterviewProps) {
   const [name, setName] = useState<string>("");
   const [isValidEmail, setIsValidEmail] = useState<boolean>(false);
   const [isOldUser, setIsOldUser] = useState<boolean>(false);
+  const [inviteEmailMismatch, setInviteEmailMismatch] =
+    useState<boolean>(false);
   const [callId, setCallId] = useState<string>("");
   const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -1172,12 +1177,19 @@ function Call({ interview, sessionToken }: InterviewProps) {
     try {
       const registerCallResponse: RegisterCallResponse = await axios.post(
         "/api/register-call",
-        { dynamic_data: data, interviewer_id: interview.interviewer_id },
+        {
+          dynamic_data: data,
+          interviewer_id: interview.interviewer_id,
+          interview_id: interview.id,
+          invite_token: inviteToken,
+          candidate_email: isReconnect ? undefined : email,
+        },
       );
       const accessToken =
         registerCallResponse.data.registerCallResponse.access_token;
       const newCallId = registerCallResponse.data.registerCallResponse.call_id;
       const newSessionToken = registerCallResponse.data.session_token ?? "";
+      const inviteId = registerCallResponse.data.invite_id ?? null;
 
       if (!accessToken) {
         if (isReconnect) {
@@ -1219,6 +1231,7 @@ function Call({ interview, sessionToken }: InterviewProps) {
           status: "ongoing",
           session_token: newSessionToken,
           last_active_at: new Date().toISOString(),
+          invite_id: inviteId,
         } as never);
       }
 
@@ -1226,6 +1239,21 @@ function Call({ interview, sessionToken }: InterviewProps) {
         router.replace(`${pathname}?session=${newSessionToken}`);
       }
     } catch (error) {
+      // INVITE_ID_THREADING_ATOMIC + ENG1: register-call returns 403 with
+      // error: "invite-email-mismatch" when the candidate's submitted
+      // email doesn't match the invite. Surface the dedicated mismatch
+      // view so the candidate can retry with a different email.
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        const code = (error.response.data as { error?: string } | undefined)
+          ?.error;
+        if (code === "invite-email-mismatch") {
+          setInviteEmailMismatch(true);
+          setLoading(false);
+
+          return;
+        }
+      }
+
       console.error("startConversation error", error);
       if (isReconnect) {
         setReconnectPhase("register_failed");
@@ -1233,6 +1261,12 @@ function Call({ interview, sessionToken }: InterviewProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onTryDifferentEmail = () => {
+    setInviteEmailMismatch(false);
+    setEmail("");
+    setIsValidEmail(false);
   };
 
   useEffect(() => {
@@ -1421,7 +1455,17 @@ function Call({ interview, sessionToken }: InterviewProps) {
           />
         ) : null}
 
-        {reconnectPhase === "idle" && !isStarted && !isEnded && !isOldUser ? (
+        {inviteEmailMismatch ? (
+          <InviteEmailMismatchSurface
+            onTryDifferentEmail={onTryDifferentEmail}
+          />
+        ) : null}
+
+        {!inviteEmailMismatch &&
+        reconnectPhase === "idle" &&
+        !isStarted &&
+        !isEnded &&
+        !isOldUser ? (
           <PreflightView
             interview={interview}
             interviewerProfile={interviewerProfile}

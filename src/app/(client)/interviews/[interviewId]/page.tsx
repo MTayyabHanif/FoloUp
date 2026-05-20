@@ -382,14 +382,17 @@ function InterviewHome({
         </div>
       </Modal>
 
-      {isSharePopupOpen ? (
+      {isSharePopupOpen && interview ? (
         <SharePopup
           open={isSharePopupOpen}
           shareContent={
-            interview?.readable_slug
+            interview.readable_slug
               ? `${getClientBaseUrl()}/call/${interview.readable_slug}`
-              : (interview?.url as string)
+              : (interview.url as string)
           }
+          interviewId={interview.id}
+          publicToken={interview.public_token ?? null}
+          publicTokenExpiresAt={interview.public_token_expires_at ?? null}
           onClose={closeSharePopup}
         />
       ) : null}

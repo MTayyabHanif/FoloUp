@@ -93,46 +93,50 @@ This group consolidates the end-to-end chain that threads `invite_id` from `/api
 
 ## 10. Candidate Page: Token-Aware Preflight
 
-- [ ] 10.1 In `src/app/(user)/call/[interviewId]/page.tsx`, read `?token=` from `searchParams` and pass to client component
-- [ ] 10.2 On mount in the client component (or in a useEffect before rendering PreflightView), call `/api/validate-access` with `{ interviewId, token }` (no email — email is not yet known at this point and is NOT sent to validate-access per ENG1)
-- [ ] 10.2a Between page mount and the `/api/validate-access` response, render the existing `LoadingSurface` component (reuse the component already used during the interview fetch in `src/app/(user)/call/[interviewId]/page.tsx` — no new copy, no new component). The loading state is replaced by the appropriate surface once the validate-access response arrives.
-- [ ] 10.3 Create `ExpiredLinkSurface` component (calm exceptional-state shell, consistent with existing StatusSurface variants at lines 206-213)
-- [ ] 10.4 Create `InviteRequiredSurface` component
-- [ ] 10.5 Create `InviteInvalidSurface` component (covers `invite-invalid`, `invite-expired`, `invite-already-used` states)
-- [ ] 10.6 Create `InviteEmailMismatchSurface` component with the following fixed content: headline "This invite is for a different email"; body "The email you entered doesn't match the invite. Double-check the email you received the invite at, or contact the recruiter."; primary button "Try a different email"; no secondary CTA. (Note: this surface is triggered by a `register-call` 403 with `error: "invite_email_mismatch"`, NOT by a validate-access response — per ENG1.)
-- [ ] 10.7 Wire access-state to surface rendering: non-`valid` validate-access state → render appropriate surface; `valid` → proceed to existing PreflightView. Additionally, in the `<Call>` component (or its caller in the candidate page), handle the `register-call` POST 403 with `error: "invite_email_mismatch"` by switching the rendered view to `<InviteEmailMismatchSurface>`. This is the only path that surfaces email mismatch (ENG1).
-- [ ] 10.7a Wire the "Try a different email" button in `InviteEmailMismatchSurface`: clicking the button SHALL re-mount `PreflightView` with the `email` field cleared to `""` and the `name` field preserved from the prior submission. Implement by lifting the preflight form state (`name`, `email`) into the parent `<Call>` component or candidate page, exposing a reset callback that `InviteEmailMismatchSurface` calls via prop.
-- [ ] 10.8 In `src/components/call/index.tsx`, thread `inviteToken` prop through `startConversation` and include in the `/api/register-call` request body
+- [x] 10.1 Read `?token=` from `searchParams` in `src/app/(user)/call/[interviewId]/page.tsx` and pass through to the new validate-access flow.
+- [x] 10.2 Call `/api/validate-access` with `{ interviewId, token }` in a useEffect once interview is fetched and active. No email is sent (ENG1).
+- [x] 10.2a Reuse existing `LoadingSurface` while `accessChecking` is true (or `accessError`).
+- [x] 10.3 `ExpiredLinkSurface` created in `src/components/call/accessSurfaces.tsx` (matches the visual language of `StatusSurface`).
+- [x] 10.4 `InviteRequiredSurface` created in the same file.
+- [x] 10.5 `InviteInvalidSurface` created — covers `invite-invalid`, `invite-expired`, `invite-already-used` states (single component, generic copy).
+- [x] 10.6 `InviteEmailMismatchSurface` created with required copy + "Try a different email" button.
+- [x] 10.7 Access-state routing wired in the candidate page: non-valid states → corresponding surface; valid → render `<Call>` with `inviteToken` prop. The `<Call>` component handles register-call 403 (`invite-email-mismatch`) by setting `inviteEmailMismatch=true` and rendering `<InviteEmailMismatchSurface>` in place of `<PreflightView>`.
+- [x] 10.7a "Try a different email" button calls `onTryDifferentEmail` which resets `email` + `isValidEmail` but preserves `name`. Re-renders `PreflightView` via the existing condition.
+- [x] 10.8 `inviteToken` threaded through `<Call>` → `startConversation` → request body `{ invite_token, interview_id, candidate_email }`.
+
+> Slice 3 note: Owner bypass also surfaces an `OwnerPreviewBanner` above the Call view when `access_mode === "owner_bypass"` (OD2).
 
 ## 11. Response Row: Store invite_id
 
-- [ ] ~~11.1~~ → **Merged into INVITE_ID_THREADING_ATOMIC (task group 6A). Do NOT implement this in isolation.**
+- [x] ~~11.1~~ → Implemented as part of INVITE_ID_THREADING_ATOMIC. `createResponse` now receives `invite_id` from the register-call response.
 
 ## 12. Dashboard: Edit Form Toggle
 
-- [ ] 12.1 Add `invite_only` Switch to `src/components/dashboard/interview/editInterview.tsx` using same pattern as `is_anonymous` switch
-- [ ] 12.2 Disable the `invite_only` switch (with tooltip "Disable Anonymous to use invite-only mode") when `is_anonymous=true` — OD1 resolved: combination is disallowed
-- [ ] 12.3 Wire toggle to `InterviewService.updateInviteOnlyFlag` on change
-- [ ] 12.4 When `is_anonymous` is toggled ON while `invite_only` is already ON, show a confirmation dialog: "Enabling anonymous mode will turn off invite-only. Continue?" — on confirm, set `invite_only=false` server-side before setting `is_anonymous=true`
+- [x] 12.1 Added `invite_only` Switch to `editInterview.tsx` using the same `Switch` pattern as `is_anonymous`.
+- [x] 12.2 Disabled the `invite_only` switch when `is_anonymous=true` with helper copy "Disable Anonymous to use invite-only mode" (OD1).
+- [x] 12.3 Toggle state is persisted via the existing `onSave` payload (`invite_only` field appended). Server-side guard is `InterviewService.updateInviteOnlyFlag` which throws `InviteOnlyAnonymousConflictError` on attempted invalid combination.
+- [x] 12.4 When `is_anonymous` is toggled ON while `invite_only` is ON, show an `AlertDialog` ("Turn off invite-only mode?") — Confirm flips both flags client-side; Cancel leaves both flags as-is. The actual server write happens on Save.
 
 ## 13. Dashboard: Share Popup Enhancements
 
-- [ ] 13.1 In `src/components/dashboard/interview/sharePopup.tsx`, extend the "Share link" tab to display `public_token_expires_at` as a human-readable time-remaining label
-- [ ] 13.2 Add "Rotate link" button that, when clicked, shows an `AlertDialog` (shadcn/ui, matching the delete-interview pattern in the codebase) with: title "Rotate public link?"; description "This invalidates the current link for any new candidate. Anyone who already started an interview will continue uninterrupted, but new visitors with the old link will see an expired state. You'll need to share the new link manually."; Cancel button (default styling); Confirm button (destructive variant, label "Rotate link"). On confirm, call `POST /api/interviews/[id]/rotate-public-token` and refresh the displayed link + expiry.
-- [ ] 13.3 Show expired state for the share link section when `public_token_expires_at < NOW()`
-- [ ] 13.4 Add "Invites" tab to the share popup. The tab is NOT gated by `invite_only` — it is always visible and always shows the send-invite form. Include a small info note below the tab label or at the top of its content: "Invites work regardless of invite-only mode. Enable invite-only in the interview settings to require an invite."
-- [ ] 13.5 Render invite list in the Invites tab: email, status badge (Pending / Reserved / Used / Expired / Revoked), expiry, copy-link button, and conditional revoke button. Revoke button behavior by status:
-  - `pending`: single-click revoke, no dialog
-  - `reserved`: show `AlertDialog` before revoking — "Revoke this invite? A candidate may be partway through entering the interview. Revoking will prevent them from starting if they haven't yet, but won't interrupt an active session." with Cancel and a Confirm button
-  - `used`: revoke button is hidden or disabled
-  - `expired`: single-click revoke, no dialog (cleanup only)
-  - Empty state (zero invites): render inline message "No invites sent yet. Send one above to track individual candidates."
-- [ ] 13.6 Wire create/revoke to the invite management API routes (9.1–9.5)
-- [ ] 13.7 Fetch invite list on tab open; refresh after create/revoke actions
+- [x] 13.1 "Share link" tab displays a human-readable time-remaining label derived from `public_token_expires_at` (e.g. "Expires in 23h 14m" or "Expires in 30 days" for grandfathered rows).
+- [x] 13.2 "Rotate link" button with destructive `AlertDialog` (matches the operator-locked copy from DD2). On confirm, POSTs to `/api/interviews/[id]/rotate-public-token` and updates the displayed URL + expiry in-place.
+- [x] 13.3 Expired state is surfaced via the expiry label text + `text-[#6b3f31]` warning color.
+- [x] 13.4 "Invites" tab added, not gated by `invite_only`. Includes an Info note: "Invites are single-use and expire in 24 hours. They work in both modes — enable invite-only in the interview settings to require an invite."
+- [x] 13.5 Invite list renders with email, created-at timestamp, status badge (Pending / Reserved / Used / Expired / Revoked), copy-link button (for pending), and conditional revoke. Revoke behavior:
+  - `pending`: single-click via the trash icon, no dialog
+  - `reserved`: opens an `AlertDialog` ("Revoke this invite? A candidate may be partway through…") before revoking
+  - `used`: revoke button hidden
+  - `expired`: single-click via the trash icon, no dialog
+  - Empty state: "No invites sent yet. Send one above to track individual candidates."
+- [x] 13.6 Create/revoke wired to `POST /api/interviews/[id]/invites` and `DELETE /api/interviews/[id]/invites/[id]` respectively.
+- [x] 13.7 Invite list is fetched on tab open and refreshes optimistically after create/revoke actions.
+
+> Slice 3 callers note: `SharePopup` now requires `interviewId`, `publicToken`, and `publicTokenExpiresAt` props. The only caller (`src/app/(client)/interviews/[interviewId]/page.tsx`) updated to pass them.
 
 ## 14. Interview Creation: Public Token Initialization
 
-- [ ] 14.1 Verify `src/app/api/create-interview/route.ts` sets `public_token` and `public_token_expires_at` on new interview creation (task 4.3 implementation verification and any missing wiring)
+- [x] 14.1 Confirmed — `src/app/api/create-interview/route.ts` mints `public_token = crypto.randomUUID()` and `public_token_expires_at = NOW() + 24h` on every new interview (slice 2 task 4.3).
 
 ## 15. Validation and Edge Cases
 

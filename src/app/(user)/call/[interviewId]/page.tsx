@@ -6,7 +6,14 @@ import { ArrowRight, Monitor, Sparkles } from "lucide-react";
 
 import { useInterviews } from "@/contexts/interviews.context";
 import Call from "@/components/call";
+import {
+  ExpiredLinkSurface,
+  InviteInvalidSurface,
+  InviteRequiredSurface,
+  OwnerPreviewBanner,
+} from "@/components/call/accessSurfaces";
 import { Interview } from "@/types/interview";
+import type { AccessMode, ValidateAccessResponse } from "@/types/invite";
 import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
 
 interface Props {
@@ -17,6 +24,7 @@ interface Props {
     call?: string;
     edit?: boolean;
     session?: string;
+    token?: string;
   }>;
 }
 
@@ -159,10 +167,14 @@ function InterviewInterface({
   const params = use(paramsPromise);
   const searchParams = use(searchParamsPromise);
   const sessionToken = searchParams.session;
+  const inviteToken = searchParams.token;
   const [interview, setInterview] = useState<Interview>();
   const [isActive, setIsActive] = useState(true);
   const { getInterviewById } = useInterviews();
   const [interviewNotFound, setInterviewNotFound] = useState(false);
+  const [access, setAccess] = useState<ValidateAccessResponse | null>(null);
+  const [accessChecking, setAccessChecking] = useState(true);
+  const [accessError, setAccessError] = useState(false);
 
   useEffect(() => {
     if (interview) {
@@ -190,6 +202,53 @@ function InterviewInterface({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.interviewId]);
 
+  useEffect(() => {
+    if (!interview || !interview.is_active) {
+      return;
+    }
+
+    let cancelled = false;
+    setAccessChecking(true);
+    setAccessError(false);
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/validate-access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            interviewId: interview.id,
+            token: inviteToken,
+          }),
+        });
+        if (!res.ok) {
+          if (!cancelled) {
+            setAccessError(true);
+          }
+
+          return;
+        }
+        const data = (await res.json()) as ValidateAccessResponse;
+        if (!cancelled) {
+          setAccess(data);
+        }
+      } catch (err) {
+        console.error("validate-access failed", err);
+        if (!cancelled) {
+          setAccessError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setAccessChecking(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [interview, inviteToken]);
+
   let desktopContent: ReactNode;
   if (!interview) {
     desktopContent = interviewNotFound ? (
@@ -211,8 +270,33 @@ function InterviewInterface({
         image="/closed.png"
       />
     );
+  } else if (accessChecking || accessError) {
+    desktopContent = <LoadingSurface />;
+  } else if (access && access.state === "expired-public") {
+    desktopContent = <ExpiredLinkSurface />;
+  } else if (access && access.state === "invite-required") {
+    desktopContent = <InviteRequiredSurface />;
+  } else if (
+    access &&
+    (access.state === "invite-invalid" ||
+      access.state === "invite-expired" ||
+      access.state === "invite-already-used")
+  ) {
+    desktopContent = <InviteInvalidSurface />;
+  } else if (access && access.state === "valid") {
+    const accessMode: AccessMode = access.access_mode ?? "public";
+    desktopContent = (
+      <>
+        {accessMode === "owner_bypass" ? <OwnerPreviewBanner /> : null}
+        <Call
+          interview={interview}
+          sessionToken={sessionToken}
+          inviteToken={inviteToken}
+        />
+      </>
+    );
   } else {
-    desktopContent = <Call interview={interview} sessionToken={sessionToken} />;
+    desktopContent = <LoadingSurface />;
   }
 
   return (

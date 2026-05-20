@@ -73,6 +73,13 @@ function EditInterview({ interview }: EditInterviewProps) {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(
     interview?.is_anonymous || false,
   );
+  const [inviteOnly, setInviteOnly] = useState<boolean>(
+    interview?.invite_only || false,
+  );
+  const [
+    inviteOnlyConflictDialogOpen,
+    setInviteOnlyConflictDialogOpen,
+  ] = useState<boolean>(false);
   const [isClicked, setIsClicked] = useState(false);
 
   const endOfListRef = useRef<HTMLDivElement>(null);
@@ -124,6 +131,7 @@ return;
       time_duration: Number(duration),
       description,
       is_anonymous: isAnonymous,
+      invite_only: inviteOnly,
     };
 
     try {
@@ -424,13 +432,74 @@ return;
                 <Switch
                   checked={isAnonymous}
                   className={isAnonymous ? "bg-[#4a3212]" : "bg-white"}
-                  onCheckedChange={(checked) => setIsAnonymous(checked)}
+                  onCheckedChange={(checked) => {
+                    // OD1: anonymous + invite-only are incompatible. If the
+                    // user turns anonymous ON while invite_only is already
+                    // ON, confirm before silently disabling invite-only.
+                    if (checked && inviteOnly) {
+                      setInviteOnlyConflictDialogOpen(true);
+
+return;
+                    }
+                    setIsAnonymous(checked);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-[#0a1d08]">
+                    Invite-only access
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-[#53614d]">
+                    Only candidates with a personal invite link can start this interview.
+                    {isAnonymous ? (
+                      <span className="mt-1 block text-[#7d4f1f]">
+                        Disable Anonymous to use invite-only mode.
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+                <Switch
+                  checked={inviteOnly}
+                  disabled={isAnonymous}
+                  className={inviteOnly ? "bg-[#4a3212]" : "bg-white"}
+                  onCheckedChange={(checked) => setInviteOnly(checked)}
                 />
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <AlertDialog
+        open={inviteOnlyConflictDialogOpen}
+        onOpenChange={setInviteOnlyConflictDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Turn off invite-only mode?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enabling anonymous mode will turn off invite-only access. Existing invites will remain in the database but will no longer be required to start this interview.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#4a3212] text-[#fbfdf6] hover:bg-[#3d2910]"
+              onClick={() => {
+                setInviteOnly(false);
+                setIsAnonymous(true);
+                setInviteOnlyConflictDialogOpen(false);
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
