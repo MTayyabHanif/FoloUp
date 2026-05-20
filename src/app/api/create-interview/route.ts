@@ -31,6 +31,13 @@ export async function POST(req: Request) {
       }
     }
 
+    if (payload?.invite_only === true && payload?.is_anonymous === true) {
+      return NextResponse.json(
+        { error: "invite-only-incompatible-with-anonymous" },
+        { status: 422 },
+      );
+    }
+
     const publicTokenExpiresAt = new Date(
       Date.now() + PUBLIC_TOKEN_TTL_HOURS * 60 * 60 * 1000,
     ).toISOString();

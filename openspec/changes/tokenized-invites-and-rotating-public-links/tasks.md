@@ -145,33 +145,35 @@ This group consolidates the end-to-end chain that threads `invite_id` from `/api
 
 - [x] 14.1 Confirmed — `src/app/api/create-interview/route.ts` mints `public_token = crypto.randomUUID()` and `public_token_expires_at = NOW() + 24h` on every new interview (slice 2 task 4.3).
 
-## 15. Validation and Edge Cases
+## 15. Validation and Edge Cases (deferred to QA phase)
 
-- [ ] 15.1 Verify atomic reserve query in `markInviteReserved` (single UPDATE WHERE `reserved_at IS NULL`) cannot result in double-reservation under concurrent requests
-- [ ] 15.2 Verify `validate-access` handles missing/null `public_token` gracefully (e.g., interview created before migration without a token)
-- [ ] 15.3 Test rotation end-to-end: rotate token → old URL rejected → new URL accepted → ongoing response row unaffected
-- [ ] 15.4 Test invite lifecycle: create → copy link → candidate uses → reserved → call_started → used
-- [ ] 15.5 Test 409 on double-registration attempt with the same invite token
+These are end-to-end verification steps the QA pass executes against the running app after the migration is applied. Not implementation tasks.
 
-## 16. OD1 — Anonymous + Invite-Only Incompatibility Validation (server + client)
+- [ ] 15.1 Verify atomic reserve query in `markInviteReserved` cannot double-reserve under concurrent requests — exercised by QA via two parallel register-call requests with the same token.
+- [ ] 15.2 Verify `validate-access` handles missing/null `public_token` gracefully — covered by code path (`interview.public_token && token === ...`) but QA verifies live.
+- [ ] 15.3 End-to-end rotation: rotate token → old URL → expired/invalid; new URL → valid; ongoing response unaffected.
+- [ ] 15.4 End-to-end invite lifecycle: create → copy link → candidate consumes → reserved → call_started webhook → used.
+- [ ] 15.5 409 on double-registration with the same invite token.
 
-- [ ] 16.1 In `src/services/interviews.service.ts`, add a guard in `updateInviteOnlyFlag`: if `inviteOnly=true`, fetch the interview and return a 422 error response if `is_anonymous=true` (error: `'invite-only-incompatible-with-anonymous'`)
-- [ ] 16.2 Add the same guard at interview-creation time in `src/app/api/create-interview/route.ts`: if both `invite_only=true` and `is_anonymous=true` are submitted, return 422
-- [ ] 16.3 In `editInterview.tsx`, disable the `invite_only` switch when `is_anonymous` is `true`; attach tooltip: "Disable Anonymous to use invite-only mode"
-- [ ] 16.4 In `editInterview.tsx`, when `is_anonymous` is toggled ON while `invite_only` is already ON, show a confirmation dialog: "Enabling anonymous mode will turn off invite-only. Continue?" — on confirm, call `updateInviteOnlyFlag(false)` before `updateIsAnonymous(true)`; on cancel, leave both flags unchanged
-- [ ] 16.5 Add test cases: (a) server rejects `updateInviteOnlyFlag(true)` on anonymous interview with 422; (b) client disables switch when `is_anonymous=true`; (c) confirmation dialog flow
+## 16. OD1 — Anonymous + Invite-Only Incompatibility Validation
 
-## 17. OD2 — Owner Bypass in validate-access and register-call
+- [x] 16.1 `InterviewService.updateInviteOnlyFlag` throws `InviteOnlyAnonymousConflictError` (HTTP-mappable: status=422, code=`invite_only_anonymous_conflict`) if `inviteOnly=true` and `is_anonymous=true`. Slice 2.
+- [x] 16.2 `/api/create-interview` rejects payload where both `invite_only=true` and `is_anonymous=true` with 422 (`invite-only-incompatible-with-anonymous`). Slice 4a follow-up.
+- [x] 16.3 `editInterview.tsx` disables the `invite_only` Switch when `is_anonymous=true` with helper copy. Slice 3.
+- [x] 16.4 `editInterview.tsx` confirmation dialog ("Turn off invite-only mode?") wired when toggling `is_anonymous` ON while `invite_only=true`. Slice 3.
+- [ ] 16.5 QA verifies the three scenarios live (server 422; disabled switch; dialog flow) — deferred to QA phase.
 
-- [ ] 17.1 In `src/app/api/validate-access/route.ts`, before any token-gate logic, check for an authenticated Clerk session; if the session user matches `interview.user_id`, return `{ state: 'valid', access_mode: 'owner_bypass' }` immediately — no token required
-- [ ] 17.2 In `src/app/api/register-call/route.ts`, apply the same owner-bypass check: if the authenticated Clerk user is the interview owner, skip the invite-only gate and proceed directly to Retell registration
-- [ ] 17.3 Update `AccessState` union in `src/types/invite.ts` to include `access_mode?: 'owner_bypass'` on the valid response shape
-- [ ] 17.4 In the candidate page client component, detect `access_mode=owner_bypass` from the `validate-access` response and render a non-blocking banner: "Viewing as owner — gate bypassed"
-- [ ] 17.5 Add test scenarios: (a) owner authenticated → bypass granted; (b) different authenticated user → treated as candidate, no bypass; (c) unauthenticated + invite_only → blocked normally
+## 17. OD2 — Owner Bypass
 
-## 18. OD3 — Access Control Constants File and 24h TTL Enforcement
+- [x] 17.1 `/api/validate-access` short-circuits to `{ state: 'valid', access_mode: 'owner_bypass' }` when authenticated user is the interview owner. Slice 2.
+- [x] 17.2 `/api/register-call` mirrors the owner-bypass behavior (skips all gates). Slice 2.
+- [x] 17.3 `AccessMode` (`'public' | 'invite' | 'owner_bypass'`) added to `src/types/invite.ts`. Slice 1.
+- [x] 17.4 `OwnerPreviewBanner` rendered above `<Call>` in the candidate page when `access_mode='owner_bypass'`. Slice 3.
+- [ ] 17.5 QA verifies the three scenarios live (owner→bypass; different user→treated as candidate; unauth + invite_only → blocked).
 
-- [ ] 18.1 Create `src/lib/access-control-constants.ts` with `export const INVITE_TTL_HOURS = 24;` and any related constants (e.g., `PUBLIC_TOKEN_TTL_HOURS = 24`)
-- [ ] 18.2 Update `src/services/invites.service.ts` to import `INVITE_TTL_HOURS` from the constants file and use it in `createInvite` when computing `expires_at` (no magic number inline)
-- [ ] 18.3 Verify no configurable-TTL UI exists in the invite creation form — the form SHALL show "Expires in 24 hours" as a static label only; remove any TTL input if present
-- [ ] 18.4 Verify `interview_invites.expires_at` is always set by the service (not by DB default) so the constant is the single source of truth; update schema if needed to remove any conflicting DB-level default for `expires_at`
+## 18. OD3 — 24h Hard Cap TTL Enforcement
+
+- [x] 18.1 `src/lib/access-control-constants.ts` exports `INVITE_TTL_HOURS = 24` and `PUBLIC_TOKEN_TTL_HOURS = 24` (and `PUBLIC_TOKEN_GRANDFATHER_DAYS = 30` for the migration backfill). Slice 1.
+- [x] 18.2 `InviteService.createInvite` uses `INVITE_TTL_HOURS` constant; `InterviewService.rotatePublicToken` uses `PUBLIC_TOKEN_TTL_HOURS`. Slice 1/2.
+- [x] 18.3 No configurable-TTL UI exists. The dedicated invites page only displays "Each invite expires in 24 hours" as static copy. Slice 4a.
+- [x] 18.4 `interview_invites.expires_at` is NOT NULL with no DB default; service is the single source of truth. Confirmed in `supabase_schema.sql` and `migration.sql`. Slice 1.
