@@ -4,6 +4,7 @@ import { ArrowUpRight, Copy, CopyCheck, PauseCircle, PlayCircle } from "lucide-r
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { getClientBaseUrl } from "@/lib/base-url";
 import {
   formatDurationLabel,
   formatResponseTime,
@@ -15,17 +16,16 @@ interface Props {
   workflow: HiringWorkflowSummary;
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_LIVE_URL;
-
 function InterviewCard({ workflow }: Props) {
   const [copied, setCopied] = useState(false);
 
-  const link = workflow.interview.readable_slug
-    ? `${baseUrl}/call/${workflow.interview.readable_slug}`
-    : (workflow.interview.url ?? "");
+  const buildInterviewLink = () =>
+    workflow.interview.readable_slug
+      ? `${getClientBaseUrl()}/call/${workflow.interview.readable_slug}`
+      : (workflow.interview.url ?? "");
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(link).then(
+    navigator.clipboard.writeText(buildInterviewLink()).then(
       () => {
         setCopied(true);
         toast.success("Interview link copied.", {

@@ -1,14 +1,13 @@
+import { getServerBaseUrl } from "@/lib/base-url";
 import { logger } from "@/lib/logger";
 import { InterviewService } from "@/services/interviews.service";
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 
-const base_url = process.env.NEXT_PUBLIC_LIVE_URL;
-
 export async function POST(req: Request) {
   try {
     const url_id = nanoid();
-    const url = `${base_url}/call/${url_id}`;
+    const url = `${getServerBaseUrl(req)}/call/${url_id}`;
     const body = await req.json();
 
     logger.info("create-interview request received");

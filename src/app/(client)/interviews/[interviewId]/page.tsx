@@ -5,6 +5,7 @@ import { useOrganization } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { getClientBaseUrl } from "@/lib/base-url";
 import { useInterviews } from "@/contexts/interviews.context";
 import { useInterviewers } from "@/contexts/interviewers.context";
 import { ResponseService } from "@/services/responses.service";
@@ -39,7 +40,6 @@ interface Props {
   }>;
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_LIVE_URL;
 const RECRUITER_MARKER_PALETTE = [
   "#203b14",
   "#4a3212",
@@ -88,13 +88,12 @@ function InterviewHome({
     : null;
 
   const seeInterviewPreviewPage = () => {
-    const protocol = baseUrl?.includes("localhost") ? "http" : "https";
     if (!interview?.url) {
       return;
     }
 
     const url = interview.readable_slug
-      ? `${protocol}://${baseUrl}/call/${interview.readable_slug}`
+      ? `${getClientBaseUrl()}/call/${interview.readable_slug}`
       : interview.url.startsWith("http")
         ? interview.url
         : `https://${interview.url}`;
@@ -388,7 +387,7 @@ function InterviewHome({
           open={isSharePopupOpen}
           shareContent={
             interview?.readable_slug
-              ? `${baseUrl}/call/${interview.readable_slug}`
+              ? `${getClientBaseUrl()}/call/${interview.readable_slug}`
               : (interview?.url as string)
           }
           onClose={closeSharePopup}
