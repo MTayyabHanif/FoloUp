@@ -18,6 +18,7 @@ export interface InterviewBase {
   question_count: number;
   time_duration: string;
   is_anonymous: boolean;
+  invite_only: boolean;
   questions: Question[];
   description: string;
   response_count: bigint;
@@ -35,6 +36,8 @@ export interface InterviewDetails {
   logo_url: string;
   respondents: string[];
   readable_slug: string;
+  public_token: string | null;
+  public_token_expires_at: string | null;
 }
 
 export interface Interview extends InterviewBase, InterviewDetails {}

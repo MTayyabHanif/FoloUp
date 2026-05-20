@@ -1,0 +1,5 @@
+export const INVITE_TTL_HOURS = 24;
+
+export const PUBLIC_TOKEN_TTL_HOURS = 24;
+
+export const PUBLIC_TOKEN_GRANDFATHER_DAYS = 30;

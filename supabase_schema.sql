@@ -47,6 +47,9 @@ CREATE TABLE interview (
     is_active BOOLEAN DEFAULT true,
     is_anonymous BOOLEAN DEFAULT false,
     is_archived BOOLEAN DEFAULT false,
+    invite_only BOOLEAN NOT NULL DEFAULT false,
+    public_token UUID,
+    public_token_expires_at TIMESTAMP WITH TIME ZONE,
     logo_url TEXT,
     theme_color TEXT,
     url TEXT,
@@ -59,6 +62,24 @@ CREATE TABLE interview (
     response_count INTEGER,
     time_duration TEXT
 );
+
+CREATE TABLE interview_invites (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    interview_id TEXT NOT NULL REFERENCES interview(id) ON DELETE CASCADE,
+    token UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+    email TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    reserved_at TIMESTAMP WITH TIME ZONE,
+    used_at TIMESTAMP WITH TIME ZONE,
+    revoked_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS interview_invites_interview_id_idx
+    ON interview_invites(interview_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS interview_invites_token_idx
+    ON interview_invites(token);
 
 CREATE TABLE response (
     id SERIAL PRIMARY KEY,
@@ -79,7 +100,8 @@ CREATE TABLE response (
     disconnection_reason TEXT,
     questions_covered INTEGER,
     last_active_at TIMESTAMP WITH TIME ZONE,
-    session_token UUID
+    session_token UUID,
+    invite_id UUID REFERENCES interview_invites(id)
 );
 
 -- Index for session-token lookups on the reconnect critical path.
@@ -187,3 +209,67 @@ CREATE TABLE feedback (
     feedback TEXT,
     satisfaction INTEGER
 );
+
+-- =====================================================================
+-- MIGRATION: tokenized-invites-and-rotating-public-links (apply manually
+-- via Supabase SQL editor for existing environments — no migrations
+-- folder exists). The runnable file is at
+-- openspec/changes/tokenized-invites-and-rotating-public-links/migration.sql
+-- =====================================================================
+--
+-- RLS posture: the project does not use Supabase RLS today. The new
+-- interview_invites table follows the same convention — no ENABLE ROW
+-- LEVEL SECURITY, no policies. If a future change adds RLS, the
+-- validate-access route will need either a restricted SELECT policy on
+-- interview_invites(token) or a service-role client.
+--
+-- 1) Add the three new columns to the interview table (idempotent):
+--
+--   ALTER TABLE interview
+--     ADD COLUMN IF NOT EXISTS invite_only BOOLEAN NOT NULL DEFAULT false,
+--     ADD COLUMN IF NOT EXISTS public_token UUID,
+--     ADD COLUMN IF NOT EXISTS public_token_expires_at TIMESTAMP WITH TIME ZONE;
+--
+-- 2) Backfill existing interviews with a 30-DAY GRANDFATHER expiry (NOT
+--    24h). Setting NOW() + 24h on backfill would silently break every
+--    existing share link 24h after the migration runs. New interviews
+--    created by the app after deploy use 24h via the create-interview
+--    route.
+--
+--   UPDATE interview
+--      SET public_token = uuid_generate_v4(),
+--          public_token_expires_at = NOW() + INTERVAL '30 days'
+--    WHERE public_token IS NULL;
+--
+-- 3) Create the interview_invites table:
+--
+--   CREATE TABLE IF NOT EXISTS interview_invites (
+--       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+--       interview_id TEXT NOT NULL REFERENCES interview(id) ON DELETE CASCADE,
+--       token UUID NOT NULL UNIQUE DEFAULT uuid_generate_v4(),
+--       email TEXT NOT NULL,
+--       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+--       expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+--       reserved_at TIMESTAMP WITH TIME ZONE,
+--       used_at TIMESTAMP WITH TIME ZONE,
+--       revoked_at TIMESTAMP WITH TIME ZONE
+--   );
+--
+-- 4) Indexes for lookups:
+--
+--   CREATE INDEX IF NOT EXISTS interview_invites_interview_id_idx
+--     ON interview_invites(interview_id);
+--   CREATE UNIQUE INDEX IF NOT EXISTS interview_invites_token_idx
+--     ON interview_invites(token);
+--
+-- 5) Add invite_id to the response table (nullable; null for public-link
+--    or legacy flows). The webhook joins response.call_id ->
+--    response.invite_id to mark interview_invites.used_at when
+--    call_started fires.
+--
+--   ALTER TABLE response
+--     ADD COLUMN IF NOT EXISTS invite_id UUID REFERENCES interview_invites(id);
+--
+-- 6) Runnable file with the SQL inlined:
+--    openspec/changes/tokenized-invites-and-rotating-public-links/migration.sql
+-- =====================================================================

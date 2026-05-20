@@ -37,6 +37,7 @@ export type Database = {
           id: string;
           insights: string[] | null;
           interviewer_id: number | null;
+          invite_only: boolean;
           is_active: boolean;
           is_anonymous: boolean;
           is_archived: boolean;
@@ -44,6 +45,8 @@ export type Database = {
           name: string | null;
           objective: string | null;
           organization_id: string | null;
+          public_token: string | null;
+          public_token_expires_at: string | null;
           question_count: number | null;
           questions: Json | null;
           quotes: Json[] | null;
@@ -61,6 +64,7 @@ export type Database = {
           id: string;
           insights?: string[] | null;
           interviewer_id?: number | null;
+          invite_only?: boolean;
           is_active?: boolean;
           is_anonymous?: boolean;
           is_archived?: boolean;
@@ -68,6 +72,8 @@ export type Database = {
           name?: string | null;
           objective?: string | null;
           organization_id?: string | null;
+          public_token?: string | null;
+          public_token_expires_at?: string | null;
           question_count?: number | null;
           questions?: Json | null;
           quotes?: Json[] | null;
@@ -85,6 +91,7 @@ export type Database = {
           id?: string;
           insights?: string[] | null;
           interviewer_id?: number | null;
+          invite_only?: boolean;
           is_active?: boolean;
           is_anonymous?: boolean;
           is_archived?: boolean;
@@ -92,6 +99,8 @@ export type Database = {
           name?: string | null;
           objective?: string | null;
           organization_id?: string | null;
+          public_token?: string | null;
+          public_token_expires_at?: string | null;
           question_count?: number | null;
           questions?: Json | null;
           quotes?: Json[] | null;
@@ -203,6 +212,7 @@ export type Database = {
           email: string | null;
           id: number;
           interview_id: string | null;
+          invite_id: string | null;
           is_analysed: boolean | null;
           is_ended: boolean | null;
           is_viewed: boolean | null;
@@ -224,6 +234,7 @@ export type Database = {
           email?: string | null;
           id?: number;
           interview_id?: string | null;
+          invite_id?: string | null;
           is_analysed?: boolean | null;
           is_ended?: boolean | null;
           is_viewed?: boolean | null;
@@ -245,6 +256,7 @@ export type Database = {
           email?: string | null;
           id?: number;
           interview_id?: string | null;
+          invite_id?: string | null;
           is_analysed?: boolean | null;
           is_ended?: boolean | null;
           is_viewed?: boolean | null;
@@ -258,6 +270,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "response_interview_id_fkey";
+            columns: ["interview_id"];
+            isOneToOne: false;
+            referencedRelation: "interview";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "response_invite_id_fkey";
+            columns: ["invite_id"];
+            isOneToOne: false;
+            referencedRelation: "interview_invites";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      interview_invites: {
+        Row: {
+          created_at: string;
+          email: string;
+          expires_at: string;
+          id: string;
+          interview_id: string;
+          reserved_at: string | null;
+          revoked_at: string | null;
+          token: string;
+          used_at: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          expires_at: string;
+          id?: string;
+          interview_id: string;
+          reserved_at?: string | null;
+          revoked_at?: string | null;
+          token?: string;
+          used_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          expires_at?: string;
+          id?: string;
+          interview_id?: string;
+          reserved_at?: string | null;
+          revoked_at?: string | null;
+          token?: string;
+          used_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "interview_invites_interview_id_fkey";
             columns: ["interview_id"];
             isOneToOne: false;
             referencedRelation: "interview";

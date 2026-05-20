@@ -18,6 +18,7 @@ const CreateEmptyInterviewData = (): InterviewBase => ({
   question_count: 0,
   time_duration: "",
   is_anonymous: false,
+  invite_only: false,
   questions: [],
   description: "",
   response_count: BigInt(0),
