@@ -262,6 +262,13 @@ CREATE TABLE feedback (
 --   CREATE UNIQUE INDEX IF NOT EXISTS interview_invites_token_idx
 --     ON interview_invites(token);
 --
+-- 4a) Disable RLS to match the project-wide no-RLS posture. Some Supabase
+--     projects auto-enable RLS on every newly created table; without this
+--     ALTER, anon-key INSERTs fail with "new row violates row-level
+--     security policy for table interview_invites".
+--
+--   ALTER TABLE interview_invites DISABLE ROW LEVEL SECURITY;
+--
 -- 5) Add invite_id to the response table (nullable; null for public-link
 --    or legacy flows). The webhook joins response.call_id ->
 --    response.invite_id to mark interview_invites.used_at when
@@ -271,5 +278,5 @@ CREATE TABLE feedback (
 --     ADD COLUMN IF NOT EXISTS invite_id UUID REFERENCES interview_invites(id);
 --
 -- 6) Runnable file with the SQL inlined:
---    openspec/changes/tokenized-invites-and-rotating-public-links/migration.sql
+--    openspec/changes/archive/2026-05-20-tokenized-invites-and-rotating-public-links/migration.sql
 -- =====================================================================

@@ -49,6 +49,16 @@ CREATE TABLE IF NOT EXISTS interview_invites (
     revoked_at TIMESTAMP WITH TIME ZONE
 );
 
+-- 3a) Explicitly disable RLS to match the project-wide posture.
+-- Some Supabase projects have "Enforce RLS for new tables" enabled at
+-- the project level, which silently turns RLS on after CREATE TABLE.
+-- Without this statement, every INSERT from the anon-key path fails
+-- with "new row violates row-level security policy". The fix-context-
+-- fetch-failures change (archived 2026-05-19) documents that this
+-- project uses no RLS; this DISABLE keeps the new table consistent
+-- with that posture even when the project default is otherwise.
+ALTER TABLE interview_invites DISABLE ROW LEVEL SECURITY;
+
 -- 4) Indexes.
 --    - (interview_id) for the dashboard "list invites for this interview" query.
 --    - (token) already unique via column constraint; an explicit index ensures
