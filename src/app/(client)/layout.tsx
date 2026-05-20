@@ -71,8 +71,8 @@ export default function ClientGroupLayout({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(215,232,181,0.2),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(224,229,213,0.28),transparent_28%)]"
         />
-        {/* Desktop sidebar — permanent fixed column */}
-        <div className="relative hidden h-screen w-80 shrink-0 md:sticky md:top-0 md:block">
+        {/* Desktop sidebar — icon rail */}
+        <div className="relative hidden h-screen w-[72px] shrink-0 md:sticky md:top-0 md:block">
           <AppSidebar />
         </div>
 
@@ -84,7 +84,7 @@ export default function ClientGroupLayout({
           <DrawerContent
             side="left"
             size="default"
-            className="w-80 rounded-none p-0 sm:max-w-[20rem]"
+            className="w-[72px] rounded-none p-0 sm:max-w-[72px]"
           >
             <AppSidebar
               onNavigate={() => setMobileSidebarOpen(false)}

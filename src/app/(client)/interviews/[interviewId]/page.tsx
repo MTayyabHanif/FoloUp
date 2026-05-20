@@ -319,7 +319,7 @@ function InterviewHome({
         </aside>
 
         <main className="min-w-0">
-          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+          <div className="">
             {selectedCallId ? (
               <CallInfo
                 call_id={selectedCallId}

@@ -1,9 +1,6 @@
 import {
   LayoutDashboard,
   Users,
-  Settings,
-  HelpCircle,
-  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -13,8 +10,6 @@ export type NavItem = {
   icon: LucideIcon;
   /** Match the route exactly, not just prefix. Use for index routes. */
   exact?: boolean;
-  /** Render the item but with reduced opacity + no-link behavior. */
-  comingSoon?: boolean;
 };
 
 export type NavSection = {
@@ -44,29 +39,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Interviewers",
         href: "/dashboard/interviewers",
         icon: Users,
-      },
-    ],
-  },
-  {
-    label: "Platform",
-    items: [
-      {
-        label: "Settings",
-        href: "/dashboard/settings",
-        icon: Settings,
-        comingSoon: true,
-      },
-      {
-        label: "Help & docs",
-        href: "/dashboard/help",
-        icon: HelpCircle,
-        comingSoon: true,
-      },
-      {
-        label: "Changelog",
-        href: "/dashboard/changelog",
-        icon: BookOpen,
-        comingSoon: true,
       },
     ],
   },
