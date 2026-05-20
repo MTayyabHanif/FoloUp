@@ -1,7 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertCircle, Clock3, Lock, MailQuestion, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  AlertCircle,
+  Clock3,
+  Lock,
+  MailQuestion,
+  ShieldCheck,
+  Sparkles,
+  WifiOff,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +19,8 @@ function SurfaceShell({
   title,
   description,
   detail,
+  helpEyebrow,
+  helpBody,
   action,
 }: {
   icon: ReactNode;
@@ -18,6 +28,8 @@ function SurfaceShell({
   title: string;
   description: string;
   detail: string;
+  helpEyebrow: string;
+  helpBody: string;
   action?: ReactNode;
 }) {
   return (
@@ -48,11 +60,10 @@ function SurfaceShell({
               {icon}
             </div>
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-[#203b14]">
-              Guided experience
+              {helpEyebrow}
             </p>
             <p className="mt-3 text-sm leading-6 text-[#31200b]/72">
-              The candidate flow stays focused on clarity, readiness, and a
-              calm next step.
+              {helpBody}
             </p>
           </div>
         </div>
@@ -67,8 +78,10 @@ export function ExpiredLinkSurface() {
       icon={<Clock3 className="h-9 w-9" />}
       eyebrow="Link expired"
       title="This interview link has expired"
-      description="Share links automatically expire to keep candidate access fresh. Ask the recruiter to send a new link when they're ready."
-      detail="If you've started a session within the last few minutes, you can return to it from your original invitation. Otherwise, request a fresh link to continue."
+      description="Share links expire after 24 hours to keep candidate access fresh. Your link is no longer active, but a new one can be sent to you."
+      detail="If a recruiter shared this link with you over email or chat, reply and ask for a refreshed link. The interview itself is still there — just the link needs to be regenerated."
+      helpEyebrow="What to do next"
+      helpBody="Reach out to the person who shared this link and ask them to send a new one. If you had already started a session within the last few minutes, return through your original invitation instead."
     />
   );
 }
@@ -79,8 +92,10 @@ export function InviteRequiredSurface() {
       icon={<Lock className="h-9 w-9" />}
       eyebrow="Invite required"
       title="This interview is invite-only"
-      description="The recruiter has restricted access to invited candidates. You'll need an invite link sent directly to your email to begin."
-      detail="Check your inbox for an invitation from the recruiter. The invite link will include a unique token that grants you access."
+      description="The recruiter has restricted this interview to invited candidates. You'll need a personal invite link to begin."
+      detail="A personal invite link looks like this interview's URL but includes a unique access token. Check your email for an invitation from the recruiter."
+      helpEyebrow="What to do next"
+      helpBody="Open the most recent email or message from the recruiter and use the link they sent you. If you can't find an invite, reply to them and ask for one — invites are tied to a specific email address."
     />
   );
 }
@@ -90,9 +105,11 @@ export function InviteInvalidSurface() {
     <SurfaceShell
       icon={<AlertCircle className="h-9 w-9" />}
       eyebrow="Invite not valid"
-      title="We couldn't verify this invite"
-      description="The invite link is no longer valid. It may have already been used, revoked, or expired."
-      detail="Invites are single-use and time-limited. If you believe this is a mistake, reach out to the recruiter to request a new invitation."
+      title="We couldn't accept this invite"
+      description="The invite link is no longer valid. It may have already been used, expired after its 24-hour window, or been revoked by the recruiter."
+      detail="Invites are single-use for security — once a session is started, the link cannot be reused. If you stopped before completing the interview, a new invite is the way back in."
+      helpEyebrow="What to do next"
+      helpBody="Reply to the recruiter who invited you and ask for a fresh invitation. Mention if you started but did not finish — they can include a note for the hiring team."
     />
   );
 }
@@ -107,14 +124,42 @@ export function InviteEmailMismatchSurface({
       icon={<MailQuestion className="h-9 w-9" />}
       eyebrow="Email mismatch"
       title="This invite is for a different email"
-      description="The email you entered doesn't match the invite. Double-check the email you received the invite at, or contact the recruiter."
-      detail="Each invite is bound to a specific email address for verification. Try entering the email the invitation was sent to."
+      description="The email you entered doesn't match the one this invite was sent to. Each invite is bound to a single email address."
+      detail="A small typo is the most common cause. The invite arrived at a specific inbox — entering that same email address here will let you continue."
+      helpEyebrow="What to do next"
+      helpBody="Open the invitation email and use the email address it was sent to. If you've changed addresses recently, reply to the recruiter and ask for a fresh invitation sent to your current email."
       action={
         <Button
           className="rounded-full bg-[#4a3212] px-5 text-[#fbfdf6] hover:bg-[#3d2910]"
           onClick={onTryDifferentEmail}
         >
           Try a different email
+        </Button>
+      }
+    />
+  );
+}
+
+export function AccessCheckFailedSurface({
+  onRetry,
+}: {
+  onRetry: () => void;
+}) {
+  return (
+    <SurfaceShell
+      icon={<WifiOff className="h-9 w-9" />}
+      eyebrow="Connection issue"
+      title="We couldn't verify your access"
+      description="Something went wrong while checking whether this interview link is still active. This usually clears up after a quick retry."
+      detail="Common causes: a brief drop in your network connection, or our servers being temporarily slow. Your link itself is probably fine."
+      helpEyebrow="What to do next"
+      helpBody="Click Retry below. If it keeps failing, check that you have a stable internet connection and try again in a minute or two. If the problem persists, contact the recruiter so they can confirm the interview is open."
+      action={
+        <Button
+          className="rounded-full bg-[#4a3212] px-5 text-[#fbfdf6] hover:bg-[#3d2910]"
+          onClick={onRetry}
+        >
+          Retry
         </Button>
       }
     />

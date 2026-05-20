@@ -7,6 +7,7 @@ import { ArrowRight, Monitor, Sparkles } from "lucide-react";
 import { useInterviews } from "@/contexts/interviews.context";
 import Call from "@/components/call";
 import {
+  AccessCheckFailedSurface,
   ExpiredLinkSurface,
   InviteInvalidSurface,
   InviteRequiredSurface,
@@ -42,17 +43,23 @@ function CandidateCanvas({ children }: { children: ReactNode }) {
 }
 
 function StatusSurface({
+  eyebrow = "Candidate session",
   title,
   description,
   detail,
   image,
   icon,
+  helpEyebrow,
+  helpBody,
 }: {
+  eyebrow?: string;
   title: string;
   description: string;
   detail?: string;
   image?: string;
   icon?: ReactNode;
+  helpEyebrow: string;
+  helpBody: string;
 }) {
   return (
     <div className="overflow-hidden rounded-[32px] border border-[#c5ccb6] bg-[#fbfdf6]/95 shadow-[rgba(99,143,61,0.1)_0px_0px_0px_1px]">
@@ -60,7 +67,7 @@ function StatusSurface({
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-[12px] font-medium uppercase tracking-[0.18em] text-[#203b14]">
             <Sparkles className="h-3.5 w-3.5" />
-            Candidate session
+            {eyebrow}
           </div>
           <div className="space-y-3">
             <h1 className="max-w-2xl text-3xl font-semibold tracking-[-0.04em] text-[#0a1d08] md:text-[3.3rem] md:leading-[1.05]">
@@ -91,11 +98,10 @@ function StatusSurface({
               </div>
             )}
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-[#203b14]">
-              Guided experience
+              {helpEyebrow}
             </p>
             <p className="mt-3 text-sm leading-6 text-[#31200b]/72">
-              The candidate flow stays focused on clarity, readiness, and a
-              calm next step.
+              {helpBody}
             </p>
           </div>
         </div>
@@ -175,6 +181,7 @@ function InterviewInterface({
   const [access, setAccess] = useState<ValidateAccessResponse | null>(null);
   const [accessChecking, setAccessChecking] = useState(true);
   const [accessError, setAccessError] = useState(false);
+  const [accessAttempt, setAccessAttempt] = useState(0);
 
   useEffect(() => {
     if (interview) {
@@ -260,15 +267,18 @@ function InterviewInterface({
     return () => {
       cancelled = true;
     };
-  }, [interview, inviteToken, sessionToken]);
+  }, [interview, inviteToken, sessionToken, accessAttempt]);
 
   let desktopContent: ReactNode;
   if (!interview) {
     desktopContent = interviewNotFound ? (
       <StatusSurface
+        eyebrow="Link not recognized"
         title="This interview link could not be verified"
-        description="The session link does not match an available interview. Please return to the original invitation or contact the person who shared it with you."
+        description="The link you opened doesn't match any active interview. The most common cause is an extra character pasted in by accident, or a link that has since been replaced by the recruiter."
         image="/invalid-url.png"
+        helpEyebrow="What to do next"
+        helpBody="Open the original invitation (email or message) and use the link directly from there instead of pasting. If you keep seeing this message, reply to the recruiter so they can confirm the correct URL."
       />
     ) : (
       <LoadingSurface />
@@ -276,14 +286,23 @@ function InterviewInterface({
   } else if (!isActive) {
     desktopContent = (
       <StatusSurface
+        eyebrow="Interview closed"
         title="This interview is no longer accepting responses"
         description="The recruiter has closed this interview, so new candidate sessions cannot begin from this link right now."
         detail="If you expected to continue an active session, contact the recruiter and ask them to confirm whether the interview window has been reopened for you."
         image="/closed.png"
+        helpEyebrow="What to do next"
+        helpBody="Reach out to the recruiter who shared this link. If they reopen the interview for you, they can resend the invitation. Already-completed sessions remain on their end either way."
       />
     );
-  } else if (accessChecking || accessError) {
+  } else if (accessChecking) {
     desktopContent = <LoadingSurface />;
+  } else if (accessError) {
+    desktopContent = (
+      <AccessCheckFailedSurface
+        onRetry={() => setAccessAttempt((n) => n + 1)}
+      />
+    );
   } else if (access && access.state === "expired-public") {
     desktopContent = <ExpiredLinkSurface />;
   } else if (access && access.state === "invite-required") {
