@@ -15,11 +15,20 @@ export async function POST(req: Request) {
 
     const payload = body.interviewData;
 
+    const slugify = (value: string) =>
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
     let readableSlug = null;
     if (body.organizationName) {
-      const interviewNameSlug = payload.name?.toLowerCase().replace(/\s/g, "-");
-      const orgNameSlug = body.organizationName?.toLowerCase().replace(/\s/g, "-");
-      readableSlug = `${orgNameSlug}-${interviewNameSlug}`;
+      const interviewNameSlug = slugify(payload.name ?? "");
+      const orgNameSlug = slugify(body.organizationName ?? "");
+      readableSlug = [orgNameSlug, interviewNameSlug].filter(Boolean).join("-");
+      if (!readableSlug) {
+        readableSlug = null;
+      }
     }
 
     const newInterview = await InterviewService.createInterview({
