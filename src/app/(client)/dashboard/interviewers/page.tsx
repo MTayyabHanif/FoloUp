@@ -85,123 +85,7 @@ function Interviewers() {
         }
       />
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,0.9fr)]">
-        <div className="relative overflow-hidden rounded-[32px] border border-[#dfe4d4] bg-[#f8fbf0] p-6 shadow-[0_0_0_1px_rgba(99,143,61,0.08)] md:p-8">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-80"
-            aria-hidden="true"
-          >
-            <div className="absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top_left,rgba(215,232,181,0.7),transparent_60%)]" />
-            <div className="absolute bottom-0 right-0 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(197,204,182,0.35),transparent_68%)]" />
-          </div>
-          <div className="relative flex h-full flex-col justify-between gap-8">
-            <div className="max-w-2xl space-y-4">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-[#203b14]">
-                <Sparkles className="h-3.5 w-3.5" />
-                Editorial persona studio
-              </div>
-              <div className="space-y-3">
-                <h2 className="max-w-3xl text-3xl font-semibold leading-tight tracking-[-0.04em] text-[#0a1d08] md:text-[2.6rem]">
-                  Treat interviewers like cast members, not configuration rows.
-                </h2>
-                <p className="max-w-2xl text-sm leading-7 text-[#42513d] md:text-base">
-                  Each persona should signal how they listen, where they probe,
-                  and what kind of candidate conversation they create. Recruiters
-                  can browse the collection, open the full composition, and add a
-                  new interviewer without leaving this workspace.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
-                  <Wand2 className="h-3.5 w-3.5 text-[#203b14]" />
-                  Identity first
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[#203b14]">
-                  Name, portrait, and description establish the role each
-                  persona plays in the library.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
-                  <Mic2 className="h-3.5 w-3.5 text-[#203b14]" />
-                  Voice direction
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[#203b14]">
-                  Recruiters can match tone and delivery to the role without
-                  reading raw IDs or hidden settings.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
-                  <MessageCircle className="h-3.5 w-3.5 text-[#203b14]" />
-                  Conversation stance
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[#203b14]">
-                  Trait sliders stay visible as shorthand for warmth, depth,
-                  cadence, and candidate comfort.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <aside className="grid gap-4">
-          <div className="rounded-[28px] border border-[#dfe4d4] bg-[#fbfdf6] p-5">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-[#6b7568]">
-              Library pulse
-            </p>
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-[20px] border border-[#e0e5d5] bg-[#f8fbf0] p-4">
-                <p className="text-3xl font-semibold tracking-[-0.05em] text-[#0a1d08]">
-                  {interviewers.length}
-                </p>
-                <p className="mt-2 text-sm text-[#42513d]">
-                  Active {interviewers.length === 1 ? "persona" : "personas"} in
-                  the studio
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <div className="rounded-[20px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                  <p className="text-2xl font-semibold tracking-[-0.05em] text-[#0a1d08]">
-                    {voicePalette}
-                  </p>
-                  <p className="mt-2 text-sm text-[#42513d]">
-                    Voice options represented in the collection
-                  </p>
-                </div>
-                <div className="rounded-[20px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                  <p className="text-2xl font-semibold tracking-[-0.05em] text-[#0a1d08]">
-                    {averageEmpathy || "0.0"}
-                  </p>
-                  <p className="mt-2 text-sm text-[#42513d]">
-                    Average empathy setting across current personas
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-[#dfe4d4] bg-[#203b14] p-5 text-[#fbfdf6]">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-[#d7e8b5]">
-              Composition prompt
-            </p>
-            <p className="mt-3 text-lg font-medium leading-7 tracking-[-0.03em]">
-              Start with the interviewer’s role in the room, then tune the
-              voice and prompt until the tone feels deliberate.
-            </p>
-            <Button
-              variant="outline"
-              className="mt-5 rounded-full border-[#d7e8b5] bg-transparent px-5 text-[#fbfdf6] hover:bg-[#2b4e1d] hover:text-[#fbfdf6]"
-              onClick={() => setCreateOpen(true)}
-            >
-              Open composition flow
-            </Button>
-          </div>
-        </aside>
-      </section>
+      
 
       <Section
         title="Persona collection"
@@ -266,44 +150,14 @@ function Interviewers() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
-                  Browse by feeling
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[#203b14]">
-                  Look for the right balance of empathy, rapport, and
-                  exploration before matching a persona to a role.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
-                  Open for full composition
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[#203b14]">
-                  Every card expands into the full prompt, audio sample, and
-                  trait profile without changing the underlying CRUD contract.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
-                  Add deliberately
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[#203b14]">
-                  The create flow is tuned for persona composition so recruiters
-                  can think in conversation style, not raw configuration.
-                </p>
-              </div>
-            </div>
-
-            <DataGrid cols="4" className="items-stretch">
-              <NewInterviewerCard onClick={() => setCreateOpen(true)} />
+            <DataGrid cols="3" className="items-stretch">
               {interviewers.map((interviewer) => (
                 <InterviewerCard
                   key={String(interviewer.id)}
                   interviewer={interviewer}
                 />
               ))}
+              <NewInterviewerCard onClick={() => setCreateOpen(true)} />
             </DataGrid>
           </div>
         )}

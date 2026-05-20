@@ -625,40 +625,17 @@ function PreflightView({
               </p>
             </div>
           ) : null}
-
-          {micPermissionStatus === "granted" ? (
-            <div className="rounded-[22px] border border-[#d7e8b5] bg-[#f7faef] px-4 py-4 text-sm text-[#203b14]">
-              <div className="flex items-center gap-2 font-medium">
-                <CheckCircle2 className="h-4 w-4" />
-                Microphone ready
-              </div>
-              <p className="mt-2 leading-6 text-[#31200b]/72">
-                Audio permission is already available, so Start interview will
-                take you straight into the session.
-              </p>
-            </div>
-          ) : null}
         </div>
 
-        <div className="space-y-3 pt-2">
-          <Button
-            type="submit"
-            className="h-12 w-full rounded-full bg-[#4a3212] text-base font-medium text-[#fbfdf6] hover:bg-[#31200b] disabled:opacity-55"
-            disabled={!canStart}
-          >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              "Start interview"
-            )}
-          </Button>
+        <div className="pt-2 flex gap-4">
+         
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
-                className="h-11 w-full rounded-full text-[#31200b]/72 hover:bg-[#f6f8ef] hover:text-[#0a1d08]"
+                className="h-11 w-[40%] rounded-full text-[#31200b]/72 hover:bg-[#f6f8ef] hover:text-[#0a1d08]"
                 disabled={loading}
               >
                 Exit interview
@@ -687,6 +664,18 @@ function PreflightView({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+           <Button
+            type="submit"
+            className="h-12 w-full rounded-full bg-[#4a3212] text-base font-medium text-[#fbfdf6] hover:bg-[#31200b] disabled:opacity-55"
+            disabled={!canStart}
+          >
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              "Start interview"
+            )}
+          </Button>
         </div>
       </form>
     </div>
@@ -791,14 +780,14 @@ function ActiveSessionView({
         />
         <MetaPill
           icon={<Headphones className="h-4 w-4" />}
-          label="Guide"
-          value={interviewerProfile?.name || "Interviewer"}
+          label="Interviewer"
+          value={interviewerProfile?.name || "AI Bot"}
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SpeakerPanel
-          title={interviewerProfile?.name || "Interviewer"}
+          title={interviewerProfile?.name || "AI Bot"}
           subtitle="Questioning and pacing"
           transcript={lastInterviewerResponse}
           active={activeTurn === "agent"}
