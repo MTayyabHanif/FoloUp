@@ -74,7 +74,7 @@ export function PageHeader({
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="truncate text-[clamp(2rem,4vw,3.35rem)] font-semibold leading-[1.02] tracking-[-0.04em] text-[hsl(var(--foreground))]">
+        <h1 className="truncate text-2xl font-semibold leading-[1.02] tracking-[-0.04em] text-[hsl(var(--foreground))]">
           {title}
         </h1>
         {description ? (

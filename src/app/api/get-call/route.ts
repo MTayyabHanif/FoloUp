@@ -1,4 +1,10 @@
 import { logger } from "@/lib/logger";
+import {
+  countQuestionsCovered,
+  hasRetellReviewArtifacts,
+  needsRetellReviewRefresh,
+} from "@/lib/retellReviewArtifacts";
+import { InterviewService } from "@/services/interviews.service";
 import { generateInterviewAnalytics } from "@/services/analytics.service";
 import { ResponseService } from "@/services/responses.service";
 import type { Response } from "@/types/response";
@@ -15,7 +21,8 @@ export async function POST(req: Request) {
 
   const callDetails: Response = await ResponseService.getResponseByCallId(body.id);
   let callResponse = callDetails.details;
-  if (callDetails.is_analysed) {
+
+  if (!needsRetellReviewRefresh(callDetails)) {
     return NextResponse.json(
       {
         callResponse,
@@ -30,27 +37,53 @@ export async function POST(req: Request) {
   const duration = Math.round(
     callResponse.end_timestamp / 1000 - callResponse.start_timestamp / 1000,
   );
+  const reviewReady = hasRetellReviewArtifacts(callResponse);
+  let analytics = callDetails.analytics;
 
-  const payload = {
-    callId: body.id,
-    interviewId: interviewId,
-    transcript: callResponse.transcript,
-  };
-  const result = await generateInterviewAnalytics(payload);
+  if (reviewReady) {
+    if (!analytics) {
+      const result = await generateInterviewAnalytics({
+        callId: body.id,
+        interviewId: interviewId,
+        transcript: callResponse.transcript,
+      });
 
-  const analytics = result.analytics;
+      analytics = result.analytics;
+    }
 
-  await ResponseService.saveResponse(
-    {
-      details: callResponse,
-      is_analysed: true,
-      duration: duration,
-      analytics: analytics,
-    },
-    body.id,
-  );
+    const interview = await InterviewService.getInterviewById(interviewId);
+    const questionsCovered = countQuestionsCovered(
+      callResponse.transcript_object,
+      interview?.question_count ?? null,
+    );
 
-  logger.info("Call analysed successfully");
+    await ResponseService.saveResponse(
+      {
+        details: callResponse,
+        is_analysed: true,
+        duration: duration,
+        analytics,
+        ...(questionsCovered !== null
+          ? { questions_covered: questionsCovered }
+          : {}),
+      },
+      body.id,
+    );
+
+    logger.info("Call analysed successfully");
+  } else {
+    await ResponseService.saveResponse(
+      {
+        details: callResponse,
+        duration: duration,
+      },
+      body.id,
+    );
+
+    logger.info("Call not ready for analysis; returning partial Retell payload", {
+      callId: body.id,
+    });
+  }
 
   return NextResponse.json(
     {

@@ -43,3 +43,10 @@ next-env.d.ts
 .claude/scheduled_tasks.lock
 .claude/launch.json
 .gstack/
+
+# playwright MCP scratch (per-run logs and snapshots)
+/.playwright-mcp/
+
+# Per-slice screenshots from local verification runs
+/slice*-*.png
+/candidate-not-verified*.png

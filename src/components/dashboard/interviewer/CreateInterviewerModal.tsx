@@ -259,93 +259,7 @@ function CreateInterviewerModal({ open, onClose }: Props) {
       onClose={handleClose}
     >
       <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-        <div className="overflow-hidden rounded-[32px] border border-[#dfe4d4] bg-[#f8fbf0]">
-          <div className="grid gap-0 xl:grid-cols-[minmax(0,1.15fr)_320px]">
-            <div className="p-6 md:p-7">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-[#203b14]">
-                <Sparkles className="h-3.5 w-3.5" />
-                Persona composition
-              </div>
-              <div className="mt-4 space-y-3">
-                <h2 className="text-3xl font-semibold leading-tight tracking-[-0.05em] text-[#0a1d08]">
-                  Compose a voice candidates will actually meet
-                </h2>
-                <p className="max-w-2xl text-sm leading-7 text-[#42513d]">
-                  Build the identity, choose the delivery, and write the
-                  interviewing philosophy in one guided flow. The underlying CRUD
-                  contract stays the same; the framing becomes much more
-                  deliberate.
-                </p>
-              </div>
-            </div>
-
-            <aside className="border-t border-[#e0e5d5] bg-[#fbfdf6] p-6 xl:border-l xl:border-t-0">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-[#6b7568]">
-                Live preview
-              </p>
-              <div className="mt-4 rounded-[28px] border border-[#e0e5d5] bg-[#f8fbf0] p-4">
-                <div className="flex items-start gap-4">
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[22px] border border-[#d7e8b5] bg-[#fbfdf6]">
-                    {form.image ? (
-                      <Image
-                        src={form.image}
-                        alt={form.name ? `${form.name} avatar` : "Selected avatar"}
-                        sizes="80px"
-                        className="object-cover object-center"
-                        fill
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-[#6b7568]">
-                        Pick one
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[#6b7568]">
-                      {voiceLabel}
-                    </p>
-                    <p className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[#0a1d08]">
-                      {form.name.trim() || "Unnamed persona"}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[#42513d]">
-                      {form.description.trim() ||
-                        "A short editorial description will help recruiters understand this interviewer at a glance."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-2">
-                  {(
-                    Object.keys(TRAIT_COPY) as Array<keyof typeof TRAIT_COPY>
-                  ).map((key) => (
-                    <div
-                      key={key}
-                      className="rounded-[18px] border border-[#e0e5d5] bg-[#fbfdf6] px-3 py-2"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs uppercase tracking-[0.14em] text-[#6b7568]">
-                          {TRAIT_COPY[key].label}
-                        </span>
-                        <span className="text-sm font-medium text-[#0a1d08]">
-                          {form[key]}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 rounded-[20px] border border-[#d7e8b5] bg-[#fbfdf6] p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[#6b7568]">
-                    Current feel
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[#203b14]">
-                    {personaMood[0]} {personaMood[1].toLowerCase()}
-                  </p>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </div>
+        
 
         <Fieldset
           title="Identity and framing"
@@ -442,8 +356,10 @@ function CreateInterviewerModal({ open, onClose }: Props) {
           title="Voice and conversation stance"
           description="Choose how the interviewer sounds, then tune the visible interaction traits that help recruiters understand the personality."
         >
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-            <div className="space-y-5">
+          <div className="grid gap-5">
+              
+
+            <div className="">
               <div className="rounded-[24px] border border-[#e0e5d5] bg-[#f8fbf0] p-4">
                 <label
                   htmlFor="ci-voice"
@@ -476,21 +392,7 @@ function CreateInterviewerModal({ open, onClose }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-4">
-                <p className="text-sm font-medium text-[#0a1d08]">
-                  Recruiter shorthand
-                </p>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-[#42513d]">
-                  <li>Use empathy for warmth and candidate comfort.</li>
-                  <li>Use rapport for ease and conversational chemistry.</li>
-                  <li>Use exploration for probing depth and curiosity.</li>
-                  <li>Use pace for how quickly the interviewer moves.</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 mt-3">
               <TraitSlider
                 label="Empathy"
                 description={traitDescription(form.empathy, "empathy")}
@@ -519,6 +421,7 @@ function CreateInterviewerModal({ open, onClose }: Props) {
                 disabled={isSubmitting}
                 onChange={(v) => setField("speed", v)}
               />
+            </div>
             </div>
           </div>
         </Fieldset>
