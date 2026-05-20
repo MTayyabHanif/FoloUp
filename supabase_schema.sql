@@ -60,7 +60,12 @@ CREATE TABLE interview (
     respondents TEXT[],
     question_count INTEGER,
     response_count INTEGER,
-    time_duration TEXT
+    time_duration TEXT,
+    job_description TEXT NOT NULL DEFAULT '',
+    seniority TEXT NOT NULL DEFAULT 'mid',
+    must_haves JSONB NOT NULL DEFAULT '[]'::jsonb,
+    CONSTRAINT interview_seniority_check
+        CHECK (seniority IN ('junior', 'mid', 'senior', 'staff', 'principal'))
 );
 
 CREATE TABLE interview_invites (
@@ -101,7 +106,8 @@ CREATE TABLE response (
     questions_covered INTEGER,
     last_active_at TIMESTAMP WITH TIME ZONE,
     session_token UUID,
-    invite_id UUID REFERENCES interview_invites(id)
+    invite_id UUID REFERENCES interview_invites(id),
+    analytics_v1 JSONB
 );
 
 -- Index for session-token lookups on the reconnect critical path.

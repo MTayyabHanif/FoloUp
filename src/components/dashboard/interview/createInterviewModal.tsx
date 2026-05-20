@@ -22,6 +22,12 @@ const CreateEmptyInterviewData = (): InterviewBase => ({
   questions: [],
   description: "",
   response_count: BigInt(0),
+  // v2 analytics scoring fields (openspec hiring-grade-analytics-scoring).
+  // Empty defaults match the DB column defaults; a follow-up change adds
+  // editor UI for these on the interview create form.
+  job_description: "",
+  seniority: "mid",
+  must_haves: [],
 });
 
 function CreateInterviewModal({ open, setOpen }: Props) {

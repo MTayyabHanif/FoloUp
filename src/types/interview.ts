@@ -9,6 +9,8 @@ export interface Quote {
   call_id: string;
 }
 
+export type Seniority = "junior" | "mid" | "senior" | "staff" | "principal";
+
 export interface InterviewBase {
   user_id: string;
   organization_id: string;
@@ -22,6 +24,14 @@ export interface InterviewBase {
   questions: Question[];
   description: string;
   response_count: bigint;
+  /**
+   * v2 analytics fields (see openspec change hiring-grade-analytics-scoring).
+   * DB defaults: job_description='', seniority='mid', must_haves='[]'.
+   * Required at the TS level; existing rows are filled by DDL defaults.
+   */
+  job_description: string;
+  seniority: Seniority;
+  must_haves: string[];
 }
 
 export interface InterviewDetails {

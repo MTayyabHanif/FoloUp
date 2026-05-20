@@ -1,0 +1,22 @@
+{
+  "changeName": "hiring-grade-analytics-scoring",
+  "currentPhase": "review",
+  "agreedOptionalSteps": ["plan_design_review"],
+  "skippedSteps": ["qa"],
+  "completedGates": [
+    "brainstorming",
+    "cgc",
+    "propose",
+    "plan_eng_review",
+    "plan_design_review",
+    "apply"
+  ],
+  "deferredFollowUps": [
+    "scripts/calibrate-analytics.ts (tasks.md §10) — deferred to follow-up change",
+    "CHANGELOG.md entry (tasks.md §11) — no CHANGELOG.md exists in repo today",
+    "AGENTS.md analytics section (tasks.md §11) — no AGENTS.md exists in repo today",
+    "Interview create form UI for job_description/seniority/must_haves (DB columns exist; UI form deferred)"
+  ],
+  "lastAmended": "2026-05-20T00:00:00Z",
+  "lastUpdated": "2026-05-20T00:00:00Z"
+}

@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import type { Analytics, CallData } from "@/types/response";
+import { isAnalyticsV2 } from "@/types/response";
+import { AnalyticsV2View } from "@/components/call/analyticsV2View";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResponseService } from "@/services/responses.service";
@@ -436,14 +438,21 @@ function CallInfo({
        
       </div>
 
+      {/* v2 hiring-grade view (full-width). When the row's analytics has
+          `schemaVersion: 2`, render the v2 layout and skip the v1 cards.
+          See openspec change `hiring-grade-analytics-scoring`. */}
+      {isAnalyticsV2(analytics) ? (
+        <AnalyticsV2View analytics={analytics} />
+      ) : null}
+
       <div className="grid gap-6 xl:grid-cols-3">
-        {analytics?.overallScore !== undefined ? (
+        {!isAnalyticsV2(analytics) && analytics?.overallScore !== undefined ? (
           <DetailCard title="Overall hiring score">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
+            <div className="flex flex-col gap-4">
               <ScoreGauge
                 value={analytics.overallScore ?? 0}
                 maxValue={100}
-                size={112}
+                size={88}
                 strokeWidth={4}
                 label={analytics.overallScore}
               />
@@ -459,13 +468,13 @@ function CallInfo({
           </DetailCard>
         ) : null}
 
-        {analytics?.communication ? (
+        {!isAnalyticsV2(analytics) && analytics?.communication ? (
           <DetailCard title="Communication">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-center">
+            <div className="flex flex-col gap-4">
               <ScoreGauge
                 value={analytics.communication.score ?? 0}
                 maxValue={10}
-                size={112}
+                size={88}
                 strokeWidth={4}
                 label={
                   <div className="flex items-baseline">
@@ -483,6 +492,14 @@ function CallInfo({
                 />
               </div>
             </div>
+          </DetailCard>
+        ) : !isAnalyticsV2(analytics) && analytics && !analytics.communication ? (
+          // Very old v1 row missing the communication field — surface the gap
+          // explicitly rather than silently omitting the card (review finding #4).
+          <DetailCard title="Communication">
+            <p className="text-sm italic text-[#7a7a6a]">
+              Communication score not available for this response.
+            </p>
           </DetailCard>
         ) : null}
 
@@ -535,9 +552,9 @@ function CallInfo({
           </div>
         </DetailCard>
 
-        {analytics && analytics.questionSummaries && analytics.questionSummaries.length > 0 ? (
+        {!isAnalyticsV2(analytics) && analytics && analytics.questionSummaries && analytics.questionSummaries.length > 0 ? (
           <DetailCard title="Question summaries">
-            <ScrollArea className="max-h-[320px] pr-1">
+            <ScrollArea className="max-h-[320px] overflow-auto pr-1">
               <div className="space-y-3">
                 {analytics.questionSummaries.map((qs, index) => (
                   <QuestionAnswerCard

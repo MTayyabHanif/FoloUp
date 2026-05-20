@@ -57,6 +57,11 @@ export type Database = {
           time_duration: string | null;
           url: string | null;
           user_id: string | null;
+          // v2 analytics scoring fields (openspec hiring-grade-analytics-scoring).
+          // NOT NULL with DB defaults; safe to read as non-null on existing rows.
+          job_description: string;
+          seniority: string;
+          must_haves: Json;
         };
         Insert: {
           created_at?: string;
@@ -84,6 +89,10 @@ export type Database = {
           time_duration?: string | null;
           url?: string | null;
           user_id?: string | null;
+          // Optional on Insert — DB defaults supply values when omitted.
+          job_description?: string;
+          seniority?: string;
+          must_haves?: Json;
         };
         Update: {
           created_at?: string;
@@ -111,6 +120,9 @@ export type Database = {
           time_duration?: string | null;
           url?: string | null;
           user_id?: string | null;
+          job_description?: string;
+          seniority?: string;
+          must_haves?: Json;
         };
         Relationships: [
           {
@@ -222,9 +234,12 @@ export type Database = {
           session_token: string | null;
           status: string;
           tab_switch_count: number | null;
+          // v2 analytics dual-write secondary column (openspec hiring-grade-analytics-scoring).
+          analytics_v1: Json | null;
         };
         Insert: {
           analytics?: Json | null;
+          analytics_v1?: Json | null;
           call_id?: string | null;
           candidate_status?: string | null;
           created_at?: string;
@@ -247,6 +262,7 @@ export type Database = {
         };
         Update: {
           analytics?: Json | null;
+          analytics_v1?: Json | null;
           call_id?: string | null;
           candidate_status?: string | null;
           created_at?: string;
