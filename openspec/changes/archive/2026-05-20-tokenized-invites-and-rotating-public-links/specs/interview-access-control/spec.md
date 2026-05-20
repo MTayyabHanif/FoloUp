@@ -159,10 +159,12 @@ Authenticated recruiter API routes SHALL support: creating an invite (POST with 
 
 ---
 
-### Security: RLS Posture (ENG3)
+### Requirement: Access-control tables follow the project-wide no-RLS posture (ENG3)
 
-RLS (Row Level Security) is **not enabled** on any table in this project. The `interview_invites` table follows the same posture — no `ENABLE ROW LEVEL SECURITY` directive and no policies are defined on it.
+The `interview_invites` table SHALL NOT have Row Level Security enabled. This follows the project-wide convention: no table in this project uses Supabase RLS, and adding RLS only to the new access-control surface would create an inconsistent security model. The Supabase anon key SHALL be used for both recruiter-authenticated paths (which are gated by Clerk on the route layer) and candidate paths (which are gated by the token-resolution logic in `/api/validate-access` and `/api/register-call`).
 
-The `/api/validate-access` route reads `interview_invites` using the Supabase anon key; this is safe because the route is server-side and RLS is off project-wide.
+If a future change introduces RLS to this project, this requirement MUST be revisited: `/api/validate-access` would then need either a restricted SELECT policy on `interview_invites(interview_id, token)` or a refactor to use a service-role client.
 
-**If RLS is ever added to this project**, this spec must be revisited: `/api/validate-access` would require either a restricted SELECT policy on `interview_invites` (scoped to `interview_id` + `token` equality lookups) or a refactor to use the service-role client. Until that time, no RLS configuration is needed or expected for this change.
+#### Scenario: No RLS directives in the migration
+- **WHEN** the migration `openspec/changes/tokenized-invites-and-rotating-public-links/migration.sql` is applied
+- **THEN** no `ENABLE ROW LEVEL SECURITY` statement appears for `interview_invites`, and no policy is created on the table

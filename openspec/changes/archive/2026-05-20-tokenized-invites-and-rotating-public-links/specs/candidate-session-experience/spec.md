@@ -33,7 +33,7 @@ Invalid-link, closed-interview, mobile-blocked, offline, expired-session, resume
 - **THEN** clicking "Try a different email" unmounts `InviteEmailMismatchSurface` and remounts `PreflightView` with `email` reset to `""` and `name` preserved from the prior submission
 - **NOTE:** `/api/validate-access` does NOT return `invite-email-mismatch`. The email is not yet known when validate-access is called (it is collected inside `PreflightView`, which only mounts after a `valid` validate-access response). The mismatch is detected exclusively at the `register-call` step.
 
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Candidate entry validates access token before preflight
 The candidate entry page (`/call/[interviewId]`) SHALL call `/api/validate-access` on mount with the `?token=` param value (if present) — **no email is sent to validate-access** (email is not yet collected at this stage). Between page mount and the `/api/validate-access` response, the page SHALL render the existing `LoadingSurface` component (the same one used during the interview fetch in `src/app/(user)/call/[interviewId]/page.tsx`) — no new copy and no new component. If the result is any non-`valid` state, the page SHALL render the appropriate error surface and SHALL NOT proceed to PreflightView or register-call. The invite token SHALL be passed through to the register-call request body when present.
