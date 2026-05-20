@@ -42,6 +42,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CandidateStatus } from "@/lib/enum";
+import { DetailTextValue } from "@/components/call/detailTextValue";
+import { formatCallTranscript } from "@/components/call/transcriptFormatter";
 
 function ScoreGauge({
   value,
@@ -269,21 +271,8 @@ function CallInfo({
   }, [call_id]);
 
   useEffect(() => {
-    const replaceAgentAndUser = (rawTranscript: string, candidateName: string) => {
-      const agentReplacement = "**AI interviewer:**";
-      const userReplacement = `**${candidateName}:**`;
-
-      let updatedTranscript = rawTranscript
-        .replace(/Agent:/g, agentReplacement)
-        .replace(/User:/g, userReplacement);
-
-      updatedTranscript = updatedTranscript.replace(/(?:\r\n|\r|\n)/g, "\n\n");
-
-      return updatedTranscript;
-    };
-
     if (call && name) {
-      setTranscript(replaceAgentAndUser(call.transcript as string, name));
+      setTranscript(formatCallTranscript(call.transcript, name));
     }
   }, [call, name]);
 
@@ -323,8 +312,10 @@ function CallInfo({
   return (
     <div className="space-y-6 text-[#0a1d08]">
       <div className="rounded-[28px] border border-[#e0e5d5] bg-[#f6f8ef] p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-4">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between w-full">
+          <div className="space-y-4 w-full">
+            <div className="flex justify-between">
+          <div className="w-full">
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#203b14] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
@@ -336,37 +327,8 @@ function CallInfo({
               Back to workspace
             </button>
 
-            <div className="flex flex-wrap items-start gap-4">
-              <Avatar className="h-14 w-14 border border-[#d8ddd0] bg-[#eef4e1]">
-                <AvatarFallback className="bg-transparent text-[#203b14]">
-                  {name ? name[0] : "A"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                {name ? (
-                  <p className="text-2xl font-semibold tracking-[-0.04em]">
-                    {name}
-                  </p>
-                ) : (
-                  <p className="text-2xl font-semibold tracking-[-0.04em]">
-                    Anonymous candidate
-                  </p>
-                )}
-                {email ? (
-                  <p className="mt-1 text-sm text-[#53614d]">{email}</p>
-                ) : null}
-              </div>
-            </div>
-
-            <SessionCoverageRow
-              status={responseStatus}
-              questionsCovered={questionsCovered}
-              questionCount={questionCount}
-              disconnectionReason={disconnectionReason}
-            />
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3">
             <Select
               value={candidateStatus}
               onValueChange={async (newValue: string) => {
@@ -404,8 +366,8 @@ function CallInfo({
                   className="rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-5 text-[#6b3f31] hover:bg-[#f0dfd8]"
                   variant="ghost"
                 >
-                  <TrashIcon className="mr-2 h-4 w-4" />
-                  Delete response
+                  <TrashIcon className="h-4 w-4" />
+                  
                 </Button>
               </AlertDialogTrigger>
 
@@ -433,14 +395,45 @@ function CallInfo({
               </AlertDialogContent>
             </AlertDialog>
           </div>
-        </div>
+            </div>
 
-        {tabSwitchCount && tabSwitchCount > 0 ? (
-          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-4 py-2 text-sm font-semibold text-[#6b3f31]">
+            <div className="flex flex-wrap items-start gap-4">
+              <div>
+                {name ? (
+                  <p className="text-2xl font-semibold tracking-[-0.04em]">
+                    {name}
+                  </p>
+                ) : (
+                  <p className="text-2xl font-semibold tracking-[-0.04em]">
+                    Anonymous candidate
+                  </p>
+                )}
+                {email ? (
+                  <p className="mt-1 text-sm text-[#53614d]">{email}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex justify-between w-full">
+            <SessionCoverageRow
+              status={responseStatus}
+              questionsCovered={questionsCovered}
+              questionCount={questionCount}
+              disconnectionReason={disconnectionReason}
+            />
+
+             {tabSwitchCount && tabSwitchCount > 0 ? (
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-4 py-2 text-sm font-semibold text-[#6b3f31]">
             <AlertTriangle className="h-4 w-4" />
             Tab switching detected
           </div>
         ) : null}
+            </div>
+          </div>
+
+          
+        </div>
+
+       
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -456,13 +449,11 @@ function CallInfo({
               />
               <div className="text-sm leading-6 text-[#53614d]">
                 <p className="font-semibold text-[#0a1d08]">Hiring signal</p>
-                <p className="mt-2">
-                  {analytics.overallFeedback === undefined ? (
-                    <Skeleton className="h-5 w-[220px]" />
-                  ) : (
-                    analytics.overallFeedback
-                  )}
-                </p>
+                <DetailTextValue
+                  className="mt-2"
+                  value={analytics.overallFeedback}
+                  fallback={<Skeleton className="h-5 w-[220px]" />}
+                />
               </div>
             </div>
           </DetailCard>
@@ -485,13 +476,11 @@ function CallInfo({
               />
               <div className="text-sm leading-6 text-[#53614d]">
                 <p className="font-semibold text-[#0a1d08]">Feedback</p>
-                <p className="mt-2">
-                  {analytics.communication.feedback === undefined ? (
-                    <Skeleton className="h-5 w-[220px]" />
-                  ) : (
-                    analytics.communication.feedback
-                  )}
-                </p>
+                <DetailTextValue
+                  className="mt-2"
+                  value={analytics.communication.feedback}
+                  fallback={<Skeleton className="h-5 w-[220px]" />}
+                />
               </div>
             </div>
           </DetailCard>
@@ -501,23 +490,19 @@ function CallInfo({
           <div className="space-y-4 text-sm leading-6 text-[#53614d]">
             <div>
               <p className="font-semibold text-[#0a1d08]">Sentiment</p>
-              <p className="mt-1">
-                {call?.call_analysis?.user_sentiment === undefined ? (
-                  <Skeleton className="h-5 w-[160px]" />
-                ) : (
-                  call.call_analysis.user_sentiment
-                )}
-              </p>
+              <DetailTextValue
+                className="mt-1"
+                value={call?.call_analysis?.user_sentiment}
+                fallback={<Skeleton className="h-5 w-[160px]" />}
+              />
             </div>
             <div>
               <p className="font-semibold text-[#0a1d08]">Call summary</p>
-              <p className="mt-1">
-                {call?.call_analysis?.call_summary === undefined ? (
-                  <Skeleton className="h-5 w-[220px]" />
-                ) : (
-                  call.call_analysis.call_summary
-                )}
-              </p>
+              <DetailTextValue
+                className="mt-1"
+                value={call?.call_analysis?.call_summary}
+                fallback={<Skeleton className="h-5 w-[220px]" />}
+              />
             </div>
             <p className="rounded-[18px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3">
               {call?.call_analysis?.call_completion_rating_reason}
