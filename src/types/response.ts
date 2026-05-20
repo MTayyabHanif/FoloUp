@@ -17,12 +17,6 @@ export interface Response {
   is_ended: boolean;
   is_viewed: boolean;
   analytics: any;
-  /**
-   * Secondary analytics payload during the v2 dual-write window. Holds
-   * whichever shape is NOT the primary (the one displayed by the dashboard).
-   * Null outside the dual-write window.
-   */
-  analytics_v1: any;
   candidate_status: string;
   tab_switch_count: number;
   status: ResponseStatus;
@@ -34,28 +28,12 @@ export interface Response {
 }
 
 /**
- * Legacy v1 analytics shape — produced by `getInterviewAnalyticsPrompt`
- * + `generateInterviewAnalytics`. v1 rows have no `schemaVersion` field;
- * `isAnalyticsV2()` returns false for them.
- */
-export interface AnalyticsV1 {
-  overallScore: number;
-  overallFeedback: string;
-  communication: { score: number; feedback: string };
-  generalIntelligence: string;
-  softSkillSummary: string;
-  questionSummaries: Array<{
-    question: string;
-    summary: string;
-  }>;
-}
-
-/**
- * Hiring-grade v2 analytics shape — produced by `getInterviewAnalyticsPromptV2`
- * + `runAnalyticsV2`. Discriminated from v1 via the literal `schemaVersion: 2`.
+ * Hiring-grade analytics shape — produced by `getInterviewAnalyticsPromptV2`
+ * + `runAnalyticsV2`. This is the only analytics shape new rows carry.
  *
- * See openspec/changes/hiring-grade-analytics-scoring/design.md (Decision 2)
- * for the full rationale, dimension weights, and field-by-field semantics.
+ * See openspec/changes/archive/2026-05-20-hiring-grade-analytics-scoring/design.md
+ * (Decision 2) for the full rationale, dimension weights, and field-by-field
+ * semantics.
  */
 export interface AnalyticsV2 {
   schemaVersion: 2;
@@ -124,14 +102,20 @@ export interface AnalyticsV2 {
   };
 }
 
-export type Analytics = AnalyticsV1 | AnalyticsV2;
+/**
+ * Sole analytics shape. Old rows (pre-v2 deploy) may still exist in the DB
+ * with no `schemaVersion` — UI consumers should call `isAnalyticsV2()` before
+ * trusting fields and render a "legacy response" placeholder otherwise.
+ */
+export type Analytics = AnalyticsV2;
 
 /**
- * Type guard. Narrows `Analytics` to `AnalyticsV2`. Use everywhere a reader
- * touches version-specific fields (communication.score, dimensions, etc.).
+ * Defensive type guard. Returns true only for rows with `schemaVersion: 2`.
+ * UI consumers branch on this to skip rendering legacy v1 rows that were
+ * written before the v2 cutover (they lack dimensions / redFlags / etc).
  */
 export function isAnalyticsV2(
-  a: Analytics | null | undefined,
+  a: Analytics | Record<string, unknown> | null | undefined,
 ): a is AnalyticsV2 {
   return (
     !!a &&

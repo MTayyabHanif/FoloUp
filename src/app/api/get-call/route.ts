@@ -5,9 +5,10 @@ import {
   needsRetellReviewRefresh,
 } from "@/lib/retellReviewArtifacts";
 import { InterviewService } from "@/services/interviews.service";
-import { generateInterviewAnalytics } from "@/services/analytics.service";
+import { runAnalyticsV2 } from "@/services/analytics.service";
 import { ResponseService } from "@/services/responses.service";
-import type { Response } from "@/types/response";
+import type { Seniority } from "@/types/interview";
+import type { AnalyticsV2, Response } from "@/types/response";
 import { NextResponse } from "next/server";
 import Retell from "retell-sdk";
 
@@ -38,20 +39,45 @@ export async function POST(req: Request) {
     callResponse.end_timestamp / 1000 - callResponse.start_timestamp / 1000,
   );
   const reviewReady = hasRetellReviewArtifacts(callResponse);
-  let analytics = callDetails.analytics;
+  let analytics: AnalyticsV2 | null = callDetails.analytics ?? null;
 
   if (reviewReady) {
-    if (!analytics) {
-      const result = await generateInterviewAnalytics({
-        callId: body.id,
-        interviewId: interviewId,
-        transcript: callResponse.transcript,
-      });
+    const interview = await InterviewService.getInterviewById(interviewId);
 
-      analytics = result.analytics;
+    if (!analytics) {
+      // Parse interview.time_duration (string like "30" or "30 minutes") into seconds.
+      const td = interview?.time_duration ?? "";
+      const tdNumeric = Number(String(td).match(/\d+/)?.[0] ?? "0");
+      const expectedDurationSeconds = tdNumeric * 60;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const co = callResponse as any;
+      try {
+        analytics = await runAnalyticsV2({
+          roleTitle: interview?.name || interview?.objective || "the role",
+          companyName: "Foloup",
+          seniority: (interview?.seniority as Seniority) ?? "mid",
+          jobDescription: interview?.job_description ?? "",
+          mustHaves: Array.isArray(interview?.must_haves)
+            ? interview.must_haves
+            : [],
+          questions: (interview?.questions ?? []).map((q: { question: string }) => ({
+            question: q.question,
+          })),
+          expectedDurationSeconds,
+          transcriptObject: co.transcript_object ?? null,
+          callAnalysis: co.call_analysis ?? null,
+          disconnectionReason: co.disconnection_reason ?? null,
+          durationSeconds: duration,
+        });
+      } catch (err) {
+        logger.error("Analytics generation failed in get-call", {
+          callId: body.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
-    const interview = await InterviewService.getInterviewById(interviewId);
     const questionsCovered = countQuestionsCovered(
       callResponse.transcript_object,
       interview?.question_count ?? null,
@@ -60,9 +86,9 @@ export async function POST(req: Request) {
     await ResponseService.saveResponse(
       {
         details: callResponse,
-        is_analysed: true,
+        is_analysed: analytics !== null,
         duration: duration,
-        analytics,
+        ...(analytics !== null ? { analytics } : {}),
         ...(questionsCovered !== null
           ? { questions_covered: questionsCovered }
           : {}),
@@ -70,7 +96,10 @@ export async function POST(req: Request) {
       body.id,
     );
 
-    logger.info("Call analysed successfully");
+    logger.info("Call analysed successfully", {
+      callId: body.id,
+      analyticsGenerated: analytics !== null,
+    });
   } else {
     await ResponseService.saveResponse(
       {

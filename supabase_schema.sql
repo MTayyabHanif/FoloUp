@@ -106,8 +106,11 @@ CREATE TABLE response (
     questions_covered INTEGER,
     last_active_at TIMESTAMP WITH TIME ZONE,
     session_token UUID,
-    invite_id UUID REFERENCES interview_invites(id),
-    analytics_v1 JSONB
+    invite_id UUID REFERENCES interview_invites(id)
+    -- NOTE: the `analytics_v1` JSONB column physically exists in deployed
+    -- databases (added by the hiring-grade-analytics-scoring migration during
+    -- the original dual-write design). It is no longer written by the app.
+    -- Safe to drop via:  ALTER TABLE response DROP COLUMN IF EXISTS analytics_v1;
 );
 
 -- Index for session-token lookups on the reconnect critical path.

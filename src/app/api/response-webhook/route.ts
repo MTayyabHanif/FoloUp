@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Retell from "retell-sdk";
 
-import { snapshotAnalyticsV2Flags } from "@/lib/analytics-v2.constants";
 import { logger } from "@/lib/logger";
 import { countQuestionsCovered, needsRetellReviewRefresh } from "@/lib/retellReviewArtifacts";
-import {
-  generateInterviewAnalytics,
-  runAnalyticsV2,
-} from "@/services/analytics.service";
+import { runAnalyticsV2 } from "@/services/analytics.service";
 import { InterviewService } from "@/services/interviews.service";
 import { InviteService } from "@/services/invites.service";
 import { ResponseService } from "@/services/responses.service";
@@ -81,12 +77,6 @@ function mapDisconnectionReason(
  *   and a Clerk-auth crossing for no benefit.
  */
 export async function POST(req: NextRequest) {
-  // Snapshot env flags at the top, BEFORE the first await. Per
-  // openspec hiring-grade-analytics-scoring (Decision 1 + plan_eng_review
-  // finding M3): re-reading process.env mid-handler creates a race during
-  // flag-flip deploys. Pass the snapshot through to all downstream helpers.
-  const v2Flags = snapshotAnalyticsV2Flags();
-
   const rawBody = await req.text();
 
   if (
@@ -182,16 +172,6 @@ export async function POST(req: NextRequest) {
           Number(callOutput.start_timestamp) / 1000,
       );
 
-      // ---------- v1 analytics (always — for dual-write backward compat) ----------
-      const v1Result = stored.analytics
-        ? { analytics: stored.analytics, status: 200 }
-        : await generateInterviewAnalytics({
-            callId: call.call_id,
-            interviewId: stored.interview_id,
-            transcript: callOutput.transcript ?? "",
-          });
-
-      // Fetch interview once — used for questions_covered AND v2 args below.
       const interview = await InterviewService.getInterviewById(
         stored.interview_id,
       );
@@ -214,57 +194,49 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // ---------- v2 analytics (only when flag is on) ----------
-      let v2Analytics: AnalyticsV2 | null = null;
-      if (v2Flags.v2Enabled) {
-        try {
-          // Parse interview.time_duration (string like "30" or "30 minutes") into seconds.
-          const td = interview?.time_duration ?? "";
-          const tdNumeric = Number(String(td).match(/\d+/)?.[0] ?? "0");
-          const expectedDurationSeconds = tdNumeric * 60;
+      // Parse interview.time_duration (string like "30" or "30 minutes") into seconds.
+      const td = interview?.time_duration ?? "";
+      const tdNumeric = Number(String(td).match(/\d+/)?.[0] ?? "0");
+      const expectedDurationSeconds = tdNumeric * 60;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const co = callOutput as any;
-          v2Analytics = await runAnalyticsV2({
-            roleTitle: interview?.name || interview?.objective || "the role",
-            companyName: "Foloup",
-            seniority: (interview?.seniority as Seniority) ?? "mid",
-            jobDescription: interview?.job_description ?? "",
-            mustHaves: Array.isArray(interview?.must_haves)
-              ? interview.must_haves
-              : [],
-            questions: (interview?.questions ?? []).map((q: { question: string }) => ({
-              question: q.question,
-            })),
-            expectedDurationSeconds,
-            transcriptObject: co.transcript_object ?? null,
-            callAnalysis: co.call_analysis ?? null,
-            disconnectionReason: co.disconnection_reason ?? null,
-            durationSeconds: duration,
-          });
-        } catch (err) {
-          // v2 failure MUST NOT break the webhook — v1 has already run.
-          logger.error("Analytics v2 generation failed (v1 still wrote)", {
-            callId: call.call_id,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const co = callOutput as any;
+
+      let analytics: AnalyticsV2 | null = null;
+      try {
+        analytics = await runAnalyticsV2({
+          roleTitle: interview?.name || interview?.objective || "the role",
+          companyName: "Foloup",
+          seniority: (interview?.seniority as Seniority) ?? "mid",
+          jobDescription: interview?.job_description ?? "",
+          mustHaves: Array.isArray(interview?.must_haves)
+            ? interview.must_haves
+            : [],
+          questions: (interview?.questions ?? []).map((q: { question: string }) => ({
+            question: q.question,
+          })),
+          expectedDurationSeconds,
+          transcriptObject: co.transcript_object ?? null,
+          callAnalysis: co.call_analysis ?? null,
+          disconnectionReason: co.disconnection_reason ?? null,
+          durationSeconds: duration,
+        });
+      } catch (err) {
+        logger.error("Analytics generation failed", {
+          callId: call.call_id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        // Continue to persist call details + questionsCovered even if scoring
+        // failed — recruiters can re-trigger analysis later. The row's
+        // `analytics` column will be set on a subsequent successful run.
       }
-
-      // ---------- Determine primary/secondary write columns ----------
-      // When v2AsPrimary=true and v2 succeeded → v2 to `analytics`, v1 to `analytics_v1`.
-      // Otherwise → v1 to `analytics`, v2 (if any) to `analytics_v1`.
-      const v2Primary = v2Flags.v2AsPrimary && v2Analytics !== null;
-      const primary = v2Primary ? v2Analytics : v1Result.analytics;
-      const secondary = v2Primary ? v1Result.analytics : v2Analytics;
 
       await ResponseService.saveResponse(
         {
           details: callOutput,
-          is_analysed: true,
+          is_analysed: analytics !== null,
           duration,
-          analytics: primary,
-          analytics_v1: secondary,
+          ...(analytics !== null ? { analytics } : {}),
           ...(questionsCovered !== null
             ? { questions_covered: questionsCovered }
             : {}),
@@ -275,9 +247,7 @@ export async function POST(req: NextRequest) {
       logger.info("Call analysed via webhook", {
         callId: call.call_id,
         questionsCovered,
-        v2Enabled: v2Flags.v2Enabled,
-        v2AsPrimary: v2Flags.v2AsPrimary,
-        v2Succeeded: v2Analytics !== null,
+        analyticsGenerated: analytics !== null,
       });
       break;
     }

@@ -151,12 +151,10 @@ export function normalizeCandidateDecision(
 }
 
 /**
- * Read the overall score from the response's analytics, regardless of schema
- * version. Both `AnalyticsV1.overallScore` and `AnalyticsV2.overallScore` use
- * the same field name and 0-100 scale, so a single accessor works for both.
+ * Read the overall score from the response's hiring-grade analytics.
  *
- * For v2 rows with `recommendation === 'insufficient_data'`, the overallScore
- * is real but anchored low by hard caps — callers that sort/rank should treat
+ * For rows with `recommendation === 'insufficient_data'`, the overallScore is
+ * real but anchored low by hard caps — callers that sort/rank should treat
  * insufficient_data rows as a separate bucket (see workflow stage logic).
  */
 export function getResponseScore(response: Response): number | null {
@@ -166,19 +164,13 @@ export function getResponseScore(response: Response): number | null {
 }
 
 /**
- * Schema-aware summary accessor. v2 uses `overallFeedback`; v1 uses
- * `softSkillSummary`. Falls back to Retell's call_summary, then a placeholder.
+ * Summary accessor — reads `overallFeedback` from the v2 analytics, falling
+ * back to Retell's call_summary, then a placeholder. Legacy pre-v2 rows fall
+ * through to the call_summary path.
  */
 export function getResponseSummary(response: Response): string {
-  const a = response.analytics;
-  const v2Feedback =
-    a && typeof a === "object" && "schemaVersion" in a && a.schemaVersion === 2
-      ? a.overallFeedback
-      : undefined;
-
   return (
-    v2Feedback ||
-    a?.softSkillSummary ||
+    response.analytics?.overallFeedback ||
     response.details?.call_analysis?.call_summary ||
     "Waiting for the interview summary."
   );

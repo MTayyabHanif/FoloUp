@@ -17,74 +17,16 @@ import {
 } from "@/lib/analytics-v2-caps";
 import {
   ANALYTICS_V2_JSON_SCHEMA,
-  getInterviewAnalyticsPrompt,
   getInterviewAnalyticsPromptV2,
   type RetellCallAnalysisLike,
   type TranscriptTurn,
-  SYSTEM_PROMPT,
   SYSTEM_PROMPT_V2,
 } from "@/lib/prompts/analytics";
-import { InterviewService } from "@/services/interviews.service";
-import { ResponseService } from "@/services/responses.service";
 import { Question, Seniority } from "@/types/interview";
-import { Analytics, AnalyticsV2 } from "@/types/response";
+import { AnalyticsV2 } from "@/types/response";
 
 // ============================================================================
-// v1 (LEGACY — dual-write only)
-// ============================================================================
-
-export const generateInterviewAnalytics = async (payload: {
-  callId: string;
-  interviewId: string;
-  transcript: string;
-}) => {
-  const { callId, interviewId, transcript } = payload;
-
-  const response = await ResponseService.getResponseByCallId(callId);
-  const interview = await InterviewService.getInterviewById(interviewId);
-
-  if (response?.analytics) {
-    return { analytics: response.analytics as Analytics, status: 200 };
-  }
-
-  const interviewTranscript = transcript || response?.details?.transcript || "";
-  const questions = interview?.questions || [];
-  const mainInterviewQuestions = questions
-    .map((q: Question, index: number) => `${index + 1}. ${q.question}`)
-    .join("\n");
-
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    maxRetries: 5,
-  });
-
-  const prompt = getInterviewAnalyticsPrompt(
-    interviewTranscript,
-    mainInterviewQuestions,
-  );
-
-  const baseCompletion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: prompt },
-    ],
-    response_format: { type: "json_object" },
-  });
-
-  const basePromptOutput = baseCompletion.choices[0] || {};
-  const content = basePromptOutput.message?.content || "";
-  const analyticsResponse = JSON.parse(content);
-
-  analyticsResponse.mainInterviewQuestions = questions.map(
-    (q: Question) => q.question,
-  );
-
-  return { analytics: analyticsResponse, status: 200 };
-};
-
-// ============================================================================
-// v2 (HIRING-GRADE)
+// Hiring-grade analytics pipeline (v2 — the only path)
 // ============================================================================
 
 export interface RunAnalyticsV2Args {
@@ -108,14 +50,14 @@ export interface RunAnalyticsV2Args {
 }
 
 /**
- * Run the v2 hiring-grade analytics pipeline.
+ * Run the hiring-grade analytics pipeline.
  *
  * Pipeline:
  *  1. Pre-compute candidateSpeakingSeconds + promptTimeQuestionsAnswered from
  *     transcript_object (BEFORE the model is called — so the model gets them
  *     as ground-truth context, not as something it has to derive).
  *  2. Substitute a sentinel when Retell omitted call_analysis.
- *  3. Build the 11-section v2 prompt.
+ *  3. Build the 11-section prompt.
  *  4. Call OpenAI with temperature=0, seed=7, response_format=json_schema strict.
  *  5. Apply hard caps in code — the model's score is overridden by deterministic
  *     thresholds for no_answers / short_call / abandoned / agent_only_speech.
@@ -193,7 +135,7 @@ export async function runAnalyticsV2(
     });
     rawJson = completion.choices[0]?.message?.content ?? "";
   } catch (err) {
-    logger.error("Analytics v2 OpenAI call failed", {
+    logger.error("Analytics OpenAI call failed", {
       error: err instanceof Error ? err.message : String(err),
     });
     throw err;
@@ -203,11 +145,11 @@ export async function runAnalyticsV2(
   try {
     modelOutput = JSON.parse(rawJson) as AnalyticsV2;
   } catch (err) {
-    logger.error("Analytics v2 response was not valid JSON", {
+    logger.error("Analytics response was not valid JSON", {
       error: err instanceof Error ? err.message : String(err),
       rawLength: rawJson.length,
     });
-    throw new Error("Analytics v2: model returned invalid JSON");
+    throw new Error("Analytics: model returned invalid JSON");
   }
 
   // The model leaves hardRulesTriggered as []; we populate it via applyHardCaps.

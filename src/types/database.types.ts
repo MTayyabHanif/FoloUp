@@ -234,12 +234,9 @@ export type Database = {
           session_token: string | null;
           status: string;
           tab_switch_count: number | null;
-          // v2 analytics dual-write secondary column (openspec hiring-grade-analytics-scoring).
-          analytics_v1: Json | null;
         };
         Insert: {
           analytics?: Json | null;
-          analytics_v1?: Json | null;
           call_id?: string | null;
           candidate_status?: string | null;
           created_at?: string;
@@ -262,7 +259,6 @@ export type Database = {
         };
         Update: {
           analytics?: Json | null;
-          analytics_v1?: Json | null;
           call_id?: string | null;
           candidate_status?: string | null;
           created_at?: string;

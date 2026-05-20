@@ -438,70 +438,24 @@ function CallInfo({
        
       </div>
 
-      {/* v2 hiring-grade view (full-width). When the row's analytics has
-          `schemaVersion: 2`, render the v2 layout and skip the v1 cards.
+      {/* Hiring-grade analytics view (full-width).
           See openspec change `hiring-grade-analytics-scoring`. */}
       {isAnalyticsV2(analytics) ? (
         <AnalyticsV2View analytics={analytics} />
+      ) : analytics ? (
+        // Orphan pre-v2 row in the DB. Render an explicit placeholder rather
+        // than silently showing nothing.
+        <div className="rounded-2xl border border-stone-300 bg-stone-50 px-6 py-5 text-sm text-[#53614d]">
+          <p className="font-semibold text-[#0a1d08]">Legacy analytics</p>
+          <p className="mt-1">
+            This response was scored with an older analytics pipeline and can&apos;t
+            be displayed here. Re-trigger analysis to view the hiring-grade
+            breakdown.
+          </p>
+        </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        {!isAnalyticsV2(analytics) && analytics?.overallScore !== undefined ? (
-          <DetailCard title="Overall hiring score">
-            <div className="flex flex-col gap-4">
-              <ScoreGauge
-                value={analytics.overallScore ?? 0}
-                maxValue={100}
-                size={88}
-                strokeWidth={4}
-                label={analytics.overallScore}
-              />
-              <div className="text-sm leading-6 text-[#53614d]">
-                <p className="font-semibold text-[#0a1d08]">Hiring signal</p>
-                <DetailTextValue
-                  className="mt-2"
-                  value={analytics.overallFeedback}
-                  fallback={<Skeleton className="h-5 w-[220px]" />}
-                />
-              </div>
-            </div>
-          </DetailCard>
-        ) : null}
-
-        {!isAnalyticsV2(analytics) && analytics?.communication ? (
-          <DetailCard title="Communication">
-            <div className="flex flex-col gap-4">
-              <ScoreGauge
-                value={analytics.communication.score ?? 0}
-                maxValue={10}
-                size={88}
-                strokeWidth={4}
-                label={
-                  <div className="flex items-baseline">
-                    {analytics.communication.score ?? 0}
-                    <span className="ml-0.5 text-xl">/10</span>
-                  </div>
-                }
-              />
-              <div className="text-sm leading-6 text-[#53614d]">
-                <p className="font-semibold text-[#0a1d08]">Feedback</p>
-                <DetailTextValue
-                  className="mt-2"
-                  value={analytics.communication.feedback}
-                  fallback={<Skeleton className="h-5 w-[220px]" />}
-                />
-              </div>
-            </div>
-          </DetailCard>
-        ) : !isAnalyticsV2(analytics) && analytics && !analytics.communication ? (
-          // Very old v1 row missing the communication field — surface the gap
-          // explicitly rather than silently omitting the card (review finding #4).
-          <DetailCard title="Communication">
-            <p className="text-sm italic text-[#7a7a6a]">
-              Communication score not available for this response.
-            </p>
-          </DetailCard>
-        ) : null}
+      <div className="grid gap-6 xl:grid-cols-3">{/* session integrity card below */}
 
         <DetailCard title="Session integrity">
           <div className="space-y-4 text-sm leading-6 text-[#53614d]">
@@ -552,22 +506,7 @@ function CallInfo({
           </div>
         </DetailCard>
 
-        {!isAnalyticsV2(analytics) && analytics && analytics.questionSummaries && analytics.questionSummaries.length > 0 ? (
-          <DetailCard title="Question summaries">
-            <ScrollArea className="max-h-[320px] overflow-auto pr-1">
-              <div className="space-y-3">
-                {analytics.questionSummaries.map((qs, index) => (
-                  <QuestionAnswerCard
-                    key={qs.question}
-                    questionNumber={index + 1}
-                    question={qs.question}
-                    answer={qs.summary}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          </DetailCard>
-        ) : null}
+        {/* Per-question details now live inside AnalyticsV2View. */}
       </div>
 
       <DetailCard title="Transcript">
