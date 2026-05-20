@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Copy,
   Mail,
+  RefreshCcw,
   Search,
   Trash2,
   Upload,
@@ -39,6 +40,33 @@ import type { InterviewInvite, InviteStatus } from "@/types/invite";
 type InviteRow = InterviewInvite & { status: InviteStatus };
 
 type FilterKey = "all" | InviteStatus;
+
+type EmailOutcome =
+  | { ok: true; messageId: string | null }
+  | { ok: false; reason: "not-configured" | "send-failed"; detail?: string };
+
+function announceEmailOutcome(email: string, outcome: EmailOutcome | undefined) {
+  if (!outcome) {
+    return;
+  }
+  if (outcome.ok) {
+    toast.success(`Email sent to ${email}.`, { position: "bottom-right" });
+
+    return;
+  }
+  if (outcome.reason === "not-configured") {
+    toast.warning(
+      "Email delivery isn't configured yet. Copy the invite link and share it manually.",
+      { position: "bottom-right", duration: 6000 },
+    );
+
+    return;
+  }
+  toast.error(
+    `Couldn't email ${email}. Copy the link and share it manually.`,
+    { position: "bottom-right", duration: 6000 },
+  );
+}
 
 const STATUS_LABEL: Record<InviteStatus, string> = {
   pending: "Pending",
@@ -142,6 +170,7 @@ export default function InvitesPage({ params: paramsPromise }: Props) {
   const [creating, setCreating] = useState(false);
 
   const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -280,17 +309,52 @@ export default function InvitesPage({ params: paramsPromise }: Props) {
       if (!res.ok) {
         throw new Error(`status ${res.status}`);
       }
-      const data = (await res.json()) as { invite: InviteRow };
+      const data = (await res.json()) as {
+        invite: InviteRow;
+        email?: EmailOutcome;
+      };
       setInvites((prev) => [data.invite, ...prev]);
       setCreateEmail("");
-      toast.success(`Invite created for ${trimmed}.`, {
-        position: "bottom-right",
-      });
+      announceEmailOutcome(trimmed, data.email);
     } catch (err) {
       console.error("Create invite failed", err);
       toast.error("Could not create invite.", { position: "bottom-right" });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleResend = async (invite: InviteRow) => {
+    if (!interview) {
+      return;
+    }
+    setResendingId(invite.id);
+    try {
+      const res = await fetch(
+        `/api/interviews/${interview.id}/invites/${invite.id}/resend`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        if (res.status === 409) {
+          toast.error(
+            "This invite can't be resent — its status has changed since the list was loaded.",
+            { position: "bottom-right" },
+          );
+          void loadInvites();
+
+          return;
+        }
+        throw new Error(`status ${res.status}`);
+      }
+      const data = (await res.json()) as { email?: EmailOutcome };
+      announceEmailOutcome(invite.email, data.email);
+    } catch (err) {
+      console.error("Resend failed", err);
+      toast.error("Could not resend the invite email.", {
+        position: "bottom-right",
+      });
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -456,13 +520,27 @@ export default function InvitesPage({ params: paramsPromise }: Props) {
                       </span>
                       <div className="flex items-center justify-end gap-1">
                         {invite.status === "pending" ? (
-                          <Button
-                            variant="ghost"
-                            className="rounded-full px-2 py-1 text-xs text-[#203b14] hover:bg-[#eef4e1]"
-                            onClick={() => copyInviteLink(invite)}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
+                          <>
+                            <Button
+                              variant="ghost"
+                              disabled={resendingId === invite.id}
+                              title="Resend invite email"
+                              className="rounded-full px-2 py-1 text-xs text-[#203b14] hover:bg-[#eef4e1] disabled:opacity-60"
+                              onClick={() => void handleResend(invite)}
+                            >
+                              <RefreshCcw
+                                className={`h-3.5 w-3.5 ${resendingId === invite.id ? "animate-spin" : ""}`}
+                              />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              title="Copy invite link"
+                              className="rounded-full px-2 py-1 text-xs text-[#203b14] hover:bg-[#eef4e1]"
+                              onClick={() => copyInviteLink(invite)}
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
                         ) : null}
                         {invite.status === "used" ? null : (
                           <Button
@@ -497,7 +575,7 @@ export default function InvitesPage({ params: paramsPromise }: Props) {
               Invite one candidate
             </h3>
             <p className="mt-1 text-sm leading-6 text-[#53614d]">
-              Each invite is bound to the email you enter. The candidate&apos;s submitted email must match to start the interview.
+              We&apos;ll email the candidate a personal link. Each invite is bound to the email you enter — the candidate must use the same address to start the interview.
             </p>
             <p className="mt-3 rounded-[16px] border border-[#e0e5d5] bg-[#f8faf3] px-3 py-2 text-xs leading-5 text-[#53614d]">
               Invites work regardless of invite-only mode. Enable invite-only in the interview settings to require an invite.
@@ -520,7 +598,7 @@ export default function InvitesPage({ params: paramsPromise }: Props) {
                 className="w-full rounded-full bg-[#4a3212] px-5 text-[#fbfdf6] hover:bg-[#3d2910] disabled:opacity-60"
                 onClick={() => void handleCreate()}
               >
-                {creating ? "Creating…" : "Create invite"}
+                {creating ? "Sending…" : "Send invite"}
               </Button>
             </div>
           </div>
