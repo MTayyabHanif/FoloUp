@@ -74,6 +74,31 @@ const updateInterview = async (
 };
 
 const deleteInterview = async (id: string) => {
+  // Cascade child rows in app code: the FKs on `response.interview_id` and
+  // `feedback.interview_id` were created without ON DELETE CASCADE, so a bare
+  // DELETE on interview returns 409 / 23503 whenever any response exists.
+  const { error: responseError } = await supabase
+    .from("response")
+    .delete()
+    .eq("interview_id", id);
+
+  if (responseError) {
+    throw new Error(
+      `deleteInterview failed (responses): ${responseError.message}`,
+    );
+  }
+
+  const { error: feedbackError } = await supabase
+    .from("feedback")
+    .delete()
+    .eq("interview_id", id);
+
+  if (feedbackError) {
+    throw new Error(
+      `deleteInterview failed (feedback): ${feedbackError.message}`,
+    );
+  }
+
   const { data, error } = await supabase
     .from("interview")
     .delete()
