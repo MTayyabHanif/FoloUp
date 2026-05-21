@@ -4,10 +4,15 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import Retell from "retell-sdk";
 
+import {
+  buildCoverageChecklist,
+  hasUntaggedQuestions,
+} from "@/lib/coverage-checklist";
 import { logger } from "@/lib/logger";
 import { InterviewService } from "@/services/interviews.service";
 import { InterviewerService } from "@/services/interviewers.service";
 import { InviteService } from "@/services/invites.service";
+import type { Question } from "@/types/interview";
 
 const retellClient = new Retell({
   apiKey: process.env.RETELL_API_KEY || "",
@@ -70,6 +75,9 @@ export async function POST(req: Request) {
   }
 
   let inviteId: string | null = null;
+  // Hoisted so the `coverage_checklist` substitution below can read the
+  // questions array. Stays undefined when no interviewId was supplied.
+  let interviewQuestions: Question[] | undefined;
 
   try {
 
@@ -81,6 +89,7 @@ export async function POST(req: Request) {
         { status: 404 },
       );
     }
+    interviewQuestions = (interview.questions as Question[] | null) ?? [];
 
     const { userId } = await auth();
     const isOwner =
@@ -191,9 +200,24 @@ export async function POST(req: Request) {
       );
     }
 
+    // Inject {{coverage_checklist}} as a Retell dynamic variable so the agent's
+    // prompt footer (PROMPT_FOOTER_TEMPLATE) substitutes the per-interview
+    // dimension checklist at call time. See openspec rubric-aware-interviewer-and-questions §5.
+    const coverageChecklist = buildCoverageChecklist(interviewQuestions);
+    if (hasUntaggedQuestions(interviewQuestions)) {
+      logger.warn(
+        "register-call: interview has untagged question(s) — coverage_checklist will contain '(untagged)' lines",
+        { interviewId, interviewerId },
+      );
+    }
+    const mergedDynamicData: Record<string, unknown> = {
+      ...(dynamicData ?? {}),
+      coverage_checklist: coverageChecklist,
+    };
+
     const registerCallResponse = await retellClient.call.createWebCall({
       agent_id: interviewer.agent_id,
-      retell_llm_dynamic_variables: dynamicData,
+      retell_llm_dynamic_variables: mergedDynamicData,
     });
 
     const sessionToken = randomUUID();

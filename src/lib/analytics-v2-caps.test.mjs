@@ -128,6 +128,16 @@ function buildHealthyTranscript() {
 // Case 1 — clean call, no caps triggered
 // ---------------------------------------------------------------------------
 
+// Helper: full set of active-dim-tagged questions so applyHardCaps doesn't
+// force assessed:false on active dims. Used by clean-call tests that need
+// legacy scoring math to hold.
+const FULL_ACTIVE_DIM_QUESTIONS = [
+  { targetDimension: "role_fit" },
+  { targetDimension: "depth_of_knowledge" },
+  { targetDimension: "problem_solving" },
+  { targetDimension: "examples_evidence" },
+];
+
 test("case 1: clean call — no caps triggered, model score preserved", () => {
   const modelOutput = makeModelOutput();
   const retellSignals = makeRetellSignals({
@@ -135,7 +145,12 @@ test("case 1: clean call — no caps triggered, model score preserved", () => {
     durationSeconds: 95,
   });
 
-  const result = applyHardCaps({ modelOutput, retellSignals, questionsTotal: 3 });
+  const result = applyHardCaps({
+    modelOutput,
+    retellSignals,
+    questionsTotal: 3,
+    questions: FULL_ACTIVE_DIM_QUESTIONS,
+  });
 
   assert.equal(result.hardRulesTriggered.length, 0, "no hard rules should fire");
   assert.notEqual(result.recommendation, "insufficient_data");
@@ -306,7 +321,12 @@ test("case 7: call_analysis missing — sentinel triggers added but no extra cap
     callAnalysisPresent: false, // the sentinel case
   });
 
-  const result = applyHardCaps({ modelOutput, retellSignals, questionsTotal: 3 });
+  const result = applyHardCaps({
+    modelOutput,
+    retellSignals,
+    questionsTotal: 3,
+    questions: FULL_ACTIVE_DIM_QUESTIONS,
+  });
 
   // agent_only_speech trigger appended with "limited signal" detail.
   const sentinelTrigger = result.hardRulesTriggered.find(
@@ -399,6 +419,125 @@ test("case 10: countSubstantiveUserTurns — counts only qualifying user turns",
 // ---------------------------------------------------------------------------
 // Sanity — computeCandidateSpeakingSeconds
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// v3 rubric-aware: assessed-override coverage
+// ---------------------------------------------------------------------------
+
+test("v3: legacy interview (no tagged questions) → all active dims assessed=false", () => {
+  // Per OD-A: when no question carries a targetDimension, the service forces
+  // all 4 active dims to assessed:false. Only communication + professionalism
+  // survive and renormalize against weight sum 0.15.
+  const modelOutput = makeModelOutput();
+  const retellSignals = makeRetellSignals({
+    transcriptObject: buildHealthyTranscript(),
+    durationSeconds: 95,
+  });
+
+  const result = applyHardCaps({
+    modelOutput,
+    retellSignals,
+    questionsTotal: 3,
+    questions: [{ targetDimension: undefined }, { targetDimension: undefined }],
+  });
+
+  // All 4 active dims should now be assessed=false.
+  const dimByName = Object.fromEntries(
+    result.dimensions.map((d) => [d.name, d]),
+  );
+  assert.equal(dimByName.role_fit.assessed, false);
+  assert.equal(dimByName.depth_of_knowledge.assessed, false);
+  assert.equal(dimByName.problem_solving.assessed, false);
+  assert.equal(dimByName.examples_evidence.assessed, false);
+  // Observational dims stay assessed=true (never overridden by absence).
+  assert.equal(dimByName.communication.assessed, true);
+  assert.equal(dimByName.professionalism.assessed, true);
+  // overallScore renormalizes against the 0.15 observational weight sum:
+  // (8*0.10 + 8*0.05) / 0.15 = 8 → ×10 = 80
+  assert.equal(result.overallScore, 80);
+});
+
+test("v3: partial coverage (only role_fit tagged) → 3 active dims unassessed", () => {
+  const modelOutput = makeModelOutput();
+  const retellSignals = makeRetellSignals({
+    transcriptObject: buildHealthyTranscript(),
+    durationSeconds: 95,
+  });
+
+  const result = applyHardCaps({
+    modelOutput,
+    retellSignals,
+    questionsTotal: 3,
+    questions: [{ targetDimension: "role_fit" }],
+  });
+
+  const dimByName = Object.fromEntries(
+    result.dimensions.map((d) => [d.name, d]),
+  );
+  assert.equal(dimByName.role_fit.assessed, true);
+  assert.equal(dimByName.depth_of_knowledge.assessed, false);
+  assert.equal(dimByName.problem_solving.assessed, false);
+  assert.equal(dimByName.examples_evidence.assessed, false);
+  assert.equal(dimByName.communication.assessed, true);
+  assert.equal(dimByName.professionalism.assessed, true);
+});
+
+test("v3: no_answers fires → all 6 dims forced assessed=false", () => {
+  // When the hard cap fires (no candidate signal at all), no dim is
+  // meaningfully assessable, including observational ones.
+  const modelOutput = makeModelOutput({
+    perQuestionScores: [
+      { question: "Q1", answered: false, score: null, summary: "Not answered", evidenceQuotes: [] },
+      { question: "Q2", answered: false, score: null, summary: "Not answered", evidenceQuotes: [] },
+      { question: "Q3", answered: false, score: null, summary: "Not answered", evidenceQuotes: [] },
+    ],
+  });
+  const retellSignals = makeRetellSignals({
+    transcriptObject: buildHealthyTranscript(),
+    durationSeconds: 95,
+  });
+
+  const result = applyHardCaps({
+    modelOutput,
+    retellSignals,
+    questionsTotal: 3,
+    questions: FULL_ACTIVE_DIM_QUESTIONS,
+  });
+
+  // All 6 dims forced to assessed=false.
+  assert.ok(
+    result.dimensions.every((d) => d.assessed === false),
+    "all dims should be unassessed when no_answers fires",
+  );
+  assert.equal(result.recommendation, "insufficient_data");
+});
+
+test("v3: computeOverallScoreFromDimensions filters unassessed + renormalizes", () => {
+  // Hand-built dimensions: role_fit unassessed, others scored.
+  const dims = [
+    { name: "role_fit", score: 10, weight: 0.25, feedback: "", evidenceQuotes: [], assessed: false },
+    { name: "depth_of_knowledge", score: 6, weight: 0.25, feedback: "", evidenceQuotes: [], assessed: true },
+    { name: "problem_solving", score: 6, weight: 0.2, feedback: "", evidenceQuotes: [], assessed: true },
+    { name: "examples_evidence", score: 6, weight: 0.15, feedback: "", evidenceQuotes: [], assessed: true },
+    { name: "communication", score: 6, weight: 0.1, feedback: "", evidenceQuotes: [], assessed: true },
+    { name: "professionalism", score: 6, weight: 0.05, feedback: "", evidenceQuotes: [], assessed: true },
+  ];
+
+  const score = computeOverallScoreFromDimensions(dims);
+  // role_fit excluded → weight sum = 0.75. All remaining = 6.
+  // weighted avg = (6*0.25 + 6*0.2 + 6*0.15 + 6*0.1 + 6*0.05) / 0.75 = 4.5 / 0.75 = 6 → ×10 = 60
+  assert.equal(score, 60);
+
+  // Legacy input (no `assessed` field) — behaves as before.
+  const legacyDims = dims.map(({ assessed: _, ...rest }) => rest);
+  const legacyScore = computeOverallScoreFromDimensions(legacyDims);
+  // weighted avg = (10*0.25 + 6*0.75) / 1.0 = 2.5 + 4.5 = 7.0 → 70
+  assert.equal(legacyScore, 70);
+
+  // All unassessed → returns 0.
+  const allUnassessed = dims.map((d) => ({ ...d, assessed: false }));
+  assert.equal(computeOverallScoreFromDimensions(allUnassessed), 0);
+});
 
 test("sanity: computeCandidateSpeakingSeconds sums word-level user turns", () => {
   const transcriptObject = [

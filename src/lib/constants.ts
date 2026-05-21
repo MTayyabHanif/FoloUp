@@ -114,10 +114,15 @@ export const VOICE_OPTIONS = [
 
 /**
  * Locked footer appended to every custom interviewer's prompt at submit time.
- * Contains the four Retell dynamic-variable placeholders ({{name}}, {{mins}},
- * {{objective}}, {{questions}}) so call-time substitution works regardless of
- * what the operator writes in the body. Server-side validation rejects any
- * submitted prompt where this footer is absent (after whitespace normalization).
+ * Contains the Retell dynamic-variable placeholders ({{name}}, {{mins}},
+ * {{objective}}, {{questions}}, {{coverage_checklist}}) so call-time substitution
+ * works regardless of what the operator writes in the body. Server-side validation
+ * rejects any submitted prompt where this footer is absent (after whitespace
+ * normalization).
+ *
+ * `{{coverage_checklist}}` is filled at register-call time from
+ * `interview.questions[].targetDimension` + `rubricNote` — see
+ * `/api/register-call/route.ts` for the substitution site.
  */
 export const PROMPT_FOOTER_TEMPLATE = `# Context for this interview
 
@@ -125,4 +130,118 @@ export const PROMPT_FOOTER_TEMPLATE = `# Context for this interview
 - Duration: keep the interview to roughly {{mins}} minutes
 - Role and objective: {{objective}}
 - The screening questions for this role (use these as your anchor — do not deviate from the objective):
-{{questions}}`;
+{{questions}}
+
+# Coverage requirements
+Across this interview you MUST gather substantive evidence for these four dimensions:
+{{coverage_checklist}}
+
+After the candidate's first answer to each main question, before moving on:
+1. Identify the weakest-evidenced dimension so far in the call
+2. Ask one follow-up that probes that dimension specifically
+3. Only advance when you have a concrete, evidence-rich answer
+
+Before saying "That's everything from my side":
+- Mentally tally evidence for each of the 4 dimensions above
+- If any is thin, ask one more targeted probe before closing
+- Communication and professionalism are judged observationally from the whole call — do not dedicate questions to them
+
+Score communication on PARTICIPATION (did the candidate engage?) and CLARITY (was their meaning understandable?), not on accent or grammar.`;
+
+// ============================================================================
+// Rubric-aware interviewer + question constants
+// (openspec change: rubric-aware-interviewer-and-questions)
+// ============================================================================
+
+import type { ActiveDimension, Seniority } from "@/types/interview";
+
+/**
+ * The four ACTIVE rubric dimensions — every interview must have at least one
+ * question tagged to each. These are the dimensions that need explicit
+ * question coverage to score meaningfully.
+ *
+ * NOTE: keep this list in sync with `ActiveDimension` in `@/types/interview`.
+ */
+export const ACTIVE_DIMENSIONS: readonly ActiveDimension[] = [
+  "role_fit",
+  "depth_of_knowledge",
+  "problem_solving",
+  "examples_evidence",
+];
+
+/**
+ * The two OBSERVATIONAL rubric dimensions — judged from the call as a whole;
+ * no dedicated questions required.
+ */
+export const OBSERVATIONAL_DIMENSIONS = [
+  "communication",
+  "professionalism",
+] as const;
+
+export type ObservationalDimension = (typeof OBSERVATIONAL_DIMENSIONS)[number];
+// Re-export ActiveDimension for callers that read constants only
+export type { ActiveDimension };
+
+/**
+ * One-line coaching strings the GENERATOR uses to instruct the LLM what kind
+ * of evidence each active dimension is probing for.
+ */
+export const DIMENSION_RUBRIC_HINT: Record<ActiveDimension, string> = {
+  role_fit:
+    "Does the candidate's background and motivation match the specific role and must-haves? Probe for concrete past responsibilities, not aspirations.",
+  depth_of_knowledge:
+    "Push one level past the surface answer. Look for how-it-works, not just what-it-is. Specific tools, trade-offs, failure modes.",
+  problem_solving:
+    "Walk-me-through-how-you-handled-X questions. Look for decomposition, logical reasoning, and explicit trade-off framing.",
+  examples_evidence:
+    "When the candidate makes a claim, ask for concrete numbers, dates, or outcomes. Penalize hand-wavy or textbook answers.",
+};
+
+/**
+ * Allocation matrix: (seniority × numQuestions) → distribution across the 4
+ * active dimensions. Every cell sums to its numQuestions key AND has every
+ * active dim ≥ 1 (the anchor floor invariant — verified in tests).
+ *
+ * Junior/mid favor breadth (role_fit, examples). Senior+ shift weight toward
+ * depth and problem-solving.
+ */
+type AllocationCell = Record<ActiveDimension, number>;
+type AllocationBySeniority = Record<4 | 5 | 6 | 7 | 8, AllocationCell>;
+
+export const ACTIVE_DIM_ALLOCATION: Record<Seniority, AllocationBySeniority> = {
+  junior: {
+    4: { role_fit: 1, depth_of_knowledge: 1, problem_solving: 1, examples_evidence: 1 },
+    5: { role_fit: 2, depth_of_knowledge: 1, problem_solving: 1, examples_evidence: 1 },
+    6: { role_fit: 2, depth_of_knowledge: 2, problem_solving: 1, examples_evidence: 1 },
+    7: { role_fit: 2, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 1 },
+    8: { role_fit: 2, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 2 },
+  },
+  mid: {
+    4: { role_fit: 1, depth_of_knowledge: 1, problem_solving: 1, examples_evidence: 1 },
+    5: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 1, examples_evidence: 1 },
+    6: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 1 },
+    7: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 2 },
+    8: { role_fit: 2, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 2 },
+  },
+  senior: {
+    4: { role_fit: 1, depth_of_knowledge: 1, problem_solving: 1, examples_evidence: 1 },
+    5: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 1, examples_evidence: 1 },
+    6: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 1 },
+    7: { role_fit: 1, depth_of_knowledge: 3, problem_solving: 2, examples_evidence: 1 },
+    8: { role_fit: 1, depth_of_knowledge: 3, problem_solving: 2, examples_evidence: 2 },
+  },
+  staff: {
+    4: { role_fit: 1, depth_of_knowledge: 1, problem_solving: 1, examples_evidence: 1 },
+    5: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 1, examples_evidence: 1 },
+    6: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 1 },
+    7: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 3, examples_evidence: 1 },
+    8: { role_fit: 1, depth_of_knowledge: 3, problem_solving: 3, examples_evidence: 1 },
+  },
+  principal: {
+    4: { role_fit: 1, depth_of_knowledge: 1, problem_solving: 1, examples_evidence: 1 },
+    5: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 1, examples_evidence: 1 },
+    6: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 2, examples_evidence: 1 },
+    7: { role_fit: 1, depth_of_knowledge: 2, problem_solving: 3, examples_evidence: 1 },
+    8: { role_fit: 1, depth_of_knowledge: 3, problem_solving: 3, examples_evidence: 1 },
+  },
+};

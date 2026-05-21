@@ -61,9 +61,14 @@ export async function POST(req: Request) {
           mustHaves: Array.isArray(interview?.must_haves)
             ? interview.must_haves
             : [],
-          questions: (interview?.questions ?? []).map((q: { question: string }) => ({
-            question: q.question,
-          })),
+          questions: (interview?.questions ?? []).map(
+            (q: { question: string; targetDimension?: string; rubricNote?: string }) => ({
+              question: q.question,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              targetDimension: q.targetDimension as any,
+              rubricNote: q.rubricNote,
+            }),
+          ),
           expectedDurationSeconds,
           transcriptObject: co.transcript_object ?? null,
           callAnalysis: co.call_analysis ?? null,

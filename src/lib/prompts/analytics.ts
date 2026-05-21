@@ -105,6 +105,10 @@ For dimensions: produce EXACTLY these six entries in this order, with the listed
   5. communication (weight 0.10)
   6. professionalism (weight 0.05)
 
+For each dimension, set "assessed": true if you observed any candidate evidence — even tangential — that lets you score it meaningfully. Set "assessed": false ONLY when the question set provided NO opportunity to evaluate this dimension (e.g., no question probed for problem-solving at all). The service code may override your assessed value to false for active dimensions that no question explicitly tagged.
+
+When assessed is false, score MUST be 0 and evidenceQuotes MUST be empty.
+
 The service code will recompute overallScore from your dimension scores, so your overallScore should equal round(sum(dim.score * dim.weight) * 10). If you can't compute it precisely, the code will fix it — but be close.
 
 Leave hardRulesTriggered as an empty array; the service populates it.`;
@@ -244,7 +248,7 @@ export const ANALYTICS_V2_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "score", "weight", "feedback", "evidenceQuotes"],
+        required: ["name", "score", "weight", "feedback", "evidenceQuotes", "assessed"],
         properties: {
           name: {
             type: "string",
@@ -261,6 +265,9 @@ export const ANALYTICS_V2_JSON_SCHEMA = {
           weight: { type: "number", minimum: 0, maximum: 1 },
           feedback: { type: "string" },
           evidenceQuotes: { type: "array", items: { type: "string" } },
+          // v3 rubric-aware (openspec rubric-aware-interviewer-and-questions §7).
+          // Service may override to false for active dims that no question targeted.
+          assessed: { type: "boolean" },
         },
       },
     },

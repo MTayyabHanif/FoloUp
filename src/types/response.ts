@@ -65,6 +65,15 @@ export interface AnalyticsV2 {
     feedback: string;
     /** Direct quotes from CANDIDATE turns. Empty array if no evidence. */
     evidenceQuotes: string[];
+    /**
+     * v3 rubric-aware (openspec rubric-aware-interviewer-and-questions §7).
+     * Optional for backward compat — missing means `true` (legacy default).
+     * False when the question set provided no opportunity to evaluate this
+     * dimension. Service code overrides to false when no question carried
+     * `targetDimension === name` (for ACTIVE dimensions only); observational
+     * dimensions (communication, professionalism) are never overridden by absence.
+     */
+    assessed?: boolean;
   }>;
   perQuestionScores: Array<{
     question: string;

@@ -185,6 +185,11 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
   const [disconnectionReason, setDisconnectionReason] = useState<string | null>(null);
   const [questionsCovered, setQuestionsCovered] = useState<number | null>(null);
   const [questionCount, setQuestionCount] = useState<number | null>(null);
+  // v3 rubric-aware: surfaced when the interview was saved with the preflight
+  // validator's "Save anyway" path (openspec rubric-aware-interviewer-and-questions §6.10).
+  const [coverageWarnings, setCoverageWarnings] = useState<string[]>([]);
+  const [coverageWarningsExpanded, setCoverageWarningsExpanded] =
+    useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const router = useRouter();
 
@@ -259,14 +264,25 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
               setQuestionCount(
                 typeof interview?.question_count === "number" ? interview.question_count : null,
               );
+              // v3 rubric-aware: coverage_warnings is a JSONB array of strings.
+              const cw = (interview as unknown as { coverage_warnings?: unknown })?.coverage_warnings;
+              if (Array.isArray(cw)) {
+                setCoverageWarnings(
+                  cw.filter((s): s is string => typeof s === "string"),
+                );
+              } else {
+                setCoverageWarnings([]);
+              }
             }
           } catch {
             if (isMounted) {
               setQuestionCount(null);
+              setCoverageWarnings([]);
             }
           }
         } else if (isMounted) {
           setQuestionCount(null);
+          setCoverageWarnings([]);
         }
       } catch (error) {
         console.error(error);
@@ -453,12 +469,27 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
               </div>
             </div>
             <div className="flex justify-between w-full">
-              <SessionCoverageRow
-                status={responseStatus}
-                questionsCovered={questionsCovered}
-                questionCount={questionCount}
-                disconnectionReason={disconnectionReason}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <SessionCoverageRow
+                  status={responseStatus}
+                  questionsCovered={questionsCovered}
+                  questionCount={questionCount}
+                  disconnectionReason={disconnectionReason}
+                />
+
+                {coverageWarnings.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCoverageWarningsExpanded((v) => !v)}
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 text-amber-800 text-xs px-2 py-1 font-medium hover:bg-amber-200"
+                    title="The operator saved this interview with acknowledged coverage gaps. Click to view."
+                    aria-expanded={coverageWarningsExpanded}
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    Coverage warnings ({coverageWarnings.length})
+                  </button>
+                ) : null}
+              </div>
 
               {tabSwitchCount && tabSwitchCount > 0 ? (
                 <div className="inline-flex items-center gap-2 rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-4 py-2 text-sm font-semibold text-[#6b3f31]">
@@ -467,6 +498,17 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
                 </div>
               ) : null}
             </div>
+
+            {coverageWarningsExpanded && coverageWarnings.length > 0 ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-semibold mb-1">Acknowledged coverage gaps from this interview:</p>
+                <ul className="list-disc pl-5 space-y-0.5">
+                  {coverageWarnings.map((w, i) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
