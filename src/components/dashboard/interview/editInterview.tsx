@@ -1,21 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { ArrowLeft, Plus, SaveIcon, TrashIcon } from "lucide-react";
 import Image from "next/image";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { v4 as uuidv4 } from "uuid";
 
-import type { Interview, Question } from "@/types/interview";
-import { useInterviewers } from "@/contexts/interviewers.context";
 import QuestionCard from "@/components/dashboard/interview/create-popup/QuestionCard";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { useInterviews } from "@/contexts/interviews.context";
-import { InterviewService } from "@/services/interviews.service";
-import { CardTitle } from "../../ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +19,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { useInterviewers } from "@/contexts/interviewers.context";
+import { useInterviews } from "@/contexts/interviews.context";
+import { InterviewService } from "@/services/interviews.service";
+import type { Interview, Question } from "@/types/interview";
+import { CardTitle } from "../../ui/card";
 
 type EditInterviewProps = {
   interview: Interview | undefined;
@@ -52,34 +52,15 @@ function EditInterview({ interview }: EditInterviewProps) {
   const { fetchInterviews } = useInterviews();
   const router = useRouter();
 
-  const [description, setDescription] = useState<string>(
-    interview?.description || "",
-  );
-  const [objective, setObjective] = useState<string>(
-    interview?.objective || "",
-  );
-  const [numQuestions, setNumQuestions] = useState<number>(
-    interview?.question_count || 1,
-  );
-  const [duration, setDuration] = useState<number>(
-    Number(interview?.time_duration),
-  );
-  const [questions, setQuestions] = useState<Question[]>(
-    interview?.questions || [],
-  );
-  const [selectedInterviewer, setSelectedInterviewer] = useState(
-    interview?.interviewer_id,
-  );
-  const [isAnonymous, setIsAnonymous] = useState<boolean>(
-    interview?.is_anonymous || false,
-  );
-  const [inviteOnly, setInviteOnly] = useState<boolean>(
-    interview?.invite_only || false,
-  );
-  const [
-    inviteOnlyConflictDialogOpen,
-    setInviteOnlyConflictDialogOpen,
-  ] = useState<boolean>(false);
+  const [description, setDescription] = useState<string>(interview?.description || "");
+  const [objective, setObjective] = useState<string>(interview?.objective || "");
+  const [numQuestions, setNumQuestions] = useState<number>(interview?.question_count || 1);
+  const [duration, setDuration] = useState<number>(Number(interview?.time_duration));
+  const [questions, setQuestions] = useState<Question[]>(interview?.questions || []);
+  const [selectedInterviewer, setSelectedInterviewer] = useState(interview?.interviewer_id);
+  const [isAnonymous, setIsAnonymous] = useState<boolean>(interview?.is_anonymous || false);
+  const [inviteOnly, setInviteOnly] = useState<boolean>(interview?.invite_only || false);
+  const [inviteOnlyConflictDialogOpen, setInviteOnlyConflictDialogOpen] = useState<boolean>(false);
   const [isClicked, setIsClicked] = useState(false);
 
   const endOfListRef = useRef<HTMLDivElement>(null);
@@ -103,7 +84,7 @@ function EditInterview({ interview }: EditInterviewProps) {
         })),
       );
 
-return;
+      return;
     }
 
     setQuestions(questions.filter((question) => question.id !== id));
@@ -112,16 +93,12 @@ return;
 
   const handleAddQuestion = () => {
     if (questions.length < numQuestions) {
-      setQuestions([
-        ...questions,
-        { id: uuidv4(), question: "", follow_up_count: 1 },
-      ]);
+      setQuestions([...questions, { id: uuidv4(), question: "", follow_up_count: 1 }]);
     }
   };
 
   const onSave = async () => {
-    const questionCount =
-      questions.length < numQuestions ? questions.length : numQuestions;
+    const questionCount = questions.length < numQuestions ? questions.length : numQuestions;
 
     const interviewData = {
       objective,
@@ -146,7 +123,7 @@ return;
         position: "bottom-right",
         duration: 3000,
       });
-      router.push(`/interviews/${interview.id}`);
+      router.push(`/jobs/${interview.id}`);
     } catch (error) {
       console.error("Error updating interview:", error);
     }
@@ -185,7 +162,7 @@ return;
               type="button"
               className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#203b14] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
               onClick={() => {
-                router.push(`/interviews/${interview?.id}`);
+                router.push(`/jobs/${interview?.id}`);
               }}
             >
               <ArrowLeft className="h-4 w-4" />
@@ -199,7 +176,8 @@ return;
                 Refine the interview workflow
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#53614d]">
-                Update the role context, interviewer, candidate anonymity, and question flow without leaving the workspace.
+                Update the role context, interviewer, candidate anonymity, and question flow without
+                leaving the workspace.
               </p>
             </div>
           </div>
@@ -304,10 +282,7 @@ return;
                     value={numQuestions}
                     onChange={(event) => {
                       let value = event.target.value;
-                      if (
-                        value === "" ||
-                        (Number.isInteger(Number(value)) && Number(value) > 0)
-                      ) {
+                      if (value === "" || (Number.isInteger(Number(value)) && Number(value) > 0)) {
                         if (Number(value) > 5) {
                           value = "5";
                         }
@@ -328,10 +303,7 @@ return;
                     value={Number(duration)}
                     onChange={(event) => {
                       const value = event.target.value;
-                      if (
-                        value === "" ||
-                        (Number.isInteger(Number(value)) && Number(value) > 0)
-                      ) {
+                      if (value === "" || (Number.isInteger(Number(value)) && Number(value) > 0)) {
                         setDuration(Number(value));
                       }
                     }}
@@ -399,9 +371,7 @@ return;
                           />
                         </div>
                         <div className="min-w-0">
-                          <CardTitle className="truncate text-base">
-                            {item.name}
-                          </CardTitle>
+                          <CardTitle className="truncate text-base">{item.name}</CardTitle>
                           <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#53614d]">
                             {item.description}
                           </p>
@@ -439,7 +409,7 @@ return;
                     if (checked && inviteOnly) {
                       setInviteOnlyConflictDialogOpen(true);
 
-return;
+                      return;
                     }
                     setIsAnonymous(checked);
                   }}
@@ -450,9 +420,7 @@ return;
             <div className="mt-4 rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-[#0a1d08]">
-                    Invite-only access
-                  </p>
+                  <p className="text-sm font-semibold text-[#0a1d08]">Invite-only access</p>
                   <p className="mt-1 text-sm leading-6 text-[#53614d]">
                     Only candidates with a personal invite link can start this interview.
                     {isAnonymous ? (
@@ -482,7 +450,8 @@ return;
           <AlertDialogHeader>
             <AlertDialogTitle>Turn off invite-only mode?</AlertDialogTitle>
             <AlertDialogDescription>
-              Enabling anonymous mode will turn off invite-only access. Existing invites will remain in the database but will no longer be required to start this interview.
+              Enabling anonymous mode will turn off invite-only access. Existing invites will remain
+              in the database but will no longer be required to start this interview.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

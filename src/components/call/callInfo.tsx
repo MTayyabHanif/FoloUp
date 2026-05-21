@@ -1,30 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
 import axios from "axios";
-import ReactAudioPlayer from "react-audio-player";
+import { AlertTriangle, ArrowLeft, DownloadIcon, RefreshCw, TrashIcon } from "lucide-react";
 import { marked } from "marked";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  DownloadIcon,
-  TrashIcon,
-} from "lucide-react";
 import { useRouter } from "next/navigation";
+import type React from "react";
+import { useEffect, useState } from "react";
+import ReactAudioPlayer from "react-audio-player";
 import { toast } from "sonner";
 
-import type { Analytics, CallData } from "@/types/response";
-import { isAnalyticsV2 } from "@/types/response";
 import { AnalyticsV2View } from "@/components/call/analyticsV2View";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ResponseService } from "@/services/responses.service";
-import { InterviewService } from "@/services/interviews.service";
-import { humanizeDisconnectionReason } from "@/lib/disconnectionReasons";
-import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DetailTextValue } from "@/components/call/detailTextValue";
+import { formatCallTranscript } from "@/components/call/transcriptFormatter";
 import QuestionAnswerCard from "@/components/dashboard/interview/questionAnswerCard";
+import LoaderWithText from "@/components/loaders/loader-with-text/loaderWithText";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +25,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -43,9 +35,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { humanizeDisconnectionReason } from "@/lib/disconnectionReasons";
 import { CandidateStatus } from "@/lib/enum";
-import { DetailTextValue } from "@/components/call/detailTextValue";
-import { formatCallTranscript } from "@/components/call/transcriptFormatter";
+import { InterviewService } from "@/services/interviews.service";
+import { ResponseService } from "@/services/responses.service";
+import type { Analytics, CallData } from "@/types/response";
+import { isAnalyticsV2 } from "@/types/response";
 
 function ScoreGauge({
   value,
@@ -120,14 +116,11 @@ function SessionCoverageRow({
   }
 
   const reasonLabel = humanizeDisconnectionReason(disconnectionReason);
-  const isInterruptedLike =
-    status === "interrupted" || status === "abandoned";
+  const isInterruptedLike = status === "interrupted" || status === "abandoned";
 
   let coverageNode: React.ReactNode = null;
   if (questionsCovered === null) {
-    coverageNode = (
-      <span className="text-sm text-[#6f7866]">Coverage: analyzing...</span>
-    );
+    coverageNode = <span className="text-sm text-[#6f7866]">Coverage: analyzing...</span>;
   } else {
     const cap = questionCount ?? questionsCovered;
     const label = `${questionsCovered} of ${cap} questions covered`;
@@ -165,9 +158,7 @@ function DetailCard({
 }) {
   return (
     <div className="rounded-[24px] border border-[#e0e5d5] bg-[#fbfdf6] p-5">
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
-        {title}
-      </p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">{title}</p>
       <div className="mt-4">{children}</div>
     </div>
   );
@@ -179,11 +170,7 @@ type CallProps = {
   onCandidateStatusChange: (callId: string, newStatus: string) => void;
 };
 
-function CallInfo({
-  call_id,
-  onDeleteResponse,
-  onCandidateStatusChange,
-}: CallProps) {
+function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallProps) {
   const [call, setCall] = useState<CallData>();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [email, setEmail] = useState<string>("");
@@ -195,12 +182,41 @@ function CallInfo({
   const [interviewId, setInterviewId] = useState<string>("");
   const [tabSwitchCount, setTabSwitchCount] = useState<number>();
   const [responseStatus, setResponseStatus] = useState<string | null>(null);
-  const [disconnectionReason, setDisconnectionReason] = useState<string | null>(
-    null,
-  );
+  const [disconnectionReason, setDisconnectionReason] = useState<string | null>(null);
   const [questionsCovered, setQuestionsCovered] = useState<number | null>(null);
   const [questionCount, setQuestionCount] = useState<number | null>(null);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
   const router = useRouter();
+
+  const onReanalyzeClick = async () => {
+    setIsReanalyzing(true);
+    try {
+      const { data } = await axios.post("/api/reanalyze-response", {
+        callId: call_id,
+      });
+      setAnalytics(data.analytics);
+      if (typeof data.questionsCovered === "number") {
+        setQuestionsCovered(data.questionsCovered);
+      }
+      toast.success("Session re-analyzed.", {
+        position: "bottom-right",
+        duration: 3000,
+      });
+    } catch (error) {
+      const message =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (error as any)?.response?.data?.error ||
+        (error instanceof Error ? error.message : "Re-analyze failed");
+      console.error("Re-analyze failed:", error);
+      toast.error("Re-analyze failed.", {
+        description: message,
+        position: "bottom-right",
+        duration: 4000,
+      });
+    } finally {
+      setIsReanalyzing(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -238,14 +254,10 @@ function CallInfo({
 
         if (responseRecord?.interview_id) {
           try {
-            const interview = await InterviewService.getInterviewById(
-              responseRecord.interview_id,
-            );
+            const interview = await InterviewService.getInterviewById(responseRecord.interview_id);
             if (isMounted) {
               setQuestionCount(
-                typeof interview?.question_count === "number"
-                  ? interview.question_count
-                  : null,
+                typeof interview?.question_count === "number" ? interview.question_count : null,
               );
             }
           } catch {
@@ -285,7 +297,7 @@ function CallInfo({
       if (response) {
         const currentInterviewId = response.interview_id;
         await ResponseService.deleteResponse(call_id);
-        router.push(`/interviews/${currentInterviewId}`);
+        router.push(`/jobs/${currentInterviewId}`);
         onDeleteResponse(call_id);
       }
 
@@ -317,125 +329,146 @@ function CallInfo({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between w-full">
           <div className="space-y-4 w-full">
             <div className="flex justify-between">
-          <div className="w-full">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#203b14] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
-              onClick={() => {
-                router.push(`/interviews/${interviewId}`);
-              }}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to workspace
-            </button>
-
-          </div>
-            <div className="flex items-center gap-3">
-            <Select
-              value={candidateStatus}
-              onValueChange={async (newValue: string) => {
-                setCandidateStatus(newValue);
-                await ResponseService.updateResponse(
-                  { candidate_status: newValue },
-                  call_id,
-                );
-                onCandidateStatusChange(call_id, newValue);
-              }}
-            >
-              <SelectTrigger className="w-[200px] rounded-full border-[#e0e5d5] bg-[#fbfdf6]">
-                <SelectValue placeholder="Candidate status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={CandidateStatus.NO_STATUS}>
-                  No Status
-                </SelectItem>
-                <SelectItem value={CandidateStatus.NOT_SELECTED}>
-                  Not Selected
-                </SelectItem>
-                <SelectItem value={CandidateStatus.POTENTIAL}>
-                  Potential
-                </SelectItem>
-                <SelectItem value={CandidateStatus.SELECTED}>
-                  Selected
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  disabled={isClicked}
-                  className="rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-5 text-[#6b3f31] hover:bg-[#f0dfd8]"
-                  variant="ghost"
+              <div className="w-full">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#203b14] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
+                  onClick={() => {
+                    router.push(`/jobs/${interviewId}`);
+                  }}
                 >
-                  <TrashIcon className="h-4 w-4" />
-                  
-                </Button>
-              </AlertDialogTrigger>
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to workspace
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <Select
+                  value={candidateStatus}
+                  onValueChange={async (newValue: string) => {
+                    setCandidateStatus(newValue);
+                    await ResponseService.updateResponse({ candidate_status: newValue }, call_id);
+                    onCandidateStatusChange(call_id, newValue);
+                  }}
+                >
+                  <SelectTrigger className="w-[200px] rounded-full border-[#e0e5d5] bg-[#fbfdf6]">
+                    <SelectValue placeholder="Candidate status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={CandidateStatus.NO_STATUS}>No Status</SelectItem>
+                    <SelectItem value={CandidateStatus.NOT_SELECTED}>Not Selected</SelectItem>
+                    <SelectItem value={CandidateStatus.POTENTIAL}>Potential</SelectItem>
+                    <SelectItem value={CandidateStatus.SELECTED}>Selected</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this response?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. The candidate session and its recruiter review surface will be removed.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      disabled={isReanalyzing || isClicked}
+                      className="rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-5 text-[#203b14] hover:border-[#c5ccb6] hover:bg-[#eef4e1] disabled:opacity-60"
+                      variant="ghost"
+                      title="Re-run the hiring-grade analysis on this session"
+                      aria-label="Re-analyze session"
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 ${isReanalyzing ? "animate-spin" : ""}`}
+                      />
+                    </Button>
+                  </AlertDialogTrigger>
 
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Re-analyze this session?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This re-runs the hiring-grade scoring against the
+                        stored transcript and Retell signals. The current
+                        analytics will be overwritten. Use this after editing
+                        the interview&apos;s job description, seniority, or
+                        must-haves — or if the model output looks wrong.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
 
-                  <AlertDialogAction
-                    className="bg-[#4a3212] text-[#fbfdf6] hover:bg-[#3d2910]"
-                    onClick={async () => {
-                      setIsClicked(true);
-                      await onDeleteResponseClick();
-                    }}
-                  >
-                    Continue
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+                      <AlertDialogAction
+                        className="bg-[#203b14] text-[#fbfdf6] hover:bg-[#152808]"
+                        onClick={onReanalyzeClick}
+                        disabled={isReanalyzing}
+                      >
+                        {isReanalyzing ? "Re-analyzing…" : "Re-analyze"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      disabled={isClicked}
+                      className="rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-5 text-[#6b3f31] hover:bg-[#f0dfd8]"
+                      variant="ghost"
+                      title="Delete this response"
+                      aria-label="Delete response"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this response?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. The candidate session and its recruiter review
+                        surface will be removed.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+                      <AlertDialogAction
+                        className="bg-[#4a3212] text-[#fbfdf6] hover:bg-[#3d2910]"
+                        onClick={async () => {
+                          setIsClicked(true);
+                          await onDeleteResponseClick();
+                        }}
+                      >
+                        Continue
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-start gap-4">
               <div>
                 {name ? (
-                  <p className="text-2xl font-semibold tracking-[-0.04em]">
-                    {name}
-                  </p>
+                  <p className="text-2xl font-semibold tracking-[-0.04em]">{name}</p>
                 ) : (
-                  <p className="text-2xl font-semibold tracking-[-0.04em]">
-                    Anonymous candidate
-                  </p>
+                  <p className="text-2xl font-semibold tracking-[-0.04em]">Anonymous candidate</p>
                 )}
-                {email ? (
-                  <p className="mt-1 text-sm text-[#53614d]">{email}</p>
-                ) : null}
+                {email ? <p className="mt-1 text-sm text-[#53614d]">{email}</p> : null}
               </div>
             </div>
             <div className="flex justify-between w-full">
-            <SessionCoverageRow
-              status={responseStatus}
-              questionsCovered={questionsCovered}
-              questionCount={questionCount}
-              disconnectionReason={disconnectionReason}
-            />
+              <SessionCoverageRow
+                status={responseStatus}
+                questionsCovered={questionsCovered}
+                questionCount={questionCount}
+                disconnectionReason={disconnectionReason}
+              />
 
-             {tabSwitchCount && tabSwitchCount > 0 ? (
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-4 py-2 text-sm font-semibold text-[#6b3f31]">
-            <AlertTriangle className="h-4 w-4" />
-            Tab switching detected
-          </div>
-        ) : null}
+              {tabSwitchCount && tabSwitchCount > 0 ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-4 py-2 text-sm font-semibold text-[#6b3f31]">
+                  <AlertTriangle className="h-4 w-4" />
+                  Tab switching detected
+                </div>
+              ) : null}
             </div>
           </div>
-
-          
         </div>
-
-       
       </div>
 
       {/* Hiring-grade analytics view (full-width).
@@ -448,14 +481,14 @@ function CallInfo({
         <div className="rounded-2xl border border-stone-300 bg-stone-50 px-6 py-5 text-sm text-[#53614d]">
           <p className="font-semibold text-[#0a1d08]">Legacy analytics</p>
           <p className="mt-1">
-            This response was scored with an older analytics pipeline and can&apos;t
-            be displayed here. Re-trigger analysis to view the hiring-grade
-            breakdown.
+            This response was scored with an older analytics pipeline and can&apos;t be displayed
+            here. Re-trigger analysis to view the hiring-grade breakdown.
           </p>
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-3">{/* session integrity card below */}
+      <div className="grid gap-6 xl:grid-cols-2">
+        {/* session integrity card below */}
 
         <DetailCard title="Session integrity">
           <div className="space-y-4 text-sm leading-6 text-[#53614d]">
@@ -475,14 +508,8 @@ function CallInfo({
                 fallback={<Skeleton className="h-5 w-[220px]" />}
               />
             </div>
-            <p className="rounded-[18px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3">
-              {call?.call_analysis?.call_completion_rating_reason}
-            </p>
           </div>
         </DetailCard>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <DetailCard title="Interview recording">
           <div className="space-y-4">
             {call?.recording_url ? (
@@ -499,14 +526,10 @@ function CallInfo({
                 </a>
               </>
             ) : (
-              <p className="text-sm text-[#53614d]">
-                No recording is available for this response.
-              </p>
+              <p className="text-sm text-[#53614d]">No recording is available for this response.</p>
             )}
           </div>
         </DetailCard>
-
-        {/* Per-question details now live inside AnalyticsV2View. */}
       </div>
 
       <DetailCard title="Transcript">

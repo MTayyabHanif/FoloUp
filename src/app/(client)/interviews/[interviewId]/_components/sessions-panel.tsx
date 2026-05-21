@@ -1,30 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { UserRound } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "@/components/ui/page-shell";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  WORKFLOW_STAGE_ORDER,
-  getWorkflowToneClasses,
   type HiringWorkflowSummary,
   type StageGroup,
+  WORKFLOW_STAGE_ORDER,
   type WorkflowCandidate,
   type WorkflowStage,
+  getWorkflowToneClasses,
 } from "@/lib/hiring-workflow";
 
 import { SessionRow } from "./session-row";
-import {
-  SessionsToolbar,
-  type SessionSortKey,
-  type StageChip,
-} from "./sessions-toolbar";
+import { type SessionSortKey, SessionsToolbar, type StageChip } from "./sessions-toolbar";
 
 type SessionsPanelProps = {
   workflow: HiringWorkflowSummary;
   interviewId: string;
+  basePath?: string;
   selectedCallId: string;
   railFilter: "all" | WorkflowStage;
   onRailFilterChange: (next: "all" | WorkflowStage) => void;
@@ -66,6 +63,7 @@ function compareByName(a: WorkflowCandidate, b: WorkflowCandidate): number {
 export function SessionsPanel({
   workflow,
   interviewId,
+  basePath,
   selectedCallId,
   railFilter,
   onRailFilterChange,
@@ -76,9 +74,7 @@ export function SessionsPanel({
   const [unreadOnly, setUnreadOnly] = useState<boolean>(false);
 
   const stageChips: StageChip[] = useMemo(() => {
-    const chips: StageChip[] = [
-      { key: "all", label: "All", count: workflow.totalResponses },
-    ];
+    const chips: StageChip[] = [{ key: "all", label: "All", count: workflow.totalResponses }];
 
     for (const stage of WORKFLOW_STAGE_ORDER) {
       const count = workflow.stageBuckets[stage]?.length ?? 0;
@@ -135,9 +131,7 @@ export function SessionsPanel({
 
     return WORKFLOW_STAGE_ORDER.map((stage) => {
       const groupMeta = workflow.stageGroups.find((group) => group.key === stage);
-      const candidates = filteredCandidates.filter(
-        (candidate) => candidate.stage === stage,
-      );
+      const candidates = filteredCandidates.filter((candidate) => candidate.stage === stage);
       if (candidates.length === 0 || !groupMeta) {
         return null;
       }
@@ -171,13 +165,7 @@ export function SessionsPanel({
   const showInlineStage = sortKey !== "stage";
 
   return (
-    <Section
-      title="Sessions"
-      description={`${filteredCandidates.length} of ${workflow.totalResponses} candidate${
-        workflow.totalResponses === 1 ? "" : "s"
-      } visible`}
-      compact
-    >
+    <Section compact className="sticky top-20">
       <div className="overflow-hidden rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6]">
         <SessionsToolbar
           query={query}
@@ -199,12 +187,8 @@ export function SessionsPanel({
                     <div key={group.key} className="space-y-2">
                       <div className="flex items-center justify-between px-1">
                         <div>
-                          <p className="text-sm font-semibold text-[#0a1d08]">
-                            {group.label}
-                          </p>
-                          <p className="text-xs text-[#6f7866]">
-                            {group.description}
-                          </p>
+                          <p className="text-sm font-semibold text-[#0a1d08]">{group.label}</p>
+                          <p className="text-xs text-[#6f7866]">{group.description}</p>
                         </div>
                         <span
                           className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getWorkflowToneClasses(
@@ -220,6 +204,7 @@ export function SessionsPanel({
                             key={candidate.callId}
                             candidate={candidate}
                             interviewId={interviewId}
+                            basePath={basePath}
                             isSelected={selectedCallId === candidate.callId}
                             onSelect={onSelectCandidate}
                           />
@@ -236,12 +221,9 @@ export function SessionsPanel({
                       key={candidate.callId}
                       candidate={candidate}
                       interviewId={interviewId}
+                      basePath={basePath}
                       isSelected={selectedCallId === candidate.callId}
-                      stageMeta={
-                        showInlineStage
-                          ? stageMetaLookup[candidate.stage]
-                          : undefined
-                      }
+                      stageMeta={showInlineStage ? stageMetaLookup[candidate.stage] : undefined}
                       onSelect={onSelectCandidate}
                     />
                   ))}

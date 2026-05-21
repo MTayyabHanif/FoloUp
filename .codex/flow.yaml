@@ -1,0 +1,115 @@
+# Flow orchestrator config — this repo (foloup).
+# Schema reference: openspec/changes/add-flow-orchestrator/design.md
+# Personal overrides go in .codex/flow.local.yaml (gitignored).
+
+project:
+  name: foloup
+  type: nextjs
+  branch_strategy: trunk
+  default_branch: main
+
+deploy:
+  target: vercel
+  production_url: https://robustagency.co
+  health_path: /
+
+# Canonical pipeline order. Steps not listed here are skipped by default
+# (the user can still force one inline at the announcement gate).
+pipeline:
+  - brainstorming
+  - cgc
+  - propose
+  - plan_eng_review
+  - plan_design_review
+  - apply
+  - qa
+  - review
+  - ship
+  - archive
+
+# Tool availability flags. Set false to omit from announced shape even when
+# the underlying tool is installed.
+tools:
+  openspec: true
+  gstack: true
+  code_context_analysis: true
+
+# Per-step model + dispatch mode.
+#   model:    gpt-5.2 | gpt-5.4 | gpt-5.5 — passed to `spawn_agent` when dispatch=subagent
+#   dispatch: subagent | main
+#     subagent — runs in an isolated agent context; reads named artifacts from disk, returns a structured summary
+#     main     — executes inline in the /flow conversation (no isolation; main context grows)
+# Override per-invocation at the announcement gate with `model <step> <name>` or `dispatch <step> <mode>`.
+steps:
+  brainstorming:
+    model: gpt-5.4
+    dispatch: subagent
+  cgc:
+    model: gpt-5.2
+    dispatch: subagent
+  propose:
+    model: gpt-5.4
+    dispatch: subagent
+  plan_eng_review:
+    model: gpt-5.2
+    dispatch: subagent
+  plan_design_review:
+    model: gpt-5.2
+    dispatch: subagent
+  apply:
+    model: gpt-5.5
+    dispatch: main
+  qa:
+    model: gpt-5.2
+    dispatch: subagent
+  review:
+    model: gpt-5.2
+    dispatch: subagent
+  ship:
+    model: gpt-5.2
+    dispatch: subagent
+  archive:
+    model: gpt-5.2
+    dispatch: main
+
+# CGC scope inference. Keys are keywords the skill matches against request
+# text; values are paths (string or list) used as scope when matched.
+cgc_keyword_map:
+  dashboard: src/app/(client)/dashboard/
+  interviewer:
+    - src/app/api/create-interviewer/
+    - src/components/dashboard/interviewer/
+    - src/services/interviewers.service.ts
+  interview:
+    - src/app/(client)/interviews/
+    - src/app/api/create-interview/
+    - src/components/dashboard/interview/
+  jobs:
+    - src/app/(client)/jobs/
+    - src/components/jobs/
+  personas:
+    - src/app/(client)/personas/
+    - src/components/personas/
+  call:
+    - src/app/(user)/call/
+    - src/components/call/
+  shell: src/components/shell/
+  api: src/app/api/
+  supabase: src/services/
+
+# Typo/bypass triggers. Request phrases that strongly suggest a trivial edit;
+# skill offers OpenSpec bypass on match. Generic heuristics also apply.
+bypass:
+  typo_patterns:
+    - fix typo
+    - typo in
+    - change copy
+    - update wording
+    - tweak copy
+
+# External system integrations. ClickUp is active; Linear remains reserved.
+integrations:
+  clickup:
+    enabled: true   # set false to disable ClickUp URL ingestion in /flow
+  linear:
+    enabled: false

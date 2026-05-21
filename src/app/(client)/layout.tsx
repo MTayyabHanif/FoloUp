@@ -1,17 +1,14 @@
 "use client";
 
-import * as React from "react";
 import { usePathname } from "next/navigation";
+import * as React from "react";
 import { Toaster } from "sonner";
 
 import Providers from "@/components/providers";
-import { AppSidebar } from "@/components/shell/app-sidebar";
-import { AppHeader } from "@/components/shell/app-header";
 import { AppFooter } from "@/components/shell/app-footer";
-import {
-  Drawer,
-  DrawerContent,
-} from "@/components/ui/drawer";
+import { AppHeader } from "@/components/shell/app-header";
+import { AppSidebar } from "@/components/shell/app-sidebar";
+import { Drawer, DrawerContent } from "@/components/ui/drawer";
 
 /**
  * (client) layout — recruiter route group. Owns the full platform shell:
@@ -37,11 +34,10 @@ export default function ClientGroupLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isAuthRoute =
-    pathname?.includes("/sign-in") || pathname?.includes("/sign-up");
+  const isAuthRoute = pathname?.includes("/sign-in") || pathname?.includes("/sign-up");
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
 
-  // Auto-close mobile sidebar on route change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is the route-change trigger for closing the mobile drawer.
   React.useEffect(() => {
     setMobileSidebarOpen(false);
   }, [pathname]);
@@ -77,18 +73,13 @@ export default function ClientGroupLayout({
         </div>
 
         {/* Mobile sidebar — slides in from left via Drawer */}
-        <Drawer
-          open={mobileSidebarOpen}
-          onOpenChange={setMobileSidebarOpen}
-        >
+        <Drawer open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
           <DrawerContent
             side="left"
             size="default"
             className="w-[72px] rounded-none p-0 sm:max-w-[72px]"
           >
-            <AppSidebar
-              onNavigate={() => setMobileSidebarOpen(false)}
-            />
+            <AppSidebar onNavigate={() => setMobileSidebarOpen(false)} />
           </DrawerContent>
         </Drawer>
 
@@ -111,8 +102,7 @@ export default function ClientGroupLayout({
               "rounded-full bg-[var(--color-amber-seed)] text-[var(--color-canvas-ice)]",
             cancelButton:
               "rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]",
-            closeButton:
-              "bg-[color:rgba(251,253,246,0.9)] text-[hsl(var(--foreground))]",
+            closeButton: "bg-[color:rgba(251,253,246,0.9)] text-[hsl(var(--foreground))]",
           },
         }}
       />
