@@ -377,8 +377,15 @@ function DetailsPopup({
       const missingDims = computeMissingDimensions(updatedQuestions);
       let uncoveredMH: string[] = [];
       let semanticGaps: string[] = [];
-      if (missingDims.length === 0) {
-        // Only run the (more expensive) semantic check when the rule check passes.
+      // Only run the (more expensive) semantic check when:
+      //  (a) the rule check passes (otherwise we already know there are gaps), AND
+      //  (b) the operator gave us explicit must-haves to anchor the check against.
+      // With no must-haves, the LLM free-associates JD topics and reliably
+      // produces 5 false-positive "gaps" — the generator's job is to cover the
+      // 4 active scoring dimensions, not every JD topic.
+      const hasMustHaves =
+        mustHaves.map((s) => s.trim()).filter(Boolean).length > 0;
+      if (missingDims.length === 0 && hasMustHaves) {
         const semantic = await runSemanticCheck(updatedQuestions);
         uncoveredMH = semantic.uncovered_must_haves;
         semanticGaps = semantic.semantic_gaps;
@@ -433,7 +440,9 @@ function DetailsPopup({
       const missingDims = computeMissingDimensions(fresh);
       let uncoveredMH: string[] = [];
       let semanticGaps: string[] = [];
-      if (missingDims.length === 0) {
+      const hasMustHaves =
+        mustHaves.map((s) => s.trim()).filter(Boolean).length > 0;
+      if (missingDims.length === 0 && hasMustHaves) {
         const semantic = await runSemanticCheck(fresh);
         uncoveredMH = semantic.uncovered_must_haves;
         semanticGaps = semantic.semantic_gaps;
@@ -476,7 +485,9 @@ function DetailsPopup({
       const missingDims = computeMissingDimensions(merged);
       let uncoveredMH: string[] = [];
       let semanticGaps: string[] = [];
-      if (missingDims.length === 0) {
+      const hasMustHavesFill =
+        mustHaves.map((s) => s.trim()).filter(Boolean).length > 0;
+      if (missingDims.length === 0 && hasMustHavesFill) {
         const semantic = await runSemanticCheck(merged);
         uncoveredMH = semantic.uncovered_must_haves;
         semanticGaps = semantic.semantic_gaps;
@@ -559,7 +570,19 @@ function DetailsPopup({
 
   return (
     <>
-      <div className="w-full">
+      {/*
+        Hide the form content (stepper, fields, nav) while the validator
+        AlertDialog is open. The AlertDialog itself is portal-rendered to
+        document.body so it stays visible. Without this, the AlertDialog
+        (max-w-lg ~512px) is narrower than the outer Modal (max-w-3xl ~768px)
+        and the form bleeds through on the sides because the dialog
+        backdrop is only 50% opaque.
+      */}
+      <div
+        className="w-full"
+        style={{ display: validatorOpen ? "none" : "block" }}
+        aria-hidden={validatorOpen}
+      >
         {/* ===== Header ===== */}
         <div className="text-center">
           <h1 className="text-xl font-semibold text-[#0a1d08]">

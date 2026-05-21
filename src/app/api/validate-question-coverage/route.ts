@@ -24,8 +24,21 @@ import { OpenAI } from "openai";
 
 import { logger } from "@/lib/logger";
 
-const SYSTEM_PROMPT_VALIDATOR =
-  "You are a hiring-interview coverage validator. Given a job description, a list of must-haves, and a question set, identify (a) must-haves that no question plausibly probes, and (b) free-text semantic gaps in the question set (e.g., 'no question targets leadership' when the JD requires team leadership). Return JSON matching the schema. Be concise — max 5 items per array.";
+const SYSTEM_PROMPT_VALIDATOR = `You are a STRICT hiring-interview coverage validator. Be conservative — false positives waste operator time.
+
+Given a job description, a list of explicit must-haves (the operator's stated hard requirements), and a question set with rubric dimension tags, find ONLY genuine, critical gaps:
+
+(a) uncovered_must_haves: each must-have where NO question plausibly probes for it. A question's \`question\` text OR \`rubricNote\` counts as coverage if it's at all related — even tangentially. If a must-have is implicitly covered, do NOT list it.
+
+(b) semantic_gaps: ONLY major, unambiguous gaps in the question set that would seriously impair the hiring decision. Specifically:
+  - Skip soft skills / cultural fit (collaboration, communication style, fast-paced environment) — these are observed during the call, not probed via dedicated questions
+  - Skip nice-to-haves and "good to know" topics
+  - Skip topics tangentially covered by any question's rubricNote
+  - Only flag a gap if a CORE requirement is genuinely absent
+
+If the question set adequately covers the rubric dimensions and the listed must-haves, return empty arrays. Most well-designed interviews will have ZERO semantic_gaps.
+
+Maximum 5 items per array — but DO NOT pad. Return fewer if fewer truly exist.`;
 
 const VALIDATE_COVERAGE_SCHEMA = {
   type: "object",
@@ -70,8 +83,21 @@ export async function POST(req: Request) {
       }))
     : [];
 
-  // No questions or no must-haves AND no JD → nothing to validate semantically.
+  // No questions → nothing to validate.
   if (questions.length === 0) {
+    return NextResponse.json(
+      { uncovered_must_haves: [], semantic_gaps: [] },
+      { status: 200 },
+    );
+  }
+
+  // No must-haves → no useful anchor for semantic gap analysis.
+  // Without concrete coverage targets, the LLM free-associates JD topics
+  // and reliably returns 5 false-positive "gaps" (interpreting "max 5 items
+  // per array" as a target rather than a ceiling). The client-side guard
+  // skips this call when must-haves is empty; this server-side check is a
+  // defense-in-depth so any direct caller gets clean empty arrays back.
+  if (mustHaves.length === 0) {
     return NextResponse.json(
       { uncovered_must_haves: [], semantic_gaps: [] },
       { status: 200 },
