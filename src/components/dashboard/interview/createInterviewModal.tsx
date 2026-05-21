@@ -68,13 +68,29 @@ function CreateInterviewModal({ open, setOpen }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // ---- Render strategy ----
+  // DetailsPopup MUST stay mounted across all transitions (loading and
+  // proceed=true) so that the operator's in-progress form state — step
+  // position, name, objective, JD, must-haves, num-questions, etc. — is
+  // preserved when:
+  //   1. The loader is shown during the API call (then the form returns to
+  //      view if validation/preflight diverts back to the form)
+  //   2. The operator clicks the back chevron in QuestionsPopup (which
+  //      flips `proceed` back to false — without this strategy, DetailsPopup
+  //      would remount fresh and the operator would lose everything)
+  //
+  // We hide it with `display:none` rather than unmounting it. LoaderWithLogo
+  // and QuestionsPopup still mount/unmount on demand — they have no
+  // operator-input state that needs preserving across those transitions
+  // (QuestionsPopup initializes its local `questions` from interviewData
+  // at mount time, so a fresh mount after `proceed: true` picks up the
+  // newly-generated questions correctly).
   return (
     <>
-      {loading ? (
-        <div className="flex h-[min(35rem,80vh)] w-full items-center justify-center">
-          <LoaderWithLogo />
-        </div>
-      ) : !proceed ? (
+      <div
+        style={{ display: !loading && !proceed ? "block" : "none" }}
+        aria-hidden={loading || proceed}
+      >
         <DetailsPopup
           open={open}
           setLoading={setLoading}
@@ -86,9 +102,19 @@ function CreateInterviewModal({ open, setOpen }: Props) {
           fileName={fileName}
           setFileName={setFileName}
         />
-      ) : (
-        <QuestionsPopup interviewData={interviewData} setProceed={setProceed} setOpen={setOpen} />
-      )}
+      </div>
+      {loading ? (
+        <div className="flex h-[min(35rem,80vh)] w-full items-center justify-center">
+          <LoaderWithLogo />
+        </div>
+      ) : null}
+      {proceed ? (
+        <QuestionsPopup
+          interviewData={interviewData}
+          setProceed={setProceed}
+          setOpen={setOpen}
+        />
+      ) : null}
     </>
   );
 }
