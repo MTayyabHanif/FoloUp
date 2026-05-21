@@ -96,6 +96,7 @@ Return JSON: { "uncovered_must_haves": string[], "semantic_gaps": string[] }`;
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     maxRetries: 0, // no retries — degrade gracefully on first failure
+    timeout: 15_000, // hard cap; this is a soft-warning check, not a blocker
   });
 
   try {
