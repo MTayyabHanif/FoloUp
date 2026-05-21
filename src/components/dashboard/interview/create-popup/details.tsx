@@ -373,43 +373,18 @@ function DetailsPopup({
       const { questions: updatedQuestions, description } =
         await callGenerator("full");
 
-      // ----- Preflight validator -----
-      const missingDims = computeMissingDimensions(updatedQuestions);
-      let uncoveredMH: string[] = [];
-      let semanticGaps: string[] = [];
-      // Only run the (more expensive) semantic check when:
-      //  (a) the rule check passes (otherwise we already know there are gaps), AND
-      //  (b) the operator gave us explicit must-haves to anchor the check against.
-      // With no must-haves, the LLM free-associates JD topics and reliably
-      // produces 5 false-positive "gaps" — the generator's job is to cover the
-      // 4 active scoring dimensions, not every JD topic.
-      const hasMustHaves =
-        mustHaves.map((s) => s.trim()).filter(Boolean).length > 0;
-      if (missingDims.length === 0 && hasMustHaves) {
-        const semantic = await runSemanticCheck(updatedQuestions);
-        uncoveredMH = semantic.uncovered_must_haves;
-        semanticGaps = semantic.semantic_gaps;
-      }
-      const hasGaps =
-        missingDims.length > 0 ||
-        uncoveredMH.length > 0 ||
-        semanticGaps.length > 0;
-
-      if (hasGaps) {
-        // Hold persistence — open the validator modal.
-        setLoading(false);
-        setPendingQuestions(updatedQuestions);
-        setPendingDescription(description);
-        setValidatorMissingDims(missingDims);
-        setValidatorUncoveredMustHaves(uncoveredMH);
-        setValidatorSemanticGaps(semanticGaps);
-        setValidatorErrorMsg(null);
-        setSaveAnywayChecked(false);
-        setValidatorOpen(true);
-        return;
-      }
-
-      // Clean — proceed to persistence with empty coverage_warnings.
+      // AI-generated questions are TRUSTED by design — the strict
+      // `json_schema` enforced by the generator route guarantees every
+      // question carries `targetDimension` + `rubricNote`, and the
+      // allocation matrix in src/lib/constants.ts ensures every active
+      // scoring dimension has at least one question. Running the preflight
+      // validator here only ever produces friction or false positives.
+      //
+      // The preflight validator (still wired below in onRegenerateAll /
+      // onFillGapsOnly / Save anyway) is reserved for a future manual-edit
+      // flow where the operator may add or remove questions and we need
+      // to re-check dimension coverage. For the AI generation path: skip
+      // it entirely and go directly to the questions-review screen.
       persistInterview(updatedQuestions, description, []);
     } catch (err) {
       setLoading(false);
