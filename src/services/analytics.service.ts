@@ -103,10 +103,16 @@ export async function runAnalyticsV2(
     candidateSpeakingSeconds: Math.round(candidateSpeakingSeconds),
   });
 
-  // 4. Call OpenAI with deterministic params + json_schema enforcement
+  // 4. Call OpenAI with deterministic params + json_schema enforcement.
+  // maxRetries: 1 + explicit per-request timeout keeps the call inside
+  // Vercel's 60s function limit; 3 retries without a timeout silently
+  // consumes the whole budget and the function gets killed before we
+  // ever see the error (same bug class fixed in
+  // /api/generate-interview-questions/route.ts).
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    maxRetries: 3,
+    maxRetries: 1,
+    timeout: 35_000,
   });
 
   // Some SDK versions don't accept `seed` — guard with `as any` and try/catch.

@@ -77,9 +77,14 @@ export async function POST(req: Request) {
     existingQuestions: body.existingQuestions,
   };
 
+  // maxRetries: 1 (not 3) + explicit per-request timeout to stay well inside
+  // Vercel's 60s function limit. 3 retries × ~15s = 60s = function killed
+  // before we ever see the error. With 1 retry × 25s = 50s max, leaving
+  // headroom to log the failure and respond.
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    maxRetries: 3,
+    maxRetries: 1,
+    timeout: 25_000,
   });
 
   try {
@@ -121,12 +126,27 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ response: content }, { status: 200 });
   } catch (error) {
+    // Surface as much detail as possible — OpenAI SDK errors have a `status`
+    // and sometimes a structured `error.error.message`. Without this, hangs
+    // and 5xx errors are indistinguishable in the logs.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = error as any;
     logger.error("Error generating interview questions", {
-      error: error instanceof Error ? error.message : String(error),
+      message: err?.message ?? String(error),
+      status: err?.status ?? null,
+      openaiCode: err?.code ?? null,
+      openaiType: err?.error?.type ?? null,
+      openaiMessage: err?.error?.message ?? null,
     });
+    const isTimeout =
+      err?.name === "APITimeoutError" || /timeout/i.test(err?.message ?? "");
     return NextResponse.json(
-      { error: "internal server error" },
-      { status: 500 },
+      {
+        error: isTimeout
+          ? "Question generation timed out. Please retry — the model service is slow right now."
+          : "Could not generate questions. Please retry.",
+      },
+      { status: isTimeout ? 504 : 500 },
     );
   }
 }

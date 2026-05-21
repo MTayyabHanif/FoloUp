@@ -42,13 +42,19 @@ function CreateInterviewModal({ open, setOpen }: Props) {
   const [isUploaded, setIsUploaded] = useState(false);
   const [fileName, setFileName] = useState("");
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Need to check
+  // Transition Details → Questions popup ONLY when interviewData is updated
+  // by a successful generate/manual handler. Including `loading` in the deps
+  // (the previous behavior) caused the effect to fire the moment
+  // setLoading(true) ran — instantly flipping proceed:true before the API
+  // call returned, so the operator saw an empty QuestionsPopup for the
+  // duration of the request instead of the LoaderWithLogo.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `loading` is intentionally read but not in deps — see comment above
   useEffect(() => {
     if (loading === true) {
       setLoading(false);
       setProceed(true);
     }
-  }, [interviewData, loading]);
+  }, [interviewData]);
 
   useEffect(() => {
     if (!open) {
