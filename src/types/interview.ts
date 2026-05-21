@@ -1,7 +1,24 @@
+/**
+ * The 4 active rubric dimensions a `Question` may be tagged to.
+ * (Re-exported from constants for module-cycle independence.)
+ */
+export type ActiveDimension =
+  | "role_fit"
+  | "depth_of_knowledge"
+  | "problem_solving"
+  | "examples_evidence";
+
 export interface Question {
   id: string;
   question: string;
   follow_up_count: number;
+  /**
+   * v3 rubric-aware fields (openspec change rubric-aware-interviewer-and-questions).
+   * Both optional for backward-compat with existing rows in the JSONB column;
+   * the generator emits them on every newly created question.
+   */
+  targetDimension?: ActiveDimension;
+  rubricNote?: string;
 }
 
 export interface Quote {
@@ -32,6 +49,13 @@ export interface InterviewBase {
   job_description: string;
   seniority: Seniority;
   must_haves: string[];
+  /**
+   * v3 rubric-aware (openspec rubric-aware-interviewer-and-questions §6).
+   * Optional — populated only when the operator clicked "Save anyway" on
+   * the preflight validator. Each string is one acknowledged coverage gap.
+   * Existing rows have DB default '[]'.
+   */
+  coverage_warnings?: string[];
 }
 
 export interface InterviewDetails {

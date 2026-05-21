@@ -208,6 +208,10 @@ function DimensionsCard({ dimensions }: { dimensions: AnalyticsV2["dimensions"] 
         {dimensions.map((d) => {
           const weightPct = `${Math.round(d.weight * 100)}%`;
           const hasQuotes = d.evidenceQuotes.length > 0;
+          // v3 rubric-aware: assessed === false means no question targeted
+          // this dimension (or hard cap forced unassessed). Excluded from
+          // overallScore; render "Not assessed" instead of a score.
+          const isUnassessed = d.assessed === false;
 
           return (
             <details
@@ -223,33 +227,56 @@ function DimensionsCard({ dimensions }: { dimensions: AnalyticsV2["dimensions"] 
                     {weightPct}
                   </span>
                 </div>
-                <div className="flex items-baseline gap-0.5">
-                  <span className="text-lg font-semibold text-[#0a1d08]">
-                    {d.score}
+                {isUnassessed ? (
+                  <span
+                    className="inline-flex items-center rounded-full bg-stone-100 border border-stone-300 text-stone-600 text-xs px-2 py-0.5"
+                    title={`Not assessed — no question targeted ${DIMENSION_LABEL[d.name]}`}
+                  >
+                    Not assessed
                   </span>
-                  <span className="text-sm text-[#53614d]">/10</span>
-                </div>
+                ) : (
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-lg font-semibold text-[#0a1d08]">
+                      {d.score}
+                    </span>
+                    <span className="text-sm text-[#53614d]">/10</span>
+                  </div>
+                )}
               </summary>
               <div className="mt-3 space-y-2 text-sm text-[#53614d]">
-                <p>{d.feedback}</p>
-                {hasQuotes ? (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-[#3a3a3a]">
-                      Evidence
+                {isUnassessed ? (
+                  <>
+                    <p className="italic text-stone-500">
+                      No question in this interview targeted{" "}
+                      {DIMENSION_LABEL[d.name]}, so the scorer had no
+                      opportunity to evaluate it. This dimension is excluded
+                      from the overall score.
                     </p>
-                    <ul className="mt-1 space-y-1">
-                      {d.evidenceQuotes.map((q, i) => (
-                        <li
-                          key={i}
-                          className="rounded border-l-2 border-[#c5ccb6] bg-[#fbfdf6] px-2 py-1 italic"
-                        >
-                          “{q}”
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                    {d.feedback ? <p>{d.feedback}</p> : null}
+                  </>
                 ) : (
-                  <p className="text-xs italic text-stone-500">No candidate evidence</p>
+                  <>
+                    <p>{d.feedback}</p>
+                    {hasQuotes ? (
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-[#3a3a3a]">
+                          Evidence
+                        </p>
+                        <ul className="mt-1 space-y-1">
+                          {d.evidenceQuotes.map((q, i) => (
+                            <li
+                              key={i}
+                              className="rounded border-l-2 border-[#c5ccb6] bg-[#fbfdf6] px-2 py-1 italic"
+                            >
+                              “{q}”
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="text-xs italic text-stone-500">No candidate evidence</p>
+                    )}
+                  </>
                 )}
               </div>
             </details>

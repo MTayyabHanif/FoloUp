@@ -62,6 +62,9 @@ export type Database = {
           job_description: string;
           seniority: string;
           must_haves: Json;
+          // v3 rubric-aware (openspec rubric-aware-interviewer-and-questions).
+          // NOT NULL with DB default '[]'.
+          coverage_warnings: Json;
         };
         Insert: {
           created_at?: string;
@@ -93,6 +96,7 @@ export type Database = {
           job_description?: string;
           seniority?: string;
           must_haves?: Json;
+          coverage_warnings?: Json;
         };
         Update: {
           created_at?: string;
@@ -123,6 +127,7 @@ export type Database = {
           job_description?: string;
           seniority?: string;
           must_haves?: Json;
+          coverage_warnings?: Json;
         };
         Relationships: [
           {

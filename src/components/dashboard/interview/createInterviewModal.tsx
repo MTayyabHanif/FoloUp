@@ -15,7 +15,7 @@ const CreateEmptyInterviewData = (): InterviewBase => ({
   name: "",
   interviewer_id: BigInt(0),
   objective: "",
-  question_count: 0,
+  question_count: 4,
   time_duration: "",
   is_anonymous: false,
   invite_only: false,
@@ -28,6 +28,9 @@ const CreateEmptyInterviewData = (): InterviewBase => ({
   job_description: "",
   seniority: "mid",
   must_haves: [],
+  // v3 rubric-aware (openspec rubric-aware-interviewer-and-questions §6)
+  // Populated when operator clicks "Save anyway" on the preflight modal.
+  coverage_warnings: [],
 });
 
 function CreateInterviewModal({ open, setOpen }: Props) {

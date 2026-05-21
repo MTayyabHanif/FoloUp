@@ -1,0 +1,21 @@
+{
+  "changeName": "rubric-aware-interviewer-and-questions",
+  "currentPhase": "review",
+  "agreedOptionalSteps": ["plan_design_review"],
+  "skippedSteps": ["qa"],
+  "completedGates": [
+    "brainstorming",
+    "cgc",
+    "propose",
+    "plan_eng_review",
+    "plan_design_review",
+    "apply"
+  ],
+  "deferredFollowUps": [
+    "questionsDirty tracking + LLM-skip-after-edit (design §6.7) — currently the LLM check always runs after rule passes; tracking dirty state across questions popup would require lifting state.",
+    "Fill-gaps re-validation when operator edits questions in QuestionsPopup (matches decision #3 'trust the operator' but could be revisited).",
+    "Constants invariant unit test (tasks §2.2) — matrix is locked in code and visually verified."
+  ],
+  "lastAmended": "2026-05-21T12:00:00Z",
+  "lastUpdated": "2026-05-21T16:00:00Z"
+}

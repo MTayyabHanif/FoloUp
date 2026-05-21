@@ -3,6 +3,21 @@ import axios from "axios";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { useInterviewers } from "@/contexts/interviewers.context";
+import {
+  ACTIVE_DIMENSIONS,
+  type ActiveDimension,
+} from "@/lib/constants";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
 import { InterviewBase, Question, Seniority } from "@/types/interview";
 import {
   ChevronRight,
@@ -212,12 +227,38 @@ function DetailsPopup({
     }
   };
 
+  // ---- Preflight validator state (openspec rubric-aware §6) ----
+  const [validatorOpen, setValidatorOpen] = useState(false);
+  // Questions + description pending validator approval (between generation
+  // and persistence). Empty when not actively validating.
+  const [pendingQuestions, setPendingQuestions] = useState<Question[]>([]);
+  const [pendingDescription, setPendingDescription] = useState("");
+  const [validatorMissingDims, setValidatorMissingDims] = useState<
+    ActiveDimension[]
+  >([]);
+  const [validatorUncoveredMustHaves, setValidatorUncoveredMustHaves] =
+    useState<string[]>([]);
+  const [validatorSemanticGaps, setValidatorSemanticGaps] = useState<
+    string[]
+  >([]);
+  const [validatorBusy, setValidatorBusy] = useState<
+    null | "regenerate" | "fill_gaps"
+  >(null);
+  const [validatorErrorMsg, setValidatorErrorMsg] = useState<string | null>(
+    null,
+  );
+  const [saveAnywayChecked, setSaveAnywayChecked] = useState(false);
+
   // ---- step validation ----
   const step0Valid =
     !!name.trim() &&
     !!objective.trim() &&
     selectedInterviewer !== BigInt(0);
-  const step2Valid = !!numQuestions && !!duration;
+  const step2Valid =
+    !!numQuestions &&
+    !!duration &&
+    Number(numQuestions) >= 4 &&
+    Number(numQuestions) <= 8;
   const canSubmit = step0Valid && step2Valid && !isClicked;
 
   const advance = () => {
@@ -231,49 +272,246 @@ function DetailsPopup({
     if (step > 0) {setStep(step - 1);}
   };
 
-  const onGenrateQuestions = async () => {
-    setLoading(true);
-
-    const data = {
+  // Generator API call — full mode. Returns updated questions + description.
+  const callGenerator = async (mode: "full" | "fill_gaps", existing?: Question[], missing?: ActiveDimension[]) => {
+    const data: Record<string, unknown> = {
       name: name.trim(),
       objective: objective.trim(),
-      number: numQuestions,
+      number: Number(numQuestions),
       context: uploadedDocumentContext,
+      jobDescription: jobDescription.trim(),
+      mustHaves: mustHaves.map((s) => s.trim()).filter(Boolean),
+      seniority,
     };
-
-    const generatedQuestions = (await axios.post(
+    if (mode === "fill_gaps") {
+      data.existingQuestions = (existing ?? []).map((q) => ({
+        question: q.question,
+        targetDimension: q.targetDimension,
+      }));
+      data.missingDimensions = missing ?? [];
+    }
+    const res = (await axios.post(
       "/api/generate-interview-questions",
       data,
     )) as any;
-
-    const generatedQuestionsResponse = JSON.parse(
-      generatedQuestions?.data?.response,
-    );
-
-    const updatedQuestions = generatedQuestionsResponse.questions.map(
-      (question: Question) => ({
+    const parsed = JSON.parse(res?.data?.response);
+    const questions: Question[] = (parsed.questions ?? []).map(
+      (q: {
+        question: string;
+        targetDimension?: Question["targetDimension"];
+        rubricNote?: string;
+      }) => ({
         id: uuidv4(),
-        question: question.question.trim(),
+        question: q.question.trim(),
         follow_up_count: 1,
+        targetDimension: q.targetDimension,
+        rubricNote: q.rubricNote,
       }),
     );
+    return { questions, description: parsed.description ?? "" };
+  };
 
+  // Rule-based gap check: which active dimensions are unrepresented?
+  const computeMissingDimensions = (questions: Question[]): ActiveDimension[] => {
+    const tagged = new Set<string>();
+    for (const q of questions) {
+      if (q.targetDimension) {tagged.add(q.targetDimension);}
+    }
+    return ACTIVE_DIMENSIONS.filter((d) => !tagged.has(d));
+  };
+
+  // LLM semantic check (best-effort, never blocks).
+  const runSemanticCheck = async (
+    questions: Question[],
+  ): Promise<{ uncovered_must_haves: string[]; semantic_gaps: string[] }> => {
+    try {
+      const res = (await axios.post("/api/validate-question-coverage", {
+        jobDescription: jobDescription.trim(),
+        mustHaves: mustHaves.map((s) => s.trim()).filter(Boolean),
+        questions: questions.map((q) => ({
+          question: q.question,
+          targetDimension: q.targetDimension,
+          rubricNote: q.rubricNote,
+        })),
+      })) as any;
+      return {
+        uncovered_must_haves: res?.data?.uncovered_must_haves ?? [],
+        semantic_gaps: res?.data?.semantic_gaps ?? [],
+      };
+    } catch {
+      return { uncovered_must_haves: [], semantic_gaps: [] };
+    }
+  };
+
+  // Final persistence path.
+  const persistInterview = (
+    qs: Question[],
+    description: string,
+    warnings: string[],
+  ) => {
     const updatedInterviewData = {
       ...interviewData,
       name: name.trim(),
       objective: objective.trim(),
-      questions: updatedQuestions,
+      questions: qs,
       interviewer_id: selectedInterviewer,
       question_count: Number(numQuestions),
       time_duration: duration,
-      description: generatedQuestionsResponse.description,
+      description,
       is_anonymous: isAnonymous,
-      // v2 hiring-grade scoring fields
       job_description: jobDescription.trim(),
       seniority,
       must_haves: mustHaves.map((s) => s.trim()).filter(Boolean),
-    };
-    setInterviewData(updatedInterviewData);
+      coverage_warnings: warnings,
+    } as InterviewBase & { coverage_warnings: string[] };
+    setInterviewData(updatedInterviewData as InterviewBase);
+  };
+
+  const onGenrateQuestions = async () => {
+    setLoading(true);
+    try {
+      const { questions: updatedQuestions, description } =
+        await callGenerator("full");
+
+      // ----- Preflight validator -----
+      const missingDims = computeMissingDimensions(updatedQuestions);
+      let uncoveredMH: string[] = [];
+      let semanticGaps: string[] = [];
+      if (missingDims.length === 0) {
+        // Only run the (more expensive) semantic check when the rule check passes.
+        const semantic = await runSemanticCheck(updatedQuestions);
+        uncoveredMH = semantic.uncovered_must_haves;
+        semanticGaps = semantic.semantic_gaps;
+      }
+      const hasGaps =
+        missingDims.length > 0 ||
+        uncoveredMH.length > 0 ||
+        semanticGaps.length > 0;
+
+      if (hasGaps) {
+        // Hold persistence — open the validator modal.
+        setLoading(false);
+        setPendingQuestions(updatedQuestions);
+        setPendingDescription(description);
+        setValidatorMissingDims(missingDims);
+        setValidatorUncoveredMustHaves(uncoveredMH);
+        setValidatorSemanticGaps(semanticGaps);
+        setValidatorErrorMsg(null);
+        setSaveAnywayChecked(false);
+        setValidatorOpen(true);
+        return;
+      }
+
+      // Clean — proceed to persistence with empty coverage_warnings.
+      persistInterview(updatedQuestions, description, []);
+    } catch (err) {
+      setLoading(false);
+      toast.error("Could not generate questions. Please retry.", {
+        description: err instanceof Error ? err.message : String(err),
+        position: "bottom-right",
+      });
+      setIsClicked(false);
+    }
+  };
+
+  // Validator modal handlers ---------------------------------------------------
+
+  const closeValidator = () => {
+    setValidatorOpen(false);
+    setValidatorErrorMsg(null);
+    setValidatorBusy(null);
+    setSaveAnywayChecked(false);
+  };
+
+  const onRegenerateAll = async () => {
+    setValidatorBusy("regenerate");
+    setValidatorErrorMsg(null);
+    try {
+      const { questions: fresh, description } = await callGenerator("full");
+      setPendingQuestions(fresh);
+      setPendingDescription(description);
+      const missingDims = computeMissingDimensions(fresh);
+      let uncoveredMH: string[] = [];
+      let semanticGaps: string[] = [];
+      if (missingDims.length === 0) {
+        const semantic = await runSemanticCheck(fresh);
+        uncoveredMH = semantic.uncovered_must_haves;
+        semanticGaps = semantic.semantic_gaps;
+      }
+      setValidatorMissingDims(missingDims);
+      setValidatorUncoveredMustHaves(uncoveredMH);
+      setValidatorSemanticGaps(semanticGaps);
+
+      if (
+        missingDims.length === 0 &&
+        uncoveredMH.length === 0 &&
+        semanticGaps.length === 0
+      ) {
+        // Clean now — close modal and persist.
+        setValidatorOpen(false);
+        setLoading(true);
+        persistInterview(fresh, description, []);
+      }
+    } catch (err) {
+      setValidatorErrorMsg(
+        err instanceof Error ? err.message : "Regenerate failed",
+      );
+    } finally {
+      setValidatorBusy(null);
+    }
+  };
+
+  const onFillGapsOnly = async () => {
+    if (validatorMissingDims.length === 0) {return;}
+    setValidatorBusy("fill_gaps");
+    setValidatorErrorMsg(null);
+    try {
+      const { questions: added } = await callGenerator(
+        "fill_gaps",
+        pendingQuestions,
+        validatorMissingDims,
+      );
+      const merged = [...pendingQuestions, ...added];
+      setPendingQuestions(merged);
+      const missingDims = computeMissingDimensions(merged);
+      let uncoveredMH: string[] = [];
+      let semanticGaps: string[] = [];
+      if (missingDims.length === 0) {
+        const semantic = await runSemanticCheck(merged);
+        uncoveredMH = semantic.uncovered_must_haves;
+        semanticGaps = semantic.semantic_gaps;
+      }
+      setValidatorMissingDims(missingDims);
+      setValidatorUncoveredMustHaves(uncoveredMH);
+      setValidatorSemanticGaps(semanticGaps);
+
+      if (
+        missingDims.length === 0 &&
+        uncoveredMH.length === 0 &&
+        semanticGaps.length === 0
+      ) {
+        setValidatorOpen(false);
+        setLoading(true);
+        persistInterview(merged, pendingDescription, []);
+      }
+    } catch (err) {
+      setValidatorErrorMsg(
+        err instanceof Error ? err.message : "Fill-gaps failed",
+      );
+    } finally {
+      setValidatorBusy(null);
+    }
+  };
+
+  const onSaveAnyway = () => {
+    const warnings: string[] = [
+      ...validatorMissingDims.map((d) => `Missing scoring dimension: ${d}`),
+      ...validatorUncoveredMustHaves.map((m) => `Uncovered must-have: ${m}`),
+      ...validatorSemanticGaps.map((g) => `Semantic gap: ${g}`),
+    ];
+    setValidatorOpen(false);
+    setLoading(true);
+    persistInterview(pendingQuestions, pendingDescription, warnings);
   };
 
   const onManual = () => {
@@ -623,14 +861,14 @@ function DetailsPopup({
                     Number of questions
                   </label>
                   <p className="text-[11px] italic text-stone-500 mb-1">
-                    Max 5 — keep the screen tight.
+                    Min 4 (one per active scoring dimension), max 8.
                   </p>
                   <input
                     id="num-questions"
                     type="number"
                     step="1"
-                    max="5"
-                    min="1"
+                    max="8"
+                    min="4"
                     className="border-b-2 focus:outline-none border-gray-500 w-20 px-2 py-1 text-center"
                     value={numQuestions}
                     onChange={(e) => {
@@ -639,8 +877,15 @@ function DetailsPopup({
                         value === "" ||
                         (Number.isInteger(Number(value)) && Number(value) > 0)
                       ) {
-                        if (Number(value) > 5) {value = "5";}
+                        if (Number(value) > 8) {value = "8";}
                         setNumQuestions(value);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Snap to lower bound on blur if below min.
+                      const n = Number(e.target.value);
+                      if (Number.isFinite(n) && n > 0 && n < 4) {
+                        setNumQuestions("4");
                       }
                     }}
                   />
@@ -770,6 +1015,141 @@ function DetailsPopup({
       >
         <InterviewerDetailsModal interviewer={interviewerDetails} />
       </Modal>
+
+      {/* ============================================================ */}
+      {/* Preflight coverage validator (openspec rubric-aware §6)     */}
+      {/* ============================================================ */}
+      <AlertDialog
+        open={validatorOpen}
+        onOpenChange={(next) => {
+          if (!next) {closeValidator();}
+        }}
+      >
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {validatorMissingDims.length +
+                validatorUncoveredMustHaves.length +
+                validatorSemanticGaps.length}{" "}
+              coverage gap
+              {validatorMissingDims.length +
+                validatorUncoveredMustHaves.length +
+                validatorSemanticGaps.length ===
+              1
+                ? ""
+                : "s"}{" "}
+              detected
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The scoring rubric needs at least one question per active
+              dimension. Regenerate or save with the gaps acknowledged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3 text-sm">
+            {validatorMissingDims.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-3 mb-1">
+                  Missing scoring dimensions
+                </p>
+                <ul className="list-disc pl-5 text-[#0a1d08]">
+                  {validatorMissingDims.map((d) => (
+                    <li key={d}>{d}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {validatorUncoveredMustHaves.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-3 mb-1">
+                  Uncovered must-haves
+                </p>
+                <ul className="list-disc pl-5 text-[#0a1d08]">
+                  {validatorUncoveredMustHaves.map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {validatorSemanticGaps.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 mt-3 mb-1">
+                  Semantic gaps
+                </p>
+                <ul className="list-disc pl-5 text-[#0a1d08]">
+                  {validatorSemanticGaps.map((g, i) => (
+                    <li key={i}>{g}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {validatorErrorMsg ? (
+              <p className="text-sm text-red-600">{validatorErrorMsg}</p>
+            ) : null}
+
+            <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={saveAnywayChecked}
+                  onChange={(e) => setSaveAnywayChecked(e.target.checked)}
+                  disabled={validatorBusy !== null}
+                />
+                <span className="text-[12px] text-stone-700">
+                  I understand this interview may under-score uncovered
+                  dimensions.
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <AlertDialogFooter className="!flex-col sm:!flex-row sm:justify-between mt-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                onClick={onRegenerateAll}
+                disabled={validatorBusy !== null}
+                className="bg-brand-bold hover:bg-brand-bolder"
+              >
+                {validatorBusy === "regenerate" ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : null}
+                Regenerate all
+              </Button>
+              <Button
+                onClick={onFillGapsOnly}
+                disabled={
+                  validatorBusy !== null || validatorMissingDims.length === 0
+                }
+                variant="secondary"
+              >
+                {validatorBusy === "fill_gaps" ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : null}
+                Fill gaps only
+              </Button>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <AlertDialogCancel onClick={closeValidator}>
+                Back to form
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={onSaveAnyway}
+                disabled={!saveAnywayChecked || validatorBusy !== null}
+                className="bg-stone-700 text-white hover:bg-stone-800 disabled:opacity-40"
+              >
+                Save anyway
+              </AlertDialogAction>
+            </div>
+          </AlertDialogFooter>
+          <p className="text-xs italic text-stone-500 mt-1 text-right">
+            &quot;Regenerate all&quot; discards your current question list.
+          </p>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -123,6 +123,10 @@ export function countSubstantiveUserTurns(
 /**
  * Recompute `overallScore` from dimension scores using the locked weights.
  * Protects against the model arithmetic-failing on the weighted average.
+ *
+ * v3 rubric-aware: dimensions with `assessed === false` are SKIPPED. The
+ * remaining weights are renormalized against their actual sum so they still
+ * effectively sum to 1.0. If all dimensions are unassessed, returns 0.
  */
 export function computeOverallScoreFromDimensions(
   dimensions: AnalyticsV2["dimensions"],
@@ -130,14 +134,16 @@ export function computeOverallScoreFromDimensions(
   let weighted = 0;
   let totalWeight = 0;
   for (const dim of dimensions) {
+    // Skip unassessed (default `true` if field absent — backward compat).
+    if (dim.assessed === false) {continue;}
     const w =
       ANALYTICS_V2_DIMENSION_WEIGHTS[dim.name] ?? dim.weight ?? 0;
     weighted += (dim.score || 0) * w;
     totalWeight += w;
   }
   if (totalWeight === 0) {return 0;}
-  // Normalize against actual weight applied (defensive — if the model omitted
-  // a dimension, we still produce a sensible score).
+  // Normalize against actual weight applied so partial-assessment cases
+  // still produce a 0-10 weighted average.
   const normalized = weighted / totalWeight;
   return Math.round(Math.max(0, Math.min(10, normalized)) * 10);
 }
@@ -150,7 +156,19 @@ interface HardCapInput {
   modelOutput: AnalyticsV2;
   retellSignals: RetellSignals;
   questionsTotal: number;
+  /**
+   * The interview's questions (with optional `targetDimension`). Used to
+   * override `assessed: false` on ACTIVE dimensions that no question targeted.
+   * Optional for backward compat — when absent, no service-side override
+   * is applied (only the scorer's `assessed` values pass through).
+   */
+  questions?: Array<{ targetDimension?: string }>;
 }
+
+const OBSERVATIONAL_DIMENSION_NAMES = new Set([
+  "communication",
+  "professionalism",
+]);
 
 /**
  * Apply hard caps to the model's output. Returns a new AnalyticsV2 object
@@ -158,14 +176,16 @@ interface HardCapInput {
  *
  * Order of operations:
  *  1. Compute speaking-seconds + substantive-turn counts from signals.
- *  2. Recompute overallScore from dimensions (defensive — the model's
- *     overallScore may not match its dimension scores).
- *  3. Determine which hard rules fire.
- *  4. Apply the lowest cap (most conservative wins).
- *  5. Force recommendation/confidence to insufficient_data when applicable.
+ *  2. Determine which hard rules fire.
+ *  3. Compute the assessed-override dimensions array (active dim → assessed=false
+ *     when no question targeted it; ALL dims → assessed=false when no_answers
+ *     or agent_only_speech fires).
+ *  4. Compute overallScore from the PATCHED dimensions (after assessed override).
+ *  5. Apply the lowest cap (most conservative wins).
+ *  6. Force recommendation/confidence to insufficient_data when applicable.
  */
 export function applyHardCaps(input: HardCapInput): AnalyticsV2 {
-  const { modelOutput, retellSignals, questionsTotal } = input;
+  const { modelOutput, retellSignals, questionsTotal, questions } = input;
 
   const candidateSpeakingSeconds = computeCandidateSpeakingSeconds(
     retellSignals.transcriptObject,
@@ -178,12 +198,6 @@ export function applyHardCaps(input: HardCapInput): AnalyticsV2 {
   const questionsAnswered = (modelOutput.perQuestionScores || []).filter(
     (q) => q.answered,
   ).length;
-
-  // Recompute overallScore from dimensions — protects against the model
-  // returning a score that doesn't match its own dimension grades.
-  const dimensionOverall = computeOverallScoreFromDimensions(
-    modelOutput.dimensions || [],
-  );
 
   // ---------- Determine triggered rules ----------
   const triggered: AnalyticsV2["hardRulesTriggered"] = [];
@@ -266,6 +280,44 @@ export function applyHardCaps(input: HardCapInput): AnalyticsV2 {
     // Don't cap on this alone; it's an evidence-quality flag.
   }
 
+  // ---------- Patch dimensions with `assessed` overrides ----------
+  // Service is the final authority (per design §7.3):
+  //   - For ACTIVE dimensions: force `assessed: false` when no question
+  //     carries `targetDimension === dim.name`.
+  //   - For OBSERVATIONAL dimensions (communication, professionalism): never
+  //     overridden by absence of a tagged question — they're judged from the
+  //     call as a whole.
+  //   - When `no_answers` OR `agent_only_speech` fires: force `assessed: false`
+  //     on ALL six dimensions (no meaningful signal exists).
+  const taggedDimensions = new Set<string>();
+  for (const q of questions ?? []) {
+    if (typeof q.targetDimension === "string") {
+      taggedDimensions.add(q.targetDimension);
+    }
+  }
+  // Force all dims unassessed only when the recommendation is being forced
+  // to insufficient_data (real no-signal cases). The sentinel `agent_only_speech`
+  // (call_analysis missing — limited signal) doesn't set forceInsufficient,
+  // so it doesn't trip this branch.
+  const forceAllUnassessed = forceInsufficient;
+  const patchedDimensions = (modelOutput.dimensions || []).map((dim) => {
+    // Hard-cap override: all dims unassessed when no-signal rules fire.
+    if (forceAllUnassessed) {
+      return { ...dim, assessed: false };
+    }
+    // Active-dim service override: only when no question targeted this dim.
+    const isObservational = OBSERVATIONAL_DIMENSION_NAMES.has(dim.name);
+    if (!isObservational && !taggedDimensions.has(dim.name)) {
+      return { ...dim, assessed: false };
+    }
+    // Otherwise pass through the scorer's `assessed` (defaulting to true).
+    return { ...dim, assessed: dim.assessed ?? true };
+  });
+
+  // Recompute overallScore from the PATCHED dimensions (now reflects
+  // `assessed: false` filtering + weight renormalization).
+  const dimensionOverall = computeOverallScoreFromDimensions(patchedDimensions);
+
   // ---------- Apply the lowest cap ----------
   const minCap = caps.length > 0 ? Math.min(...caps) : 100;
   const finalScore = Math.max(0, Math.min(dimensionOverall, minCap));
@@ -280,6 +332,7 @@ export function applyHardCaps(input: HardCapInput): AnalyticsV2 {
   return {
     ...modelOutput,
     schemaVersion: 2,
+    dimensions: patchedDimensions,
     recommendation,
     confidence,
     overallScore: finalScore,

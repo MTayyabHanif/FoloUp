@@ -36,7 +36,7 @@ export interface RunAnalyticsV2Args {
   seniority: Seniority;
   jobDescription: string;
   mustHaves: string[];
-  questions: Pick<Question, "question">[];
+  questions: Pick<Question, "question" | "targetDimension" | "rubricNote">[];
   /** Total expected duration (seconds), used by the abandoned hard cap. */
   expectedDurationSeconds: number;
   /** Full Retell `transcript_object` — separated turns with word timestamps. */
@@ -168,6 +168,10 @@ export async function runAnalyticsV2(
     modelOutput,
     retellSignals,
     questionsTotal: args.questions.length,
+    // v3 rubric-aware: pass questions so applyHardCaps can override
+    // `assessed: false` on active dims that no question targeted.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    questions: args.questions as any,
   });
 
   // Always-populate callSignals from authoritative sources (model may have echoed wrong)

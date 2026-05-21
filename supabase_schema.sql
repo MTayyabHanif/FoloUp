@@ -64,6 +64,7 @@ CREATE TABLE interview (
     job_description TEXT NOT NULL DEFAULT '',
     seniority TEXT NOT NULL DEFAULT 'mid',
     must_haves JSONB NOT NULL DEFAULT '[]'::jsonb,
+    coverage_warnings JSONB NOT NULL DEFAULT '[]'::jsonb,
     CONSTRAINT interview_seniority_check
         CHECK (seniority IN ('junior', 'mid', 'senior', 'staff', 'principal'))
 );
