@@ -45,7 +45,7 @@ export function SessionsToolbar({
   onUnreadOnlyChange,
 }: SessionsToolbarProps) {
   return (
-    <div className="sticky top-0 z-10 space-y-3 border-b border-[#e0e5d5] bg-[#fbfdf6] px-3 pb-3 pt-3">
+    <div className="z-10 space-y-3 border-b border-[#e0e5d5] bg-[#fbfdf6] px-3 pb-3 pt-3">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6f7866]" />
         <Input

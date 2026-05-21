@@ -42,6 +42,7 @@ next-env.d.ts
 .claude/flow.local.yaml
 .claude/scheduled_tasks.lock
 .claude/launch.json
+.codex/flow.local.yaml
 .gstack/
 
 # playwright MCP scratch (per-run logs and snapshots)

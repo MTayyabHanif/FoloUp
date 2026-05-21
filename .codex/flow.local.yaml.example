@@ -1,0 +1,21 @@
+# Personal overrides for the flow skill. Copy to `.codex/flow.local.yaml`
+# (gitignored) and edit. Values here win over `.codex/flow.yaml` per-key.
+#
+# Common use cases:
+# - Disable a tool you haven't set up locally
+# - Override the production URL when working against a staging env
+# - Extend the cgc_keyword_map with personal shortcuts
+
+# Example: turn off a delegated tool locally.
+# tools:
+#   gstack: false
+
+# Example: point canary at a personal staging deployment instead of prod.
+# deploy:
+#   production_url: https://my-fork.vercel.app
+
+# Example: add a personal scope shortcut.
+# cgc_keyword_map:
+#   auth:
+#     - src/app/api/
+#     - src/lib/
