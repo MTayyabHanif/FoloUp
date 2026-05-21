@@ -1,21 +1,13 @@
 "use client";
 
-import * as React from "react";
+import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  OrganizationSwitcher,
-  UserButton,
-} from "@clerk/nextjs";
-import { type LucideIcon } from "lucide-react";
+import * as React from "react";
 
-import { NAV_SECTIONS } from "@/components/shell/sidebar-nav";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { getPrimaryNavItems, isNavItemActive } from "@/components/shell/sidebar-nav";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,6 +35,7 @@ export function AppSidebar({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const primaryNavItems = React.useMemo(() => getPrimaryNavItems(), []);
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -95,24 +88,16 @@ export function AppSidebar({
           aria-label="Primary"
           className="flex w-full flex-1 flex-col items-center overflow-y-auto px-2 py-2"
         >
-          {NAV_SECTIONS.map((section, sectionIdx) => (
-            <ul
-              key={section.label ?? `section-${sectionIdx}`}
-              className={cn(
-                "flex flex-col items-center space-y-2",
-                sectionIdx > 0 && "mt-4",
-              )}
-            >
-              {section.items.map((item) => (
-                <SidebarLink
-                  key={item.href}
-                  item={item}
-                  pathname={pathname}
-                  onNavigate={onNavigate}
-                />
-              ))}
-            </ul>
-          ))}
+          <ul className="flex flex-col items-center space-y-2">
+            {primaryNavItems.map((item) => (
+              <SidebarLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
         </nav>
 
         {/* User account button */}
@@ -134,13 +119,12 @@ function SidebarLink({
     href: string;
     icon: LucideIcon;
     exact?: boolean;
+    activePrefixes?: string[];
   };
   pathname: string | null;
   onNavigate?: () => void;
 }) {
-  const isActive = item.exact
-    ? pathname === item.href
-    : pathname?.startsWith(item.href) ?? false;
+  const isActive = isNavItemActive(item, pathname);
 
   const Icon = item.icon;
 

@@ -1,18 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { PlayCircle } from "lucide-react";
+import Link from "next/link";
 
 import {
-  formatResponseTime,
-  getWorkflowToneClasses,
   type StageGroup,
   type WorkflowCandidate,
+  formatResponseTime,
+  getWorkflowToneClasses,
 } from "@/lib/hiring-workflow";
 
 type SessionRowProps = {
   candidate: WorkflowCandidate;
   interviewId: string;
+  basePath?: string;
   isSelected: boolean;
   stageMeta?: Pick<StageGroup, "label" | "tone">;
   onSelect: (candidate: WorkflowCandidate) => void;
@@ -21,17 +22,17 @@ type SessionRowProps = {
 export function SessionRow({
   candidate,
   interviewId,
+  basePath = "/interviews",
   isSelected,
   stageMeta,
   onSelect,
 }: SessionRowProps) {
-  const isUnopened =
-    !candidate.isViewed && candidate.status !== "ongoing";
+  const isUnopened = !candidate.isViewed && candidate.status !== "ongoing";
   const isLive = candidate.status === "ongoing";
 
   return (
     <Link
-      href={`/interviews/${interviewId}?call=${candidate.callId}`}
+      href={`${basePath}/${interviewId}?call=${candidate.callId}`}
       onClick={(event) => {
         if (
           event.metaKey ||
@@ -53,9 +54,7 @@ export function SessionRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-[#0a1d08]">
-            {candidate.displayName}
-          </p>
+          <p className="truncate text-sm font-semibold text-[#0a1d08]">{candidate.displayName}</p>
           {isLive ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-[#203b14] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#fbfdf6]">
               <PlayCircle className="h-3 w-3" />
@@ -63,15 +62,10 @@ export function SessionRow({
             </span>
           ) : null}
           {isUnopened ? (
-            <span
-              className="inline-flex h-2 w-2 rounded-full bg-[#4a3212]"
-              aria-label="Unopened"
-            />
+            <span className="inline-flex h-2 w-2 rounded-full bg-[#4a3212]" aria-label="Unopened" />
           ) : null}
         </div>
-        <p className="mt-1 line-clamp-1 text-xs leading-5 text-[#53614d]">
-          {candidate.summary}
-        </p>
+        <p className="mt-1 line-clamp-1 text-xs leading-5 text-[#53614d]">{candidate.summary}</p>
         <div className="mt-2 flex items-center gap-2 text-[11px] text-[#6f7866]">
           {stageMeta ? (
             <span

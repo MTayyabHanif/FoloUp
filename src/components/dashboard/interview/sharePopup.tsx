@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Copy, ExternalLink, RefreshCcw } from "lucide-react";
 import Link from "next/link";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import Modal from "@/components/dashboard/Modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,8 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import Modal from "@/components/dashboard/Modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SharePopupProps {
   open: boolean;
@@ -70,9 +70,7 @@ function SharePopup({
   const [embedHeight, setEmbedHeight] = useState(735);
 
   const [currentToken, setCurrentToken] = useState<string | null>(publicToken);
-  const [currentExpiresAt, setCurrentExpiresAt] = useState<string | null>(
-    publicTokenExpiresAt,
-  );
+  const [currentExpiresAt, setCurrentExpiresAt] = useState<string | null>(publicTokenExpiresAt);
   const [rotating, setRotating] = useState(false);
   const [rotateDialogOpen, setRotateDialogOpen] = useState(false);
 
@@ -103,10 +101,7 @@ function SharePopup({
     );
   }, [publicShareUrl, embedWidth, embedHeight]);
 
-  const expiryInfo = useMemo(
-    () => formatRemaining(currentExpiresAt),
-    [currentExpiresAt],
-  );
+  const expiryInfo = useMemo(() => formatRemaining(currentExpiresAt), [currentExpiresAt]);
 
   const copyLinkToClipboard = () => {
     navigator.clipboard.writeText(url).then(
@@ -139,10 +134,9 @@ function SharePopup({
   const handleRotate = async () => {
     setRotating(true);
     try {
-      const res = await fetch(
-        `/api/interviews/${interviewId}/rotate-public-token`,
-        { method: "POST" },
-      );
+      const res = await fetch(`/api/interviews/${interviewId}/rotate-public-token`, {
+        method: "POST",
+      });
       if (!res.ok) {
         throw new Error(`status ${res.status}`);
       }
@@ -183,7 +177,8 @@ function SharePopup({
               Send this interview anywhere
             </h3>
             <p className="max-w-lg text-sm leading-6 text-[#53614d]">
-              Copy the time-limited public link or generate an embed snippet. For per-candidate single-use links, manage invites separately.
+              Copy the time-limited public link or generate an embed snippet. For per-candidate
+              single-use links, manage invites separately.
             </p>
           </div>
 
@@ -255,7 +250,7 @@ function SharePopup({
               </div>
 
               <Link
-                href={`/interviews/${interviewId}/invites`}
+                href={`/jobs/${interviewId}/invites`}
                 className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#203b14] transition-colors hover:border-[#c5ccb6] hover:bg-[#f6f8ef]"
                 onClick={onClose}
               >
@@ -295,9 +290,7 @@ function SharePopup({
                     min="700"
                     value={embedHeight}
                     className="w-full rounded-[18px] border border-[#d8ddd0] bg-[#fbfdf6] px-4 py-3 text-sm text-[#0a1d08] outline-none"
-                    onChange={(event) =>
-                      setEmbedHeight(Number(event.target.value))
-                    }
+                    onChange={(event) => setEmbedHeight(Number(event.target.value))}
                     onBlur={(event) => {
                       const value = Math.max(700, Number(event.target.value));
                       setEmbedHeight(value);
@@ -322,7 +315,9 @@ function SharePopup({
           <AlertDialogHeader>
             <AlertDialogTitle>Rotate public link?</AlertDialogTitle>
             <AlertDialogDescription>
-              This invalidates the current link for any new candidate. Anyone who already started an interview will continue uninterrupted, but new visitors with the old link will see an expired state. You&apos;ll need to share the new link manually.
+              This invalidates the current link for any new candidate. Anyone who already started an
+              interview will continue uninterrupted, but new visitors with the old link will see an
+              expired state. You&apos;ll need to share the new link manually.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

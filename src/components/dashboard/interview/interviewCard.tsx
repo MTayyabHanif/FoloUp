@@ -1,15 +1,15 @@
-import { useState } from "react";
-import Image from "next/image";
 import { ArrowUpRight, Copy, CopyCheck, PauseCircle, PlayCircle } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { getClientBaseUrl } from "@/lib/base-url";
 import {
+  type HiringWorkflowSummary,
   formatDurationLabel,
   formatResponseTime,
   getWorkflowToneClasses,
-  type HiringWorkflowSummary,
 } from "@/lib/hiring-workflow";
 
 interface Props {
@@ -51,7 +51,7 @@ function InterviewCard({ workflow }: Props) {
 
   return (
     <a
-      href={`/interviews/${workflow.interview.id}`}
+      href={`/jobs/${workflow.interview.id}`}
       className="group flex min-h-[280px] flex-col justify-between rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6 text-[#0a1d08] transition-all hover:-translate-y-0.5 hover:border-[#c5ccb6] hover:bg-[#f6f8ef]"
     >
       <div className="space-y-5">
@@ -100,11 +100,7 @@ function InterviewCard({ workflow }: Props) {
                 copyToClipboard();
               }}
             >
-              {copied ? (
-                <CopyCheck className="h-4 w-4" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
+              {copied ? <CopyCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
         </div>

@@ -487,7 +487,7 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* session integrity card below */}
 
         <DetailCard title="Session integrity">
@@ -508,14 +508,8 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
                 fallback={<Skeleton className="h-5 w-[220px]" />}
               />
             </div>
-            <p className="rounded-[18px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3">
-              {call?.call_analysis?.call_completion_rating_reason}
-            </p>
           </div>
         </DetailCard>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <DetailCard title="Interview recording">
           <div className="space-y-4">
             {call?.recording_url ? (
@@ -536,8 +530,6 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
             )}
           </div>
         </DetailCard>
-
-        {/* Per-question details now live inside AnalyticsV2View. */}
       </div>
 
       <DetailCard title="Transcript">

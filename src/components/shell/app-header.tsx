@@ -1,9 +1,9 @@
 "use client";
 
-import * as React from "react";
+import { ChevronRight, HelpCircle, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, HelpCircle, Menu } from "lucide-react";
+import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -34,8 +34,10 @@ export interface AppHeaderProps {
 
 const ROUTE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
-  interviewers: "Interviewers",
-  interviews: "Interviews",
+  jobs: "Jobs",
+  personas: "Personas",
+  interviewers: "Personas",
+  interviews: "Jobs",
   settings: "Settings",
   help: "Help & docs",
   changelog: "Changelog",
@@ -50,12 +52,10 @@ function humanize(segment: string): string {
   }
   // Dynamic segments (e.g. interview ID): just truncate.
   if (segment.length > 24) {
-    return segment.slice(0, 8) + "…";
+    return `${segment.slice(0, 8)}…`;
   }
 
-  return segment
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return segment.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
@@ -65,10 +65,9 @@ export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
   // Build the breadcrumb trail, with the optional pageTitle overriding the
   // final crumb if provided.
   const crumbs = segments.map((seg, idx) => {
-    const href = "/" + segments.slice(0, idx + 1).join("/");
+    const href = `/${segments.slice(0, idx + 1).join("/")}`;
     const isLast = idx === segments.length - 1;
-    const label =
-      isLast && pageTitle ? pageTitle : humanize(seg);
+    const label = isLast && pageTitle ? pageTitle : humanize(seg);
 
     return { href, label, isLast };
   });
@@ -127,9 +126,6 @@ export function AppHeader({ pageTitle, onMenuClick }: AppHeaderProps) {
       </nav>
 
       <div className="flex items-center gap-2">
-        <div className="hidden rounded-full border border-[color:rgba(197,204,182,0.86)] bg-[color:rgba(224,229,213,0.22)] px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground lg:block">
-          Recruiter shell
-        </div>
         <Button
           variant="ghost"
           size="icon"
