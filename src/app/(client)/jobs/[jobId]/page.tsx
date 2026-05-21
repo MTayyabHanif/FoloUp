@@ -262,6 +262,17 @@ export default function JobWorkspacePage({
     );
   }
 
+  // Edit mode is a full-page surface — the sessions sidebar and the workspace
+  // HeaderActions (Share/Edit/Toggle/Preview/Marker/Invites) don't belong here.
+  // EditInterview owns its own header (back button + Save / Delete actions).
+  if (isEditMode) {
+    return (
+      <PageShell className="pb-12">
+        <EditInterview interview={interview} />
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell className="pb-12">
       <PageHeader

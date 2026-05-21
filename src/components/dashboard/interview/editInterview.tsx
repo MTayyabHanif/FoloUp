@@ -154,83 +154,86 @@ function EditInterview({ interview }: EditInterviewProps) {
   }, [questions.length]);
 
   return (
-    <div className="space-y-6 text-[#0a1d08]">
-      <div className="rounded-[28px] border border-[#e0e5d5] bg-[#f6f8ef] p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-3">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-[#e0e5d5] bg-[#fbfdf6] px-4 py-2 text-sm font-semibold text-[#203b14] transition-colors hover:border-[#c5ccb6] hover:bg-[#eef4e1]"
-              onClick={() => {
-                router.push(`/jobs/${interview?.id}`);
-              }}
+    <div className="space-y-8 text-[#0a1d08]">
+      {/* Page header — slim and informative. The full job-workspace HeaderActions
+          don't belong in edit mode (the only relevant actions are Back / Save / Delete). */}
+      <header className="flex flex-col gap-5 border-b border-[#e0e5d5] pb-6 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0 space-y-3">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#53614d] transition-colors hover:text-[#0a1d08]"
+            onClick={() => {
+              router.push(`/jobs/${interview?.id}`);
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to workspace
+          </button>
+          <div className="space-y-1">
+            <p
+              className="text-[11px] uppercase tracking-[0.18em] text-[#6f7866]"
+              style={{ fontFamily: "var(--font-fragmentmono)" }}
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back to workspace
-            </button>
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#6f7866]">
-                Job settings
-              </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.05em]">
-                Refine the interview workflow
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#53614d]">
-                Update the role context, interviewer, candidate anonymity, and question flow without
-                leaving the workspace.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              disabled={isClicked}
-              className="rounded-full bg-[#4a3212] px-5 text-[#fbfdf6] hover:bg-[#3d2910]"
-              onClick={() => {
-                setIsClicked(true);
-                onSave();
-              }}
-            >
-              Save changes
-              <SaveIcon className="ml-2 h-4 w-4" />
-            </Button>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  disabled={isClicked}
-                  className="rounded-full border border-[#d7bdb7] bg-[#f6ebe7] px-5 text-[#6b3f31] hover:bg-[#f0dfd8]"
-                  variant="ghost"
-                >
-                  <TrashIcon className="mr-2 h-4 w-4" />
-                  Delete workflow
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this interview?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This permanently removes the interview and its workspace.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-[#4a3212] text-[#fbfdf6] hover:bg-[#3d2910]"
-                    onClick={async () => {
-                      await onDeleteInterviewClick();
-                    }}
-                  >
-                    Continue
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              Editing interview
+            </p>
+            <h1 className="truncate text-2xl font-semibold leading-[1.05] tracking-[-0.04em] md:text-[28px]">
+              {interview?.name || "Untitled interview"}
+            </h1>
           </div>
         </div>
-      </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="flex flex-wrap items-center gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                disabled={isClicked}
+                className="rounded-full border border-[#d7bdb7] bg-transparent px-4 text-[#6b3f31] hover:bg-[#f6ebe7]"
+                variant="ghost"
+              >
+                <TrashIcon className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this interview?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This permanently removes the interview and every candidate response attached to
+                  it. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-[#6b3f31] text-[#fbfdf6] hover:bg-[#5a3327]"
+                  onClick={async () => {
+                    await onDeleteInterviewClick();
+                  }}
+                >
+                  Delete interview
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Button
+            disabled={isClicked}
+            className="rounded-full bg-[#4a3212] px-5 text-[#fbfdf6] hover:bg-[#3d2910]"
+            onClick={() => {
+              setIsClicked(true);
+              onSave();
+            }}
+          >
+            <SaveIcon className="mr-2 h-4 w-4" />
+            Save changes
+          </Button>
+        </div>
+      </header>
+
+      {/* Two-column layout. Balanced so neither side towers over the other:
+            Left  — candidate-visible copy + access controls (short fields)
+            Right — interviewer persona + question flow (the tall content) */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <div className="space-y-6">
           <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
             <FieldLabel
@@ -239,7 +242,7 @@ function EditInterview({ interview }: EditInterviewProps) {
             />
             <textarea
               value={description}
-              className="mt-4 min-h-[140px] w-full rounded-[22px] border border-[#d8ddd0] bg-[#f8faf3] px-4 py-4 text-sm leading-6 text-[#0a1d08] outline-none"
+              className="mt-4 min-h-[140px] w-full rounded-[22px] border border-[#d8ddd0] bg-[#f8faf3] px-4 py-4 text-sm leading-6 text-[#0a1d08] outline-none transition-colors focus:border-[#4a3212]"
               placeholder="Describe the role, the purpose of the interview, and what a candidate should expect."
               rows={5}
               onChange={(event) => setDescription(event.target.value)}
@@ -250,11 +253,11 @@ function EditInterview({ interview }: EditInterviewProps) {
           <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
             <FieldLabel
               title="Interview objective"
-              note="Use this as the internal hiring brief for the AI interviewer."
+              note="Internal hiring brief. Only the AI interviewer reads this."
             />
             <textarea
               value={objective}
-              className="mt-4 min-h-[140px] w-full rounded-[22px] border border-[#d8ddd0] bg-[#f8faf3] px-4 py-4 text-sm leading-6 text-[#0a1d08] outline-none"
+              className="mt-4 min-h-[140px] w-full rounded-[22px] border border-[#d8ddd0] bg-[#f8faf3] px-4 py-4 text-sm leading-6 text-[#0a1d08] outline-none transition-colors focus:border-[#4a3212]"
               placeholder="Explain what strong performance looks like and what the interviewer should probe for."
               rows={5}
               onChange={(event) => setObjective(event.target.value)}
@@ -263,76 +266,61 @@ function EditInterview({ interview }: EditInterviewProps) {
           </div>
 
           <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <FieldLabel
-                title="Question flow"
-                note="Set the session length, question count, and the prompts the AI interviewer will use."
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <label className="rounded-[20px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3 text-sm">
-                  <span className="block text-xs uppercase tracking-[0.12em] text-[#6f7866]">
-                    Questions
-                  </span>
-                  <input
-                    type="number"
-                    step="1"
-                    max="5"
-                    min={questions.length.toString()}
-                    className="mt-2 w-full bg-transparent text-lg font-semibold outline-none"
-                    value={numQuestions}
-                    onChange={(event) => {
-                      let value = event.target.value;
-                      if (value === "" || (Number.isInteger(Number(value)) && Number(value) > 0)) {
-                        if (Number(value) > 5) {
-                          value = "5";
-                        }
-                        setNumQuestions(Number(value));
+            <FieldLabel
+              title="Candidate identity"
+              note="Whether the workflow should collect candidate names and emails."
+            />
+            <div className="mt-5 space-y-3">
+              <div className="rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#0a1d08]">
+                      Collect anonymous responses
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[#53614d]">
+                      Hide name and email collection from the candidate journey.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isAnonymous}
+                    className={isAnonymous ? "bg-[#4a3212]" : "bg-white"}
+                    onCheckedChange={(checked) => {
+                      // OD1: anonymous + invite-only are incompatible. If the
+                      // user turns anonymous ON while invite_only is already
+                      // ON, confirm before silently disabling invite-only.
+                      if (checked && inviteOnly) {
+                        setInviteOnlyConflictDialogOpen(true);
+
+                        return;
                       }
+                      setIsAnonymous(checked);
                     }}
                   />
-                </label>
-                <label className="rounded-[20px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3 text-sm">
-                  <span className="block text-xs uppercase tracking-[0.12em] text-[#6f7866]">
-                    Duration (mins)
-                  </span>
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    className="mt-2 w-full bg-transparent text-lg font-semibold outline-none"
-                    value={Number(duration)}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (value === "" || (Number.isInteger(Number(value)) && Number(value) > 0)) {
-                        setDuration(Number(value));
-                      }
-                    }}
+                </div>
+              </div>
+
+              <div className="rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#0a1d08]">Invite-only access</p>
+                    <p className="mt-1 text-sm leading-6 text-[#53614d]">
+                      Only candidates with a personal invite link can start this interview.
+                      {isAnonymous ? (
+                        <span className="mt-1 block text-[#7d4f1f]">
+                          Disable anonymous mode to use invite-only.
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={inviteOnly}
+                    disabled={isAnonymous}
+                    className={inviteOnly ? "bg-[#4a3212]" : "bg-white"}
+                    onCheckedChange={(checked) => setInviteOnly(checked)}
                   />
-                </label>
+                </div>
               </div>
             </div>
-
-            <ScrollArea className="mt-5 max-h-[560px] rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] p-4">
-              {questions.map((question, index) => (
-                <QuestionCard
-                  key={question.id}
-                  questionNumber={index + 1}
-                  questionData={question}
-                  onDelete={handleDeleteQuestion}
-                  onQuestionChange={handleInputChange}
-                />
-              ))}
-              <div ref={endOfListRef} />
-              {questions.length < numQuestions ? (
-                <button
-                  type="button"
-                  className="mx-auto mt-2 flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-[#c5ccb6] bg-[#fbfdf6] text-[#203b14] transition-colors hover:border-[#203b14] hover:bg-[#eef4e1]"
-                  onClick={handleAddQuestion}
-                >
-                  <Plus className="h-6 w-6" />
-                </button>
-              ) : null}
-            </ScrollArea>
           </div>
         </div>
 
@@ -340,7 +328,7 @@ function EditInterview({ interview }: EditInterviewProps) {
           <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
             <FieldLabel
               title="Interviewer persona"
-              note="Choose the interviewer who should represent this job during the candidate session."
+              note="The AI interviewer who represents this job to candidates."
             />
             <ScrollArea className="mt-5 whitespace-nowrap">
               <div className="flex gap-3 pb-2">
@@ -351,7 +339,7 @@ function EditInterview({ interview }: EditInterviewProps) {
                     <button
                       type="button"
                       key={item.id}
-                      className={`min-w-[180px] rounded-[24px] border p-4 text-left transition-colors ${
+                      className={`min-w-[200px] rounded-[24px] border p-4 text-left transition-colors ${
                         isSelected
                           ? "border-[#203b14] bg-[#eef4e1]"
                           : "border-[#e0e5d5] bg-[#f8faf3] hover:border-[#c5ccb6]"
@@ -361,7 +349,7 @@ function EditInterview({ interview }: EditInterviewProps) {
                       }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-14 w-14 overflow-hidden rounded-full border border-[#d8ddd0]">
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-[#d8ddd0]">
                           <Image
                             src={item.image}
                             alt={item.name}
@@ -372,7 +360,7 @@ function EditInterview({ interview }: EditInterviewProps) {
                         </div>
                         <div className="min-w-0">
                           <CardTitle className="truncate text-base">{item.name}</CardTitle>
-                          <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#53614d]">
+                          <p className="mt-1 line-clamp-2 whitespace-normal text-sm leading-5 text-[#53614d]">
                             {item.description}
                           </p>
                         </div>
@@ -385,59 +373,89 @@ function EditInterview({ interview }: EditInterviewProps) {
           </div>
 
           <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
-            <FieldLabel
-              title="Candidate identity"
-              note="Decide whether the workflow should collect candidate names and emails."
-            />
-            <div className="mt-5 rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-[#0a1d08]">
-                    Collect anonymous responses
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-[#53614d]">
-                    When enabled, the candidate journey hides name and email collection.
-                  </p>
-                </div>
-                <Switch
-                  checked={isAnonymous}
-                  className={isAnonymous ? "bg-[#4a3212]" : "bg-white"}
-                  onCheckedChange={(checked) => {
-                    // OD1: anonymous + invite-only are incompatible. If the
-                    // user turns anonymous ON while invite_only is already
-                    // ON, confirm before silently disabling invite-only.
-                    if (checked && inviteOnly) {
-                      setInviteOnlyConflictDialogOpen(true);
-
-                      return;
-                    }
-                    setIsAnonymous(checked);
-                  }}
-                />
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <FieldLabel
+                title="Question flow"
+                note="The prompts the AI interviewer will work through with candidates."
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <label className="rounded-[18px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3 text-sm transition-colors focus-within:border-[#4a3212]">
+                  <span
+                    className="block text-[10px] uppercase tracking-[0.14em] text-[#6f7866]"
+                    style={{ fontFamily: "var(--font-fragmentmono)" }}
+                  >
+                    Questions
+                  </span>
+                  <input
+                    type="number"
+                    step="1"
+                    max="5"
+                    min={questions.length.toString()}
+                    className="mt-1 w-full bg-transparent text-lg font-semibold outline-none"
+                    value={numQuestions}
+                    onChange={(event) => {
+                      let value = event.target.value;
+                      if (value === "" || (Number.isInteger(Number(value)) && Number(value) > 0)) {
+                        if (Number(value) > 5) {
+                          value = "5";
+                        }
+                        setNumQuestions(Number(value));
+                      }
+                    }}
+                  />
+                </label>
+                <label className="rounded-[18px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-3 text-sm transition-colors focus-within:border-[#4a3212]">
+                  <span
+                    className="block text-[10px] uppercase tracking-[0.14em] text-[#6f7866]"
+                    style={{ fontFamily: "var(--font-fragmentmono)" }}
+                  >
+                    Duration · min
+                  </span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    className="mt-1 w-full bg-transparent text-lg font-semibold outline-none"
+                    value={Number(duration)}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value === "" || (Number.isInteger(Number(value)) && Number(value) > 0)) {
+                        setDuration(Number(value));
+                      }
+                    }}
+                  />
+                </label>
               </div>
             </div>
 
-            <div className="mt-4 rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-[#0a1d08]">Invite-only access</p>
-                  <p className="mt-1 text-sm leading-6 text-[#53614d]">
-                    Only candidates with a personal invite link can start this interview.
-                    {isAnonymous ? (
-                      <span className="mt-1 block text-[#7d4f1f]">
-                        Disable Anonymous to use invite-only mode.
-                      </span>
-                    ) : null}
-                  </p>
-                </div>
-                <Switch
-                  checked={inviteOnly}
-                  disabled={isAnonymous}
-                  className={inviteOnly ? "bg-[#4a3212]" : "bg-white"}
-                  onCheckedChange={(checked) => setInviteOnly(checked)}
-                />
-              </div>
-            </div>
+            <ScrollArea className="mt-5 max-h-[640px] rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] p-4">
+              {questions.length === 0 ? (
+                <p className="px-4 py-6 text-center text-sm text-[#6f7866]">
+                  No questions yet. Use the + below to add one.
+                </p>
+              ) : (
+                questions.map((question, index) => (
+                  <QuestionCard
+                    key={question.id}
+                    questionNumber={index + 1}
+                    questionData={question}
+                    onDelete={handleDeleteQuestion}
+                    onQuestionChange={handleInputChange}
+                  />
+                ))
+              )}
+              <div ref={endOfListRef} />
+              {questions.length < numQuestions ? (
+                <button
+                  type="button"
+                  aria-label="Add question"
+                  className="mx-auto mt-2 flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-[#c5ccb6] bg-[#fbfdf6] text-[#203b14] transition-colors hover:border-[#203b14] hover:bg-[#eef4e1]"
+                  onClick={handleAddQuestion}
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              ) : null}
+            </ScrollArea>
           </div>
         </div>
       </div>
