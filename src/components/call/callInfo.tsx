@@ -387,20 +387,6 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
 
   return (
     <div className="space-y-6 text-[#0a1d08]">
-      {(proctoringCameraEnabled || proctoringScreenEnabled) &&
-      responseId !== null ? (
-        <ProctoringReview
-          responseId={responseId}
-          cameraEnabled={proctoringCameraEnabled}
-          screenEnabled={proctoringScreenEnabled}
-          cameraStoragePath={cameraStoragePath}
-          screenStoragePath={screenStoragePath}
-          cameraStatus={cameraStatus}
-          screenShareType={screenShareType}
-          proctoringInterrupted={proctoringInterrupted}
-          consentAcknowledgedAt={consentAcknowledgedAt}
-        />
-      ) : null}
       <div className="rounded-[28px] border border-[#e0e5d5] bg-[#f6f8ef] p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between w-full">
           <div className="space-y-4 w-full">
@@ -643,6 +629,23 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
           />
         </ScrollArea>
       </DetailCard>
+
+
+      {(proctoringCameraEnabled || proctoringScreenEnabled) &&
+      responseId !== null ? (
+        <ProctoringReview
+          responseId={responseId}
+          cameraEnabled={proctoringCameraEnabled}
+          screenEnabled={proctoringScreenEnabled}
+          cameraStoragePath={cameraStoragePath}
+          screenStoragePath={screenStoragePath}
+          cameraStatus={cameraStatus}
+          screenShareType={screenShareType}
+          proctoringInterrupted={proctoringInterrupted}
+          consentAcknowledgedAt={consentAcknowledgedAt}
+          audioUrl={call?.recording_url ?? null}
+        />
+      ) : null}
     </div>
   );
 }

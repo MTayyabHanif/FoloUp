@@ -339,6 +339,34 @@ CREATE TABLE feedback (
 --   Note: R2 lifecycle expiration runs daily; objects are deleted within
 --   ~24h of the 90-day mark.
 --
+-- ── Step 3.5: Configure CORS so recruiter playback works ──────────────
+-- Without this, the recruiter UI fetches manifest/chunk URLs from R2 and
+-- the browser blocks the response (no Access-Control-Allow-Origin header).
+-- Symptom: "Failed to fetch" on every video element.
+--
+-- In Cloudflare dashboard → R2 → proctoring → Settings → CORS Policy
+--   → Add CORS policy:
+--
+-- [
+--   {
+--     "AllowedOrigins": [
+--       "http://localhost:3000",
+--       "https://YOUR-PRODUCTION-DOMAIN.com"
+--     ],
+--     "AllowedMethods": ["GET", "HEAD"],
+--     "AllowedHeaders": ["*"],
+--     "ExposeHeaders": ["Content-Length", "Content-Type", "ETag"],
+--     "MaxAgeSeconds": 3600
+--   }
+-- ]
+--
+-- Replace YOUR-PRODUCTION-DOMAIN.com with the actual deployed hostname
+-- BEFORE going live. The localhost entry is fine to keep — it only
+-- matters during local dev.
+--
+-- CLI alternative (requires wrangler):
+--   wrangler r2 bucket cors put proctoring --rules ./cors-rules.json
+--
 -- ── Step 4: Verify ─────────────────────────────────────────────────────
 -- After setup, confirm:
 --   - The bucket's public r2.dev access is OFF (returns 403 on direct GET)

@@ -20,6 +20,12 @@ const isPublicRoute = createRouteMatcher([
   "/api/check-session(.*)",
   "/api/response-heartbeat(.*)",
   "/api/validate-access(.*)",
+  // Proctoring chunk + finalize are candidate-facing; they authenticate
+  // via session_token bearer (resolveSessionToken in src/lib/proctoringAuth.ts),
+  // NOT via Clerk. The signed-url route is intentionally excluded — it's
+  // recruiter-only and stays Clerk-protected.
+  "/api/proctoring/chunk(.*)",
+  "/api/proctoring/finalize(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

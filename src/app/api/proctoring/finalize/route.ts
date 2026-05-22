@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { streams?: unknown };
+  let body: { streams?: unknown; mimeTypes?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -56,6 +56,19 @@ export async function POST(req: Request) {
   if (streams.length === 0) {
     return NextResponse.json({ error: "No streams" }, { status: 400 });
   }
+  // Per-stream codec recorded by the candidate's MediaRecorder. Stored in
+  // the manifest so the recruiter-side MSE player knows the EXACT codec
+  // to feed addSourceBuffer. Without this, an old hardcoded vp8 manifest
+  // would mismatch vp9 bytes and break playback.
+  const mimeTypesInput =
+    body.mimeTypes && typeof body.mimeTypes === "object"
+      ? (body.mimeTypes as Record<string, unknown>)
+      : {};
+  const mimeTypeFor = (s: "camera" | "screen"): string => {
+    const v = mimeTypesInput[s];
+
+    return typeof v === "string" && v.length > 0 ? v : "video/webm";
+  };
 
   const r2 = getR2Client();
   const bucket = getR2BucketName();
@@ -104,7 +117,7 @@ export async function POST(req: Request) {
     const manifest = {
       stream,
       chunks,
-      mimeType: "video/webm;codecs=vp8",
+      mimeType: mimeTypeFor(stream),
       createdAt: new Date().toISOString(),
     };
     const manifestKey = `${ctx.organizationId}/${ctx.responseId}/${stream}.manifest.json`;

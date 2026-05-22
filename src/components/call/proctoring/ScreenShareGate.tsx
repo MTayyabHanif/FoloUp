@@ -43,15 +43,21 @@ export function ScreenShareGate({
   const heldStreamRef = useRef<MediaStream | null>(null);
   const hasResolvedRef = useRef(false);
 
-  // Cleanup any locally-held stream on unmount (e.g., candidate closes the
-  // tab between picker close and onResolved).
+  // Cleanup any locally-held stream on unmount IF it was never handed
+  // off. The cleanup MUST check hasResolvedRef — once we've called
+  // onResolved with the stream, the parent (Call) owns it and is
+  // responsible for stopping the tracks when the call ends. If we
+  // unconditionally stopped tracks here, the parent would receive a
+  // dead stream and MediaRecorder.start() would throw NotSupportedError
+  // (the bug that was failing screen recording end-to-end before this
+  // guard was added).
   useEffect(() => {
     return () => {
       const s = heldStreamRef.current;
-      if (s) {
+      if (s && !hasResolvedRef.current) {
         s.getTracks().forEach((t) => t.stop());
-        heldStreamRef.current = null;
       }
+      heldStreamRef.current = null;
     };
   }, []);
 

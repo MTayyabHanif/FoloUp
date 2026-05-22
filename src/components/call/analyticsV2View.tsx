@@ -71,15 +71,18 @@ const REC_LABEL: Record<Rec, string> = {
   insufficient_data: "Insufficient Data",
 };
 
-// Full-width verdict-banner tint (Decision OD-4). These are stock Tailwind
-// utilities present by default — no config additions required.
+// Full-width verdict-banner tint (Decision OD-4). Light-mode only —
+// removed the dark:* variants because the project doesn't have a real
+// dark-mode design system. Tailwind's default `darkMode: 'media'` was
+// triggering these from OS-level prefers-color-scheme:dark and rendering
+// the banner with hardcoded near-black text on near-black backgrounds.
 const REC_TINT: Record<Rec, string> = {
-  strong_yes: "bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900",
-  yes: "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900",
-  lean_yes: "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900",
-  lean_no: "bg-amber-50 border-amber-300 dark:bg-amber-950/30 dark:border-amber-800",
-  no: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-900",
-  insufficient_data: "bg-stone-100 border-stone-300 dark:bg-stone-900 dark:border-stone-700",
+  strong_yes: "bg-green-50 border-green-200",
+  yes: "bg-green-50 border-green-200",
+  lean_yes: "bg-amber-50 border-amber-200",
+  lean_no: "bg-amber-50 border-amber-300",
+  no: "bg-red-50 border-red-200",
+  insufficient_data: "bg-stone-100 border-stone-300",
 };
 
 const REC_GLYPH: Record<Rec, ReactNode> = {

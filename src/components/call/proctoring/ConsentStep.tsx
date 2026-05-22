@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, MonitorPlay } from "lucide-react";
+import { Camera, Mic, MonitorPlay } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -22,15 +22,35 @@ export type ConsentStepProps = {
   onDecline: () => void;
 };
 
+/**
+ * Build the consent body text dynamically based on the interview's
+ * proctoring toggles. Microphone is ALWAYS part of the disclosure
+ * (required for any audio interview); camera and screen are added when
+ * the recruiter enabled them. The ConsentStep only renders when at least
+ * one proctoring toggle is on (proctoringActive in the parent), so a
+ * mic-only variant is unreachable in practice — but the function handles
+ * it defensively.
+ */
 function consentBody(cameraEnabled: boolean, screenEnabled: boolean): string {
-  if (cameraEnabled && screenEnabled) {
-    return "This interview includes recording. With your permission, we'll capture your camera feed and a view of your screen during the session. Recordings are reviewed only by the hiring team and are automatically deleted after 90 days.";
-  }
-  if (cameraEnabled) {
-    return "This interview includes recording. With your permission, we'll capture your camera feed during the session. Recordings are reviewed only by the hiring team and are automatically deleted after 90 days.";
+  const intro = "This interview will be recorded. With your permission, we'll";
+  const outro =
+    "Recordings are reviewed only by the hiring team and are automatically deleted after 90 days.";
+
+  const parts: string[] = ["record your microphone audio"];
+  if (cameraEnabled) parts.push("capture your camera feed");
+  if (screenEnabled) parts.push("capture a view of your screen");
+
+  // Oxford-comma join for 3+ items; "X and Y" for 2; "X" alone for 1.
+  let modalities: string;
+  if (parts.length === 1) {
+    modalities = parts[0];
+  } else if (parts.length === 2) {
+    modalities = `${parts[0]} and ${parts[1]}`;
+  } else {
+    modalities = `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
   }
 
-  return "This interview includes recording. With your permission, we'll capture a view of your screen during the session. Recordings are reviewed only by the hiring team and are automatically deleted after 90 days.";
+  return `${intro} ${modalities} during the session. ${outro}`;
 }
 
 /**
@@ -56,7 +76,15 @@ export function ConsentStep({
         {consentBody(cameraEnabled, screenEnabled)}
       </p>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-3">
+        {/* Microphone disclosed alongside camera/screen so the candidate
+            sees all permission prompts originating from a single Continue
+            click, instead of stacking at the Start-interview click. */}
+        {renderNoteCard({
+          title: "Microphone",
+          icon: <Mic className="h-5 w-5" />,
+          body: "Used for the interview audio. Your browser will ask permission after you continue.",
+        })}
         {cameraEnabled
           ? renderNoteCard({
               title: "Camera",

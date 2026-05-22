@@ -974,6 +974,14 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
   const [screenShareType, setScreenShareType] = useState<string | null>(null);
   const [revokedStreams, setRevokedStreams] = useState<RevokedStream[]>([]);
   const [proctoringInterrupted, setProctoringInterrupted] = useState(false);
+  // Finalize-settled flag. Starts FALSE — so the moment isEnded flips
+  // true with proctoring active, the JSX synchronously evaluates
+  // `isFinalizing = true` and shows the saving overlay. No 1-frame flash
+  // of CompletionView, no premature URL redirect. Set to true once the
+  // finalize POST resolves (success OR failure — a failed finalize still
+  // unblocks the candidate so they're not trapped on the overlay).
+  const [finalizeSettled, setFinalizeSettled] = useState(false);
+  const [finalizeFailed, setFinalizeFailed] = useState(false);
   const [lastInterviewerResponse, setLastInterviewerResponse] =
     useState<string>("");
   const [lastUserResponse, setLastUserResponse] = useState<string>("");
@@ -1553,15 +1561,24 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
       }).catch(() => {});
     }
 
-    if (isEnded && activeSessionToken && pathname) {
+    // Strip ?session= from the URL once the call is over so a refresh
+    // doesn't re-enter the reconnect path on a finished session. When
+    // proctoring is active, defer until finalize settles (success or
+    // failure). Without this, the JSX would flip to CompletionView
+    // immediately and the candidate would close the tab mid-upload,
+    // killing in-flight chunks.
+    const canRedirect = !proctoringActive || finalizeSettled;
+    if (isEnded && activeSessionToken && pathname && canRedirect) {
       router.replace(pathname);
     }
   }, [
     activeSessionToken,
     callId,
     cameraStatus,
+    finalizeSettled,
     isEnded,
     pathname,
+    proctoringActive,
     proctoringInterrupted,
     router,
     tabSwitchCount,
@@ -1581,39 +1598,86 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCalling, activeSessionToken]);
 
-  // Stop recorders + finalize when the call ends. Awaits pending chunk
-  // uploads with a 30s hard timeout (encoded in useMediaRecorder.stop()).
+  // Stop recorders + finalize when the call ends. Triggers identically
+  // whether the candidate clicked End, the Retell agent hung up, the
+  // call timed out, or an error occurred — all four paths set
+  // setIsEnded(true). Awaits pending chunk uploads with a 30s hard
+  // timeout (encoded in useMediaRecorder.stop()). Flips finalizeSettled
+  // to true on success or failure so the JSX overlay clears.
   useEffect(() => {
     if (!isEnded || !activeSessionToken) return;
     const streamsToFinalize: ("camera" | "screen")[] = [];
     if (interview.proctoring_camera_enabled) streamsToFinalize.push("camera");
     if (interview.proctoring_screen_enabled) streamsToFinalize.push("screen");
-    if (streamsToFinalize.length === 0) return;
+    if (streamsToFinalize.length === 0) {
+      setFinalizeSettled(true);
+
+      return;
+    }
 
     const tokenSnapshot = activeSessionToken;
     void (async () => {
       try {
-        // Stop recorders in parallel so worst-case finalize delay is one
-        // 30s timeout, not two (QA finding #5).
+        // Stop recorders in parallel so worst-case delay is one 30s
+        // timeout, not two (QA finding #5).
         const stops: Promise<void>[] = [];
         if (interview.proctoring_camera_enabled) stops.push(cameraRecorder.stop());
         if (interview.proctoring_screen_enabled) stops.push(screenRecorder.stop());
         await Promise.all(stops);
-        await fetch("/api/proctoring/finalize", {
+        // Snapshot the chosen codec per stream so the manifest records
+        // the real codec, not a hardcoded guess. Without this, MSE on
+        // the recruiter side mis-types the SourceBuffer and every
+        // appendBuffer fails.
+        const mimeTypes: Record<string, string> = {};
+        if (interview.proctoring_camera_enabled && cameraRecorder.mimeType) {
+          mimeTypes.camera = cameraRecorder.mimeType;
+        }
+        if (interview.proctoring_screen_enabled && screenRecorder.mimeType) {
+          mimeTypes.screen = screenRecorder.mimeType;
+        }
+        const res = await fetch("/api/proctoring/finalize", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${tokenSnapshot}`,
           },
-          body: JSON.stringify({ streams: streamsToFinalize }),
+          body: JSON.stringify({
+            streams: streamsToFinalize,
+            mimeTypes,
+          }),
           keepalive: true,
-        }).catch(() => {});
+        });
+        if (!res.ok) {
+          throw new Error(`finalize ${res.status}`);
+        }
       } catch (err) {
         console.warn("[proctoring] finalize flow failed", err);
+        setFinalizeFailed(true);
+      } finally {
+        setFinalizeSettled(true);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEnded, activeSessionToken]);
+
+  // Compute saving state for JSX + beforeunload guard. Synchronous —
+  // no useEffect lag, no first-render flash.
+  const isFinalizing = isEnded && proctoringActive && !finalizeSettled;
+
+  // Warn the candidate if they try to close the tab while uploads are
+  // still in flight. Browsers show a generic "leave site?" confirmation
+  // (text is spec-mandated; can't be customized) — the prompt itself
+  // stops accidental closes from killing the upload.
+  useEffect(() => {
+    if (!isFinalizing) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isFinalizing]);
 
   useEffect(() => {
     const flushHeartbeatBeacon = () => {
@@ -1763,13 +1827,22 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
               </NoteCard>
             )}
             onConsent={async (acknowledgedAt) => {
-              // Keep the consent view mounted while camera permission is
+              // Keep the consent view mounted while all permissions are
               // negotiated so the CandidateFrame doesn't flash blank
-              // (QA finding #1). Only advance the phase once camera resolves.
+              // (QA finding #1). Only advance the phase once they resolve.
+              //
+              // Acquire mic + camera in parallel. Mic was previously
+              // prompted at Start-interview click — pulling it into the
+              // consent step collapses all permission prompts into one
+              // logical action.
               setConsentAcknowledgedAt(acknowledgedAt);
+              const acquisitions: Promise<unknown>[] = [
+                checkMicrophonePermission(),
+              ];
               if (interview.proctoring_camera_enabled) {
-                await acquireCamera();
+                acquisitions.push(acquireCamera());
               }
+              await Promise.all(acquisitions);
               if (interview.proctoring_screen_enabled) {
                 setProctoringPhase("screen_share");
               } else {
@@ -1868,7 +1941,17 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
           <CameraPip stream={cameraStream} cameraStatus={cameraStatus} />
         ) : null}
 
-        {isEnded && !isOldUser ? (
+        {isEnded && !isOldUser && isFinalizing ? (
+          <div className="px-6 py-10 md:px-8">
+            <StatusPanel
+              title="Saving your interview session"
+              body="This usually takes 10-30 seconds. Please keep this tab open until it finishes."
+              icon={<Loader2 className="h-8 w-8 animate-spin" />}
+            />
+          </div>
+        ) : null}
+
+        {isEnded && !isOldUser && !isFinalizing ? (
           <CompletionView
             email={email}
             isStarted={isStarted}
