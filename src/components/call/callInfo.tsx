@@ -621,7 +621,7 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
       </div>
 
       <DetailCard title="Transcript">
-        <ScrollArea className="h-[480px] pr-1">
+        <ScrollArea className="max-h-[480px] pr-1 overflow-auto">
           <div
             className="rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] p-5 text-sm leading-7 text-[#0a1d08]"
             // eslint-disable-next-line react/no-danger

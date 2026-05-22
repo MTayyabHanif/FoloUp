@@ -70,89 +70,8 @@ export function PersonasPage() {
       >
         {interviewersLoading ? (
           <InterviewersLoader />
-        ) : interviewers.length === 0 ? (
-          <div className="overflow-hidden rounded-[32px] border border-dashed border-[#c5ccb6] bg-[#f8fbf0] p-6 md:p-8">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.7fr)] lg:items-end">
-              <div className="space-y-4">
-                <div className="inline-flex w-fit items-center rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-[#203b14]">
-                  No personas yet
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-2xl font-semibold tracking-[-0.04em] text-[#0a1d08]">
-                    Create the first interviewer in your library
-                  </h3>
-                  <p className="max-w-2xl text-sm leading-7 text-[#42513d]">
-                    Give the platform a clear interviewing voice: choose a face, set the pace, and
-                    write the conversational stance that should guide every screening session.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 text-sm text-[#203b14]">
-                  <span className="rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1">
-                    Identity
-                  </span>
-                  <span className="rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1">
-                    Voice
-                  </span>
-                  <span className="rounded-full border border-[#d7e8b5] bg-[#fbfdf6] px-3 py-1">
-                    Prompt direction
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-5">
-                <p className="text-sm leading-7 text-[#42513d]">
-                  Compose a persona that feels intentional for the role instead of cloning a generic
-                  interviewer.
-                </p>
-                <Button className="rounded-full px-5" onClick={() => setCreateOpen(true)}>
-                  Compose the first persona
-                </Button>
-              </div>
-            </div>
-          </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-5">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#eef4e1] text-[#203b14]">
-                    <Mic2 className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="text-base font-semibold text-[#0a1d08]">Voice range</p>
-                    <p className="mt-1 text-sm text-[#53614d]">
-                      Distinct vocal styles available across the current persona set.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-5">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#f7efe8] text-[#4a3212]">
-                    <MessageCircle className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="text-base font-semibold text-[#0a1d08]">Conversation styles</p>
-                    <p className="mt-1 text-sm text-[#53614d]">
-                      Keep probing approaches and rapport styles intentional instead of generic.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-5">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#f6ebe7] text-[#6b3f31]">
-                    <Wand2 className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="text-base font-semibold text-[#0a1d08]">Ready to assign</p>
-                    <p className="mt-1 text-sm text-[#53614d]">
-                      Personas can be attached to any job workflow as soon as they are composed.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <DataGrid cols="3" className="items-stretch">
               {interviewers.map((interviewer) => (
                 <InterviewerCard key={String(interviewer.id)} interviewer={interviewer} />
