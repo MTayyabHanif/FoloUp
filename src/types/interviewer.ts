@@ -13,4 +13,5 @@ export interface Interviewer {
   prompt: string;
   voice_id: string | null;
   deleted_at: string | null;
+  retell_llm_id: string | null;
 }

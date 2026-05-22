@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, MessageSquare, Mic2 } from "lucide-react";
 
 import Modal from "@/components/dashboard/Modal";
@@ -14,17 +14,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useInterviewers } from "@/contexts/interviewers.context";
+import {
+  useInterviewers,
+  type InterviewerPatch,
+} from "@/contexts/interviewers.context";
 import { PROMPT_FOOTER_TEMPLATE, VOICE_OPTIONS } from "@/lib/constants";
-import { appendFooter } from "@/lib/promptFooter";
+import { stripFooter } from "@/lib/promptFooter";
 import { avatars } from "@/components/dashboard/interviewer/avatars";
 import { Fieldset } from "@/components/dashboard/interviewer/shared/Fieldset";
 import { TraitSlider } from "@/components/dashboard/interviewer/shared/TraitSlider";
 import { AvatarGrid } from "@/components/dashboard/interviewer/shared/AvatarGrid";
 import { traitDescription } from "@/components/dashboard/interviewer/shared/traitCopy";
+import type { Interviewer } from "@/types/interviewer";
 
 interface Props {
   open: boolean;
+  interviewer: Interviewer;
   onClose: () => void;
 }
 
@@ -40,47 +45,65 @@ interface FormState {
   speed: number;
 }
 
-const INITIAL_STATE: FormState = {
-  name: "",
-  description: "",
-  image: "",
-  voice_id: VOICE_OPTIONS[0]?.id ?? "",
-  promptBody: "",
-  empathy: 5,
-  rapport: 5,
-  exploration: 5,
-  speed: 5,
-};
+function initialStateFrom(interviewer: Interviewer): FormState {
+  return {
+    name: interviewer.name ?? "",
+    description: interviewer.description ?? "",
+    image: interviewer.image ?? "",
+    voice_id: interviewer.voice_id ?? VOICE_OPTIONS[0]?.id ?? "",
+    promptBody: stripFooter(interviewer.prompt ?? ""),
+    empathy: interviewer.empathy ?? 5,
+    rapport: interviewer.rapport ?? 5,
+    exploration: interviewer.exploration ?? 5,
+    speed: interviewer.speed ?? 5,
+  };
+}
 
-function CreateInterviewerModal({ open, onClose }: Props) {
-  const { fetchInterviewers } = useInterviewers();
-  const [form, setForm] = useState<FormState>(INITIAL_STATE);
+// Build the patch body containing only fields whose values differ from the
+// stored row. Empty patches are short-circuited at submit time to avoid an
+// unnecessary 400 from the API.
+function diffPatch(initial: FormState, current: FormState): InterviewerPatch {
+  const patch: InterviewerPatch = {};
+  if (current.name.trim() !== initial.name.trim()) patch.name = current.name.trim();
+  if (current.description.trim() !== initial.description.trim()) {
+    patch.description = current.description.trim();
+  }
+  if (current.image !== initial.image) patch.image = current.image;
+  if (current.voice_id !== initial.voice_id) patch.voice_id = current.voice_id;
+  if (current.promptBody.trim() !== initial.promptBody.trim()) {
+    patch.prompt = current.promptBody.trim();
+  }
+  if (current.empathy !== initial.empathy) patch.empathy = current.empathy;
+  if (current.rapport !== initial.rapport) patch.rapport = current.rapport;
+  if (current.exploration !== initial.exploration) patch.exploration = current.exploration;
+  if (current.speed !== initial.speed) patch.speed = current.speed;
+
+return patch;
+}
+
+function EditInterviewerModal({ open, interviewer, onClose }: Props) {
+  const { updateInterviewer } = useInterviewers();
+  const [initial, setInitial] = useState<FormState>(() => initialStateFrom(interviewer));
+  const [form, setForm] = useState<FormState>(() => initialStateFrom(interviewer));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const voiceLabel =
-    VOICE_OPTIONS.find((voice) => voice.id === form.voice_id)?.label ??
-    "Choose a voice";
-
-  const personaMood = useMemo(() => {
-    return [
-      traitDescription(form.empathy, "empathy"),
-      traitDescription(form.exploration, "exploration"),
-    ];
-  }, [form.empathy, form.exploration]);
-
-  const reset = () => {
-    setForm(INITIAL_STATE);
-    setErrorMessage(null);
-    setIsSubmitting(false);
-  };
+  // Re-hydrate the form whenever the modal is opened or the underlying
+  // interviewer changes (e.g., parent passed a fresh row after refetch).
+  useEffect(() => {
+    if (open) {
+      const next = initialStateFrom(interviewer);
+      setInitial(next);
+      setForm(next);
+      setErrorMessage(null);
+      setIsSubmitting(false);
+    }
+  }, [open, interviewer]);
 
   const handleClose = () => {
     if (isSubmitting) {
       return;
     }
-
-    reset();
     onClose();
   };
 
@@ -91,57 +114,43 @@ function CreateInterviewerModal({ open, onClose }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    const patch = diffPatch(initial, form);
+    if (Object.keys(patch).length === 0) {
+      onClose();
+
+return;
+    }
+
     setIsSubmitting(true);
 
-    const fullPrompt = appendFooter(form.promptBody);
-
     try {
-      const res = await fetch("/api/interviewers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          description: form.description,
-          image: form.image,
-          voice_id: form.voice_id,
-          prompt: fullPrompt,
-          empathy: form.empathy,
-          rapport: form.rapport,
-          exploration: form.exploration,
-          speed: form.speed,
-        }),
-      });
-
-      const body = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        const detail =
-          typeof body?.details === "string" &&
-          process.env.NODE_ENV !== "production"
-            ? ` (Detail: ${body.details})`
-            : "";
-
-        if (res.status === 422) {
-          setErrorMessage(body?.error ?? "Validation failed");
-        } else {
-          setErrorMessage(
-            `Failed to create interviewer — please try again.${detail}`,
-          );
-        }
-
-        return;
-      }
-
-      await fetchInterviewers();
-      reset();
+      await updateInterviewer(Number(interviewer.id), patch);
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setErrorMessage(`Failed to create interviewer — please try again. (${msg})`);
+      const e = err as Error & { type?: string; status?: number };
+      if (e.status === 422) {
+        setErrorMessage(e.message || "Validation failed");
+      } else if (e.type === "retell_failure") {
+        setErrorMessage(
+          "This change was rejected — your interviewer is unchanged. Check your input and try again.",
+        );
+      } else if (e.type === "db_failure") {
+        setErrorMessage(
+          "Your changes were applied to the AI model but could not be saved to the record. Saving again should fix it.",
+        );
+      } else {
+        setErrorMessage("Failed to save changes — please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const promptRows = Math.min(
+    18,
+    Math.max(10, form.promptBody.split("\n").length + 2),
+  );
 
   const submitDisabled =
     isSubmitting ||
@@ -155,25 +164,23 @@ function CreateInterviewerModal({ open, onClose }: Props) {
     <Modal
       open={open}
       size="2xl"
-      title="Compose interviewer persona"
+      title="Edit interviewer persona"
       closeOnOutsideClick={!isSubmitting}
       onClose={handleClose}
     >
       <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-        
-
         <Fieldset
           title="Identity and framing"
-          description="Set the face and short positioning recruiters will see when they browse the persona library."
+          description="Update the face and short positioning recruiters see in the persona library."
         >
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <div className="space-y-5">
               <div className="flex flex-col gap-2">
-                <label htmlFor="ci-name" className="text-sm font-medium text-[#0a1d08]">
+                <label htmlFor="ei-name" className="text-sm font-medium text-[#0a1d08]">
                   Persona name
                 </label>
                 <Input
-                  id="ci-name"
+                  id="ei-name"
                   value={form.name}
                   placeholder="e.g., Skeptical Sam"
                   disabled={isSubmitting}
@@ -184,16 +191,13 @@ function CreateInterviewerModal({ open, onClose }: Props) {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="ci-description"
-                  className="text-sm font-medium text-[#0a1d08]"
-                >
+                <label htmlFor="ei-description" className="text-sm font-medium text-[#0a1d08]">
                   Persona description
                 </label>
                 <Textarea
-                  id="ci-description"
+                  id="ei-description"
                   value={form.description}
-                  placeholder="Summarize how this interviewer shows up in the room, what they prioritize, and the kind of candidate conversation they create."
+                  placeholder="Summarize how this interviewer shows up in the room."
                   rows={4}
                   disabled={isSubmitting}
                   className="rounded-[18px] border-[#dfe4d4] bg-[#fbfdf6] leading-6"
@@ -206,12 +210,9 @@ function CreateInterviewerModal({ open, onClose }: Props) {
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-[#0a1d08]">
-                    Portrait selection
-                  </p>
+                  <p className="text-sm font-medium text-[#0a1d08]">Portrait selection</p>
                   <p className="text-xs leading-5 text-[#5e6958]">
-                    Choose the visual identity recruiters will recognize in the
-                    library.
+                    Pick the visual identity recruiters will recognize.
                   </p>
                 </div>
                 <div className="rounded-full border border-[#d7e8b5] bg-[#f8fbf0] px-3 py-1 text-xs text-[#203b14]">
@@ -231,33 +232,27 @@ function CreateInterviewerModal({ open, onClose }: Props) {
 
         <Fieldset
           title="Voice and conversation stance"
-          description="Choose how the interviewer sounds, then tune the visible interaction traits that help recruiters understand the personality."
+          description="Adjust how the interviewer sounds and tune the visible interaction traits."
         >
           <div className="grid gap-5">
-              
-
-            <div className="">
+            <div>
               <div className="rounded-[24px] border border-[#e0e5d5] bg-[#f8fbf0] p-4">
                 <label
-                  htmlFor="ci-voice"
+                  htmlFor="ei-voice"
                   className="flex items-center gap-2 text-sm font-medium text-[#0a1d08]"
                 >
                   <Mic2 className="h-4 w-4 text-[#203b14]" />
                   Voice selection
                 </label>
                 <p className="mt-2 text-xs leading-5 text-[#5e6958]">
-                  This is the delivery layer candidates hear during the
-                  interview.
+                  This is the delivery layer candidates hear during the interview.
                 </p>
                 <Select
                   value={form.voice_id}
                   disabled={isSubmitting}
                   onValueChange={(v) => setField("voice_id", v)}
                 >
-                  <SelectTrigger
-                    id="ci-voice"
-                    className="mt-4 rounded-[18px] border-[#dfe4d4] bg-[#fbfdf6]"
-                  >
+                  <SelectTrigger id="ei-voice" className="mt-4 rounded-[18px] border-[#dfe4d4] bg-[#fbfdf6]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -269,59 +264,60 @@ function CreateInterviewerModal({ open, onClose }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-3 md:grid-cols-2 mt-3">
-              <TraitSlider
-                label="Empathy"
-                description={traitDescription(form.empathy, "empathy")}
-                value={form.empathy}
-                disabled={isSubmitting}
-                onChange={(v) => setField("empathy", v)}
-              />
-              <TraitSlider
-                label="Rapport"
-                description={traitDescription(form.rapport, "rapport")}
-                value={form.rapport}
-                disabled={isSubmitting}
-                onChange={(v) => setField("rapport", v)}
-              />
-              <TraitSlider
-                label="Exploration"
-                description={traitDescription(form.exploration, "exploration")}
-                value={form.exploration}
-                disabled={isSubmitting}
-                onChange={(v) => setField("exploration", v)}
-              />
-              <TraitSlider
-                label="Pace"
-                description={traitDescription(form.speed, "speed")}
-                value={form.speed}
-                disabled={isSubmitting}
-                onChange={(v) => setField("speed", v)}
-              />
-            </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <TraitSlider
+                  label="Empathy"
+                  description={traitDescription(form.empathy, "empathy")}
+                  value={form.empathy}
+                  disabled={isSubmitting}
+                  onChange={(v) => setField("empathy", v)}
+                />
+                <TraitSlider
+                  label="Rapport"
+                  description={traitDescription(form.rapport, "rapport")}
+                  value={form.rapport}
+                  disabled={isSubmitting}
+                  onChange={(v) => setField("rapport", v)}
+                />
+                <TraitSlider
+                  label="Exploration"
+                  description={traitDescription(form.exploration, "exploration")}
+                  value={form.exploration}
+                  disabled={isSubmitting}
+                  onChange={(v) => setField("exploration", v)}
+                />
+                <TraitSlider
+                  label="Pace"
+                  description={traitDescription(form.speed, "speed")}
+                  value={form.speed}
+                  disabled={isSubmitting}
+                  onChange={(v) => setField("speed", v)}
+                />
+              </div>
             </div>
           </div>
         </Fieldset>
 
         <Fieldset
           title="Interview philosophy"
-          description="Write the prompt body that guides the interviewer’s tone, follow-up behavior, and guardrails. Candidate, role, duration, and question context are appended automatically."
+          description="Edit the prompt body that guides this interviewer’s tone, follow-ups, and guardrails. The candidate/role context footer is appended automatically."
         >
           <div className="space-y-5">
             <div className="flex flex-col gap-2">
               <label
-                htmlFor="ci-prompt"
+                htmlFor="ei-prompt"
                 className="flex items-center gap-2 text-sm font-medium text-[#0a1d08]"
               >
-                  <MessageSquare className="h-4 w-4 text-[#203b14]" />
+                <MessageSquare className="h-4 w-4 text-[#203b14]" />
                 Prompt body
               </label>
               <Textarea
-                id="ci-prompt"
+                id="ei-prompt"
                 value={form.promptBody}
-                placeholder="Describe how this persona behaves: how they open, how they probe, what they avoid, and how direct or warm they should feel in the room."
-                rows={10}
-                className="min-h-[220px] rounded-[22px] border-[#dfe4d4] bg-[#fbfdf6] font-mono text-xs leading-6"
+                placeholder="Describe how this persona behaves: how they open, how they probe, what they avoid."
+                rows={promptRows}
+                className="min-h-[240px] rounded-[22px] border-[#dfe4d4] bg-[#fbfdf6] font-mono text-xs leading-6"
                 disabled={isSubmitting}
                 required
                 onChange={(e) => setField("promptBody", e.target.value)}
@@ -333,9 +329,8 @@ function CreateInterviewerModal({ open, onClose }: Props) {
                 Locked context footer
               </p>
               <p className="mt-2 text-sm leading-6 text-[#42513d]">
-                This context is appended automatically so every persona receives
-                the candidate name, role objective, timing, and question set in
-                a consistent format.
+                Appended automatically so every persona receives candidate name, role objective,
+                timing, and question set in a consistent format.
               </p>
               <pre className="mt-4 whitespace-pre-wrap break-words rounded-[18px] border border-[#e0e5d5] bg-[#fbfdf6] p-4 font-mono text-xs leading-6 text-[#5e6958]">
                 {PROMPT_FOOTER_TEMPLATE}
@@ -367,10 +362,10 @@ function CreateInterviewerModal({ open, onClose }: Props) {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating persona...
+                Saving...
               </>
             ) : (
-              "Create persona"
+              "Save changes"
             )}
           </Button>
         </div>
@@ -379,4 +374,4 @@ function CreateInterviewerModal({ open, onClose }: Props) {
   );
 }
 
-export default CreateInterviewerModal;
+export default EditInterviewerModal;

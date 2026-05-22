@@ -5,10 +5,23 @@ import type { Interviewer } from "@/types/interviewer";
 import { useClerk } from "@clerk/nextjs";
 import React, { useState, useContext, type ReactNode, useEffect } from "react";
 
+export interface InterviewerPatch {
+  name?: string;
+  description?: string;
+  image?: string;
+  voice_id?: string;
+  prompt?: string;
+  empathy?: number;
+  rapport?: number;
+  exploration?: number;
+  speed?: number;
+}
+
 interface InterviewerContextProps {
   interviewers: Interviewer[];
   setInterviewers: React.Dispatch<React.SetStateAction<Interviewer[]>>;
   fetchInterviewers: () => Promise<void>;
+  updateInterviewer: (id: number, patch: InterviewerPatch) => Promise<void>;
   deleteInterviewer: (id: number) => Promise<void>;
   interviewersLoading: boolean;
   setInterviewersLoading: (interviewersLoading: boolean) => void;
@@ -18,6 +31,7 @@ export const InterviewerContext = React.createContext<InterviewerContextProps>({
   interviewers: [],
   setInterviewers: () => {},
   fetchInterviewers: async () => {},
+  updateInterviewer: async () => {},
   deleteInterviewer: async () => {},
   interviewersLoading: false,
   setInterviewersLoading: () => undefined,
@@ -43,6 +57,27 @@ export function InterviewerProvider({ children }: InterviewerProviderProps) {
     setInterviewersLoading(false);
   };
 
+  const updateInterviewer = async (id: number, patch: InterviewerPatch) => {
+    const res = await fetch(`/api/interviewers/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      // Preserve the server-provided failure type so callers (e.g., the edit
+      // modal) can render the right error message. See design.md 7e.
+      const err = new Error(body.error ?? `Update failed (HTTP ${res.status})`) as Error & {
+        type?: string;
+        status?: number;
+      };
+      err.type = typeof body.type === "string" ? body.type : undefined;
+      err.status = res.status;
+      throw err;
+    }
+    await fetchInterviewers();
+  };
+
   const deleteInterviewer = async (id: number) => {
     const res = await fetch(`/api/interviewers/${id}`, { method: "DELETE" });
     if (!res.ok) {
@@ -66,6 +101,7 @@ export function InterviewerProvider({ children }: InterviewerProviderProps) {
         interviewers,
         setInterviewers,
         fetchInterviewers,
+        updateInterviewer,
         deleteInterviewer,
         interviewersLoading,
         setInterviewersLoading,

@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import { InterviewerService } from "@/services/interviewers.service";
 import { PROMPT_FOOTER_TEMPLATE, VOICE_OPTIONS } from "@/lib/constants";
+import { stripFooter } from "@/lib/promptFooter";
 
 const retellClient = new Retell({
   apiKey: process.env.RETELL_API_KEY || "",
@@ -106,8 +107,7 @@ export async function POST(req: NextRequest) {
   // Empty-body validation: the user-authored portion (everything BEFORE the
   // footer suffix) must be non-empty after trimming. Prevents a prompt that
   // is just the footer with no personality instructions.
-  const footerIdx = normalizedPrompt.lastIndexOf(normalizedFooter);
-  const promptBody = normalizedPrompt.slice(0, footerIdx).trim();
+  const promptBody = stripFooter(body.prompt);
   if (promptBody.length === 0) {
     return NextResponse.json(
       { error: "Prompt body must not be empty" },

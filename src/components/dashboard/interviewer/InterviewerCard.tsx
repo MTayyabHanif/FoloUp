@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Mic2, Trash2 } from "lucide-react";
+import { Mic2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import Modal from "@/components/dashboard/Modal";
 import { Interviewer } from "@/types/interviewer";
 import InterviewerDetailsModal from "@/components/dashboard/interviewer/interviewerDetailsModal";
+import EditInterviewerModal from "@/components/dashboard/interviewer/EditInterviewerModal";
 import DeleteInterviewerDialog from "@/components/dashboard/interviewer/DeleteInterviewerDialog";
 import { useInterviewers } from "@/contexts/interviewers.context";
 import { VOICE_OPTIONS } from "@/lib/constants";
@@ -77,6 +79,7 @@ function describeTrait(value: number | undefined, mode: "warmth" | "depth" | "fl
 
 function InterviewerCard({ interviewer }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { deleteInterviewer } = useInterviewers();
 
@@ -213,6 +216,17 @@ function InterviewerCard({ interviewer }: Props) {
 
         <button
           type="button"
+          aria-label={`Edit ${interviewer.name}`}
+          className="absolute right-14 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#e0e5d5] bg-[#fbfdf6]/95 text-[#42513d] opacity-0 backdrop-blur-sm transition-all hover:border-[#203b14] hover:bg-[#203b14] hover:text-[#fbfdf6] group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditOpen(true);
+          }}
+        >
+          <Pencil size={16} />
+        </button>
+        <button
+          type="button"
           aria-label={`Delete ${interviewer.name}`}
           className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#e0e5d5] bg-[#fbfdf6]/95 text-[#42513d] opacity-0 backdrop-blur-sm transition-all hover:border-[#4a3212] hover:bg-[#4a3212] hover:text-[#fbfdf6] group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
           onClick={(e) => {
@@ -232,7 +246,26 @@ function InterviewerCard({ interviewer }: Props) {
         onClose={() => setDetailsOpen(false)}
       >
         <InterviewerDetailsModal interviewer={interviewer} />
+        <div className="mt-2 flex justify-end border-t border-[#e0e5d5] pt-4">
+          <Button
+            type="button"
+            className="rounded-full px-5"
+            onClick={() => {
+              setDetailsOpen(false);
+              setEditOpen(true);
+            }}
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit persona
+          </Button>
+        </div>
       </Modal>
+
+      <EditInterviewerModal
+        open={editOpen}
+        interviewer={interviewer}
+        onClose={() => setEditOpen(false)}
+      />
 
       <DeleteInterviewerDialog
         open={deleteOpen}

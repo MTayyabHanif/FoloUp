@@ -32,7 +32,8 @@ CREATE TABLE interviewer (
     speed INTEGER NOT NULL,
     prompt TEXT NOT NULL,
     voice_id TEXT,
-    deleted_at TIMESTAMP WITH TIME ZONE
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    retell_llm_id TEXT
 );
 
 CREATE TABLE interview (

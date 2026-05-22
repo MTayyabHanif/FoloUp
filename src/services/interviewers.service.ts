@@ -91,6 +91,30 @@ const getInterviewer = async (
   return data;
 };
 
+// Partial update by id. Callers pass only the fields that changed; the route
+// layer has already issued any Retell PATCH calls before reaching here, so a
+// non-empty patch object reaching the DB means the Retell side is already
+// updated. Returns the updated row.
+const updateInterviewer = async (
+  id: number,
+  patch: Partial<Interviewer>,
+  client?: SupabaseClient,
+) => {
+  const supabase = getSupabase(client);
+  const { data, error } = await supabase
+    .from("interviewer")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`updateInterviewer failed: ${error.message}`);
+  }
+
+  return data;
+};
+
 // Soft-delete by id. Idempotent — re-deleting an already-deleted row simply
 // overwrites `deleted_at` with a new timestamp and returns the same row.
 // Returns the affected row(s); callers check `data.length === 0` for a 404.
@@ -114,5 +138,6 @@ export const InterviewerService = {
   getAllInterviewers,
   createInterviewer,
   getInterviewer,
+  updateInterviewer,
   deleteInterviewer,
 };

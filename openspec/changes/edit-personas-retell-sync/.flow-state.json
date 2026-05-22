@@ -1,0 +1,8 @@
+{
+  "changeName": "edit-personas-retell-sync",
+  "currentPhase": "qa",
+  "agreedOptionalSteps": [],
+  "skippedSteps": [],
+  "completedGates": ["brainstorming", "cgc", "propose", "plan_eng_review", "plan_design_review", "apply"],
+  "lastUpdated": "2026-05-22T00:01:00Z"
+}

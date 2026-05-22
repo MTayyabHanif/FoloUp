@@ -153,6 +153,7 @@ export type Database = {
           name: string;
           prompt: string;
           rapport: number;
+          retell_llm_id: string | null;
           speed: number;
           voice_id: string | null;
         };
@@ -169,6 +170,7 @@ export type Database = {
           name?: string;
           prompt?: string;
           rapport?: number;
+          retell_llm_id?: string | null;
           speed?: number;
           voice_id?: string | null;
         };
@@ -185,6 +187,7 @@ export type Database = {
           name?: string;
           prompt?: string;
           rapport?: number;
+          retell_llm_id?: string | null;
           speed?: number;
           voice_id?: string | null;
         };
