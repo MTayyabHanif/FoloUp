@@ -43,6 +43,17 @@ import {
   TabSwitchWarning,
   useTabSwitchPrevention,
 } from "./tabSwitchPrevention";
+import { CameraPip, type CameraStatus } from "./proctoring/CameraPip";
+import { ConsentStep } from "./proctoring/ConsentStep";
+import {
+  RevocationBanner,
+  type RevokedStream,
+} from "./proctoring/RevocationBanner";
+import {
+  ScreenShareGate,
+  type ScreenShareOutcome,
+} from "./proctoring/ScreenShareGate";
+import { useMediaRecorder } from "./proctoring/useMediaRecorder";
 
 const webClient = new RetellWebClient();
 
@@ -928,12 +939,41 @@ function IneligibleView() {
   );
 }
 
+type ProctoringPhase = "consent" | "camera_acquire" | "screen_share" | "ready";
+
 function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
   const { createResponse } = useResponses();
   const router = useRouter();
   const pathname = usePathname();
+
+  const proctoringActive = Boolean(
+    interview.proctoring_camera_enabled || interview.proctoring_screen_enabled,
+  );
+
+  // Suppression ref shared with useTabSwitchPrevention. Set true around
+  // getDisplayMedia so the screen-share picker's visibilitychange does
+  // not register as a tab switch. Cleared via setTimeout(...,0) in
+  // ScreenShareGate so the cleared value outlives the picker-close event.
+  const pickerSuppressionRef = useRef<boolean>(false);
+
   const { isDialogOpen: isTabWarningOpen, tabSwitchCount, handleUnderstand } =
-    useTabSwitchPrevention();
+    useTabSwitchPrevention(pickerSuppressionRef);
+
+  // Proctoring state — only matters when proctoringActive is true.
+  const [proctoringPhase, setProctoringPhase] = useState<ProctoringPhase>(
+    proctoringActive ? "consent" : "ready",
+  );
+  const [consentAcknowledgedAt, setConsentAcknowledgedAt] = useState<
+    string | null
+  >(null);
+  const [consentDeclined, setConsentDeclined] = useState(false);
+  const [screenShareExit, setScreenShareExit] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [cameraStatus, setCameraStatus] = useState<CameraStatus>(null);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [screenShareType, setScreenShareType] = useState<string | null>(null);
+  const [revokedStreams, setRevokedStreams] = useState<RevokedStream[]>([]);
+  const [proctoringInterrupted, setProctoringInterrupted] = useState(false);
   const [lastInterviewerResponse, setLastInterviewerResponse] =
     useState<string>("");
   const [lastUserResponse, setLastUserResponse] = useState<string>("");
@@ -973,6 +1013,22 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
   const callIdRef = useRef<string>("");
   const tabSwitchCountRef = useRef<number>(0);
   const isCallingRef = useRef<boolean>(false);
+
+  // Proctoring recorder hooks. enabled=false until call_started fires AND
+  // the session_token is available. Camera and screen each get their own
+  // hook so chunk_index sequences are independent per stream.
+  const cameraRecorder = useMediaRecorder({
+    stream: cameraStream,
+    streamType: "camera",
+    sessionToken: activeSessionToken || null,
+    enabled: Boolean(interview.proctoring_camera_enabled),
+  });
+  const screenRecorder = useMediaRecorder({
+    stream: screenStream,
+    streamType: "screen",
+    sessionToken: activeSessionToken || null,
+    enabled: Boolean(interview.proctoring_screen_enabled),
+  });
 
   const totalDurationSeconds = Number(interviewTimeDuration || "0") * 60;
   const elapsedSeconds = Math.floor(time / 100);
@@ -1082,6 +1138,81 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
       webClient.removeAllListeners();
     };
   }, []);
+
+  // Acquire camera stream. Soft-flag pattern: on any failure, set status
+  // and proceed (do not block the interview). Track-ended listeners are
+  // attached in a separate useEffect below (so cleanup works on unmount).
+  const acquireCamera = useCallback(async (): Promise<CameraStatus> => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      setCameraStatus("unavailable");
+
+      return "unavailable";
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      setCameraStream(stream);
+      setCameraStatus("granted");
+
+      return "granted";
+    } catch {
+      setCameraStatus("denied");
+
+      return "denied";
+    }
+  }, []);
+
+  // Cleanup any locally-held camera/screen streams on unmount.
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((t) => t.stop());
+      }
+      if (screenStream) {
+        screenStream.getTracks().forEach((t) => t.stop());
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Wire camera-stream track-ended so browser revoke surfaces as
+  // proctoring_interrupted. useEffect cleanup removes the listener on
+  // unmount or when the stream changes (avoids leaked closures that
+  // setState on an unmounted component — QA finding #2).
+  useEffect(() => {
+    if (!cameraStream) return;
+    const handler = () => {
+      setRevokedStreams((prev) =>
+        prev.includes("camera") ? prev : [...prev, "camera"],
+      );
+      setProctoringInterrupted(true);
+    };
+    const tracks = cameraStream.getTracks();
+    tracks.forEach((t) => t.addEventListener("ended", handler));
+
+    return () => {
+      tracks.forEach((t) => t.removeEventListener("ended", handler));
+    };
+  }, [cameraStream]);
+
+  // Wire screen-stream track-ended so revocation surfaces.
+  useEffect(() => {
+    if (!screenStream) return;
+    const handler = () => {
+      setRevokedStreams((prev) =>
+        prev.includes("screen") ? prev : [...prev, "screen"],
+      );
+      setProctoringInterrupted(true);
+    };
+    const tracks = screenStream.getTracks();
+    tracks.forEach((t) => t.addEventListener("ended", handler));
+
+    return () => {
+      tracks.forEach((t) => t.removeEventListener("ended", handler));
+    };
+  }, [screenStream]);
 
   const onEndCallClick = async () => {
     if (isStarted) {
@@ -1238,6 +1369,16 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
           session_token: newSessionToken,
           last_active_at: new Date().toISOString(),
           invite_id: inviteId,
+          // Proctoring fields — null when proctoring is off for this interview.
+          consent_acknowledged_at: proctoringActive
+            ? consentAcknowledgedAt
+            : null,
+          camera_status: interview.proctoring_camera_enabled
+            ? cameraStatus
+            : null,
+          screen_share_type: interview.proctoring_screen_enabled
+            ? screenShareType
+            : null,
         } as never);
       }
 
@@ -1394,13 +1535,20 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
     if (isEnded && callId) {
       const callIdSnapshot = callId;
       const tabCountSnapshot = tabSwitchCount;
+      const heartbeatBody: Record<string, unknown> = {
+        call_id: callIdSnapshot,
+        tab_switch_count: tabCountSnapshot,
+      };
+      if (proctoringInterrupted) {
+        heartbeatBody.proctoring_interrupted = true;
+      }
+      if (cameraStatus) {
+        heartbeatBody.camera_status = cameraStatus;
+      }
       void fetch("/api/response-heartbeat", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          call_id: callIdSnapshot,
-          tab_switch_count: tabCountSnapshot,
-        }),
+        body: JSON.stringify(heartbeatBody),
         keepalive: true,
       }).catch(() => {});
     }
@@ -1408,7 +1556,64 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
     if (isEnded && activeSessionToken && pathname) {
       router.replace(pathname);
     }
-  }, [activeSessionToken, callId, isEnded, pathname, router, tabSwitchCount]);
+  }, [
+    activeSessionToken,
+    callId,
+    cameraStatus,
+    isEnded,
+    pathname,
+    proctoringInterrupted,
+    router,
+    tabSwitchCount,
+  ]);
+
+  // Start recorders shortly after isCalling flips true. We wait for both
+  // (a) isCalling=true and (b) activeSessionToken set so the chunk POSTs
+  // are authenticated.
+  useEffect(() => {
+    if (!isCalling || !activeSessionToken) return;
+    if (interview.proctoring_camera_enabled && cameraStream) {
+      cameraRecorder.start();
+    }
+    if (interview.proctoring_screen_enabled && screenStream) {
+      screenRecorder.start();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCalling, activeSessionToken]);
+
+  // Stop recorders + finalize when the call ends. Awaits pending chunk
+  // uploads with a 30s hard timeout (encoded in useMediaRecorder.stop()).
+  useEffect(() => {
+    if (!isEnded || !activeSessionToken) return;
+    const streamsToFinalize: ("camera" | "screen")[] = [];
+    if (interview.proctoring_camera_enabled) streamsToFinalize.push("camera");
+    if (interview.proctoring_screen_enabled) streamsToFinalize.push("screen");
+    if (streamsToFinalize.length === 0) return;
+
+    const tokenSnapshot = activeSessionToken;
+    void (async () => {
+      try {
+        // Stop recorders in parallel so worst-case finalize delay is one
+        // 30s timeout, not two (QA finding #5).
+        const stops: Promise<void>[] = [];
+        if (interview.proctoring_camera_enabled) stops.push(cameraRecorder.stop());
+        if (interview.proctoring_screen_enabled) stops.push(screenRecorder.stop());
+        await Promise.all(stops);
+        await fetch("/api/proctoring/finalize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${tokenSnapshot}`,
+          },
+          body: JSON.stringify({ streams: streamsToFinalize }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch (err) {
+        console.warn("[proctoring] finalize flow failed", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEnded, activeSessionToken]);
 
   useEffect(() => {
     const flushHeartbeatBeacon = () => {
@@ -1506,7 +1711,120 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
         reconnectPhase === "idle" &&
         !isStarted &&
         !isEnded &&
-        !isOldUser ? (
+        !isOldUser &&
+        consentDeclined ? (
+          <div className="px-6 py-10 md:px-8">
+            {/* v1.1 gap: design.md "Decline / Exit Paths" specifies a mailto:
+                link when interview.organization.support_email is set. The
+                Interview type and InterviewService.getInterviewById do not
+                surface the organization row today, so the link is omitted
+                for v1.0. Add the join + thread `support_email` through the
+                Interview type to enable. (QA finding #3) */}
+            <StatusPanel
+              title="This interview requires proctoring"
+              body="Please contact the hiring team if you need an alternative."
+              icon={<ShieldCheck className="h-9 w-9" />}
+            />
+          </div>
+        ) : null}
+
+        {!inviteEmailMismatch &&
+        !inviteAccessError &&
+        reconnectPhase === "idle" &&
+        !isStarted &&
+        !isEnded &&
+        !isOldUser &&
+        screenShareExit ? (
+          <div className="px-6 py-10 md:px-8">
+            <StatusPanel
+              title="Interview not started"
+              body="Screen sharing is required for this interview. Please contact the hiring team if you need an alternative."
+              icon={<ShieldCheck className="h-9 w-9" />}
+            />
+          </div>
+        ) : null}
+
+        {!inviteEmailMismatch &&
+        !inviteAccessError &&
+        reconnectPhase === "idle" &&
+        !isStarted &&
+        !isEnded &&
+        !isOldUser &&
+        !consentDeclined &&
+        !screenShareExit &&
+        proctoringActive &&
+        proctoringPhase === "consent" ? (
+          <ConsentStep
+            cameraEnabled={Boolean(interview.proctoring_camera_enabled)}
+            screenEnabled={Boolean(interview.proctoring_screen_enabled)}
+            renderNoteCard={({ title, icon, body }) => (
+              <NoteCard title={title} icon={icon} tone="soft">
+                {body}
+              </NoteCard>
+            )}
+            onConsent={async (acknowledgedAt) => {
+              // Keep the consent view mounted while camera permission is
+              // negotiated so the CandidateFrame doesn't flash blank
+              // (QA finding #1). Only advance the phase once camera resolves.
+              setConsentAcknowledgedAt(acknowledgedAt);
+              if (interview.proctoring_camera_enabled) {
+                await acquireCamera();
+              }
+              if (interview.proctoring_screen_enabled) {
+                setProctoringPhase("screen_share");
+              } else {
+                setProctoringPhase("ready");
+              }
+            }}
+            onDecline={() => setConsentDeclined(true)}
+          />
+        ) : null}
+
+        {!inviteEmailMismatch &&
+        !inviteAccessError &&
+        reconnectPhase === "idle" &&
+        !isStarted &&
+        !isEnded &&
+        !isOldUser &&
+        !consentDeclined &&
+        !screenShareExit &&
+        proctoringActive &&
+        proctoringPhase === "screen_share" ? (
+          <ScreenShareGate
+            onPickerOpening={() => {
+              pickerSuppressionRef.current = true;
+            }}
+            onPickerClosed={() => {
+              pickerSuppressionRef.current = false;
+            }}
+            onResolved={(outcome: ScreenShareOutcome) => {
+              if (outcome.kind === "exit") {
+                setScreenShareExit(true);
+
+                return;
+              }
+              if (outcome.kind === "unsupported") {
+                setScreenShareType("unsupported");
+                setProctoringPhase("ready");
+
+                return;
+              }
+              setScreenStream(outcome.stream);
+              setScreenShareType("monitor");
+              setProctoringPhase("ready");
+            }}
+          />
+        ) : null}
+
+        {!inviteEmailMismatch &&
+        !inviteAccessError &&
+        reconnectPhase === "idle" &&
+        !isStarted &&
+        !isEnded &&
+        !isOldUser &&
+        !consentDeclined &&
+        !screenShareExit &&
+        proctoringPhase === "ready" ? (
           <PreflightView
             interview={interview}
             interviewerProfile={interviewerProfile}
@@ -1527,16 +1845,27 @@ function Call({ interview, sessionToken, inviteToken }: InterviewProps) {
         ) : null}
 
         {isStarted && !isEnded && !isOldUser ? (
-          <ActiveSessionView
-            activeTurn={activeTurn}
-            interviewerProfile={interviewerProfile}
-            lastInterviewerResponse={lastInterviewerResponse}
-            lastUserResponse={lastUserResponse}
-            loading={loading}
-            progressPercent={progressPercent}
-            timeRemainingLabel={formatRemainingTime(remainingSeconds)}
-            onEnd={onEndCallClick}
-          />
+          <>
+            {revokedStreams.length > 0 ? (
+              <div className="px-6 pt-6 md:px-8">
+                <RevocationBanner revokedStreams={revokedStreams} />
+              </div>
+            ) : null}
+            <ActiveSessionView
+              activeTurn={activeTurn}
+              interviewerProfile={interviewerProfile}
+              lastInterviewerResponse={lastInterviewerResponse}
+              lastUserResponse={lastUserResponse}
+              loading={loading}
+              progressPercent={progressPercent}
+              timeRemainingLabel={formatRemainingTime(remainingSeconds)}
+              onEnd={onEndCallClick}
+            />
+          </>
+        ) : null}
+
+        {isStarted && !isEnded && interview.proctoring_camera_enabled ? (
+          <CameraPip stream={cameraStream} cameraStatus={cameraStatus} />
         ) : null}
 
         {isEnded && !isOldUser ? (

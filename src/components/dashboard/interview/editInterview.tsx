@@ -61,6 +61,12 @@ function EditInterview({ interview }: EditInterviewProps) {
   const [isAnonymous, setIsAnonymous] = useState<boolean>(interview?.is_anonymous || false);
   const [inviteOnly, setInviteOnly] = useState<boolean>(interview?.invite_only || false);
   const [inviteOnlyConflictDialogOpen, setInviteOnlyConflictDialogOpen] = useState<boolean>(false);
+  const [proctoringCameraEnabled, setProctoringCameraEnabled] = useState<boolean>(
+    Boolean(interview?.proctoring_camera_enabled),
+  );
+  const [proctoringScreenEnabled, setProctoringScreenEnabled] = useState<boolean>(
+    Boolean(interview?.proctoring_screen_enabled),
+  );
   const [isClicked, setIsClicked] = useState(false);
 
   const endOfListRef = useRef<HTMLDivElement>(null);
@@ -109,6 +115,8 @@ function EditInterview({ interview }: EditInterviewProps) {
       description,
       is_anonymous: isAnonymous,
       invite_only: inviteOnly,
+      proctoring_camera_enabled: proctoringCameraEnabled,
+      proctoring_screen_enabled: proctoringScreenEnabled,
     };
 
     try {
@@ -317,6 +325,65 @@ function EditInterview({ interview }: EditInterviewProps) {
                     disabled={isAnonymous}
                     className={inviteOnly ? "bg-[#4a3212]" : "bg-white"}
                     onCheckedChange={(checked) => setInviteOnly(checked)}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-[#e0e5d5] bg-[#fbfdf6] p-6">
+            <FieldLabel
+              title="Proctoring"
+              note="Optional camera + screen recording for manual review."
+            />
+            <div className="mt-5 space-y-3">
+              <div className="rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="proctoring-camera-enabled"
+                      className="text-sm font-semibold text-[#0a1d08]"
+                    >
+                      Record candidate camera
+                    </label>
+                    <p className="mt-1 text-sm leading-6 text-[#53614d]">
+                      Record a camera feed of the candidate for the duration of the session.
+                      Candidates must consent before starting.
+                    </p>
+                  </div>
+                  <Switch
+                    id="proctoring-camera-enabled"
+                    checked={proctoringCameraEnabled}
+                    className={proctoringCameraEnabled ? "bg-[#4a3212]" : "bg-white"}
+                    onCheckedChange={(checked) =>
+                      setProctoringCameraEnabled(checked)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-[22px] border border-[#e0e5d5] bg-[#f8faf3] px-4 py-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <label
+                      htmlFor="proctoring-screen-enabled"
+                      className="text-sm font-semibold text-[#0a1d08]"
+                    >
+                      Record candidate screen
+                    </label>
+                    <p className="mt-1 text-sm leading-6 text-[#53614d]">
+                      Record the candidate&apos;s full screen during the session. Only a
+                      full-screen share is accepted — windows or tabs are rejected. Candidates
+                      must consent before starting.
+                    </p>
+                  </div>
+                  <Switch
+                    id="proctoring-screen-enabled"
+                    checked={proctoringScreenEnabled}
+                    className={proctoringScreenEnabled ? "bg-[#4a3212]" : "bg-white"}
+                    onCheckedChange={(checked) =>
+                      setProctoringScreenEnabled(checked)
+                    }
                   />
                 </div>
               </div>

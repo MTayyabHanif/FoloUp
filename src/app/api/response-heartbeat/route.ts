@@ -21,14 +21,20 @@ const supabase = createClient(
  * navigator.sendBeacon) and on tab-switch.
  */
 export async function PATCH(req: NextRequest) {
-  let body: { call_id?: string; tab_switch_count?: number };
+  let body: {
+    call_id?: string;
+    tab_switch_count?: number;
+    proctoring_interrupted?: boolean;
+    camera_status?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
 
-  const { call_id, tab_switch_count } = body;
+  const { call_id, tab_switch_count, proctoring_interrupted, camera_status } =
+    body;
   if (!call_id) {
     return NextResponse.json({ error: "call_id required" }, { status: 400 });
   }
@@ -38,6 +44,12 @@ export async function PATCH(req: NextRequest) {
   };
   if (typeof tab_switch_count === "number") {
     payload.tab_switch_count = tab_switch_count;
+  }
+  if (typeof proctoring_interrupted === "boolean") {
+    payload.proctoring_interrupted = proctoring_interrupted;
+  }
+  if (typeof camera_status === "string") {
+    payload.camera_status = camera_status;
   }
 
   const { data, error } = await supabase

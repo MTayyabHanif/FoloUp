@@ -65,6 +65,8 @@ export type Database = {
           // v3 rubric-aware (openspec rubric-aware-interviewer-and-questions).
           // NOT NULL with DB default '[]'.
           coverage_warnings: Json;
+          proctoring_camera_enabled: boolean;
+          proctoring_screen_enabled: boolean;
         };
         Insert: {
           created_at?: string;
@@ -97,6 +99,8 @@ export type Database = {
           seniority?: string;
           must_haves?: Json;
           coverage_warnings?: Json;
+          proctoring_camera_enabled?: boolean;
+          proctoring_screen_enabled?: boolean;
         };
         Update: {
           created_at?: string;
@@ -128,6 +132,8 @@ export type Database = {
           seniority?: string;
           must_haves?: Json;
           coverage_warnings?: Json;
+          proctoring_camera_enabled?: boolean;
+          proctoring_screen_enabled?: boolean;
         };
         Relationships: [
           {
@@ -242,6 +248,12 @@ export type Database = {
           session_token: string | null;
           status: string;
           tab_switch_count: number | null;
+          consent_acknowledged_at: string | null;
+          camera_status: string | null;
+          screen_share_type: string | null;
+          proctoring_interrupted: boolean;
+          camera_storage_path: string | null;
+          screen_storage_path: string | null;
         };
         Insert: {
           analytics?: Json | null;
@@ -264,6 +276,12 @@ export type Database = {
           session_token?: string | null;
           status?: string;
           tab_switch_count?: number | null;
+          consent_acknowledged_at?: string | null;
+          camera_status?: string | null;
+          screen_share_type?: string | null;
+          proctoring_interrupted?: boolean;
+          camera_storage_path?: string | null;
+          screen_storage_path?: string | null;
         };
         Update: {
           analytics?: Json | null;
@@ -286,6 +304,12 @@ export type Database = {
           session_token?: string | null;
           status?: string;
           tab_switch_count?: number | null;
+          consent_acknowledged_at?: string | null;
+          camera_status?: string | null;
+          screen_share_type?: string | null;
+          proctoring_interrupted?: boolean;
+          camera_storage_path?: string | null;
+          screen_storage_path?: string | null;
         };
         Relationships: [
           {

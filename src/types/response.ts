@@ -25,6 +25,19 @@ export interface Response {
   last_active_at: string | null;
   session_token: string | null;
   invite_id: string | null;
+  /**
+   * Proctoring fields (openspec add-interview-proctoring-camera-screen).
+   * All nullable — null means proctoring was not enabled for this interview.
+   */
+  consent_acknowledged_at: string | null;
+  /** "granted" | "unavailable" | "denied" | null */
+  camera_status: string | null;
+  /** "monitor" | "window" | "browser" | "denied" | "unsupported" | null */
+  screen_share_type: string | null;
+  proctoring_interrupted: boolean;
+  /** Path to camera manifest JSON, e.g. "<org>/<resp>/camera.manifest.json" */
+  camera_storage_path: string | null;
+  screen_storage_path: string | null;
 }
 
 /**

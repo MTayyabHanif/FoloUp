@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type MutableRefObject, useEffect, useState } from "react";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 
 import {
@@ -11,13 +11,30 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const useTabSwitchPrevention = () => {
+/**
+ * Tab-switch detection hook.
+ *
+ * Optional `isSuppressionActive` ref lets the caller temporarily suppress
+ * the increment + warning dialog — used by the proctoring flow during the
+ * getDisplayMedia screen-share picker (which fires its own
+ * `visibilitychange → hidden` and would otherwise trigger a false-positive
+ * tab switch). The caller flips the ref to `true` before invoking the
+ * picker and clears it inside `setTimeout(...,0)` from the picker's
+ * then/catch, so the cleared value outlives the picker-close visibility
+ * event. See openspec add-interview-proctoring-camera-screen design.md §3.
+ */
+const useTabSwitchPrevention = (
+  isSuppressionActive?: MutableRefObject<boolean>,
+) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
+        if (isSuppressionActive?.current) {
+          return;
+        }
         setIsDialogOpen(true);
         setTabSwitchCount((prev) => prev + 1);
       }
@@ -28,7 +45,7 @@ const useTabSwitchPrevention = () => {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [isSuppressionActive]);
 
   const handleUnderstand = () => {
     setIsDialogOpen(false);

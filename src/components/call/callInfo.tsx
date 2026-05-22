@@ -42,6 +42,7 @@ import { InterviewService } from "@/services/interviews.service";
 import { ResponseService } from "@/services/responses.service";
 import type { Analytics, CallData } from "@/types/response";
 import { isAnalyticsV2 } from "@/types/response";
+import { ProctoringReview } from "@/components/call/proctoring/ProctoringReview";
 
 function ScoreGauge({
   value,
@@ -191,6 +192,16 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
   const [coverageWarningsExpanded, setCoverageWarningsExpanded] =
     useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  // Proctoring state (openspec add-interview-proctoring-camera-screen).
+  const [responseId, setResponseId] = useState<number | null>(null);
+  const [proctoringCameraEnabled, setProctoringCameraEnabled] = useState(false);
+  const [proctoringScreenEnabled, setProctoringScreenEnabled] = useState(false);
+  const [cameraStoragePath, setCameraStoragePath] = useState<string | null>(null);
+  const [screenStoragePath, setScreenStoragePath] = useState<string | null>(null);
+  const [cameraStatus, setCameraStatus] = useState<string | null>(null);
+  const [screenShareType, setScreenShareType] = useState<string | null>(null);
+  const [proctoringInterrupted, setProctoringInterrupted] = useState(false);
+  const [consentAcknowledgedAt, setConsentAcknowledgedAt] = useState<string | null>(null);
   const router = useRouter();
 
   const onReanalyzeClick = async () => {
@@ -256,6 +267,25 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
             ? responseRecord.questions_covered
             : null,
         );
+        // Proctoring fields (may be undefined on legacy rows before migration).
+        const r = responseRecord as
+          | (typeof responseRecord & {
+              id?: number;
+              camera_storage_path?: string | null;
+              screen_storage_path?: string | null;
+              camera_status?: string | null;
+              screen_share_type?: string | null;
+              proctoring_interrupted?: boolean | null;
+              consent_acknowledged_at?: string | null;
+            })
+          | null;
+        setResponseId(typeof r?.id === "number" ? r.id : null);
+        setCameraStoragePath(r?.camera_storage_path ?? null);
+        setScreenStoragePath(r?.screen_storage_path ?? null);
+        setCameraStatus(r?.camera_status ?? null);
+        setScreenShareType(r?.screen_share_type ?? null);
+        setProctoringInterrupted(Boolean(r?.proctoring_interrupted));
+        setConsentAcknowledgedAt(r?.consent_acknowledged_at ?? null);
 
         if (responseRecord?.interview_id) {
           try {
@@ -273,16 +303,32 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
               } else {
                 setCoverageWarnings([]);
               }
+              setProctoringCameraEnabled(
+                Boolean(
+                  (interview as unknown as { proctoring_camera_enabled?: boolean })
+                    ?.proctoring_camera_enabled,
+                ),
+              );
+              setProctoringScreenEnabled(
+                Boolean(
+                  (interview as unknown as { proctoring_screen_enabled?: boolean })
+                    ?.proctoring_screen_enabled,
+                ),
+              );
             }
           } catch {
             if (isMounted) {
               setQuestionCount(null);
               setCoverageWarnings([]);
+              setProctoringCameraEnabled(false);
+              setProctoringScreenEnabled(false);
             }
           }
         } else if (isMounted) {
           setQuestionCount(null);
           setCoverageWarnings([]);
+          setProctoringCameraEnabled(false);
+          setProctoringScreenEnabled(false);
         }
       } catch (error) {
         console.error(error);
@@ -341,6 +387,20 @@ function CallInfo({ call_id, onDeleteResponse, onCandidateStatusChange }: CallPr
 
   return (
     <div className="space-y-6 text-[#0a1d08]">
+      {(proctoringCameraEnabled || proctoringScreenEnabled) &&
+      responseId !== null ? (
+        <ProctoringReview
+          responseId={responseId}
+          cameraEnabled={proctoringCameraEnabled}
+          screenEnabled={proctoringScreenEnabled}
+          cameraStoragePath={cameraStoragePath}
+          screenStoragePath={screenStoragePath}
+          cameraStatus={cameraStatus}
+          screenShareType={screenShareType}
+          proctoringInterrupted={proctoringInterrupted}
+          consentAcknowledgedAt={consentAcknowledgedAt}
+        />
+      ) : null}
       <div className="rounded-[28px] border border-[#e0e5d5] bg-[#f6f8ef] p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between w-full">
           <div className="space-y-4 w-full">

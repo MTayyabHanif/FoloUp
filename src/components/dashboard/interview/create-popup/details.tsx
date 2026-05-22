@@ -164,6 +164,12 @@ function DetailsPopup({
   const [isAnonymous, setIsAnonymous] = useState<boolean>(
     interviewData.is_anonymous,
   );
+  const [proctoringCameraEnabled, setProctoringCameraEnabled] = useState<boolean>(
+    Boolean(interviewData.proctoring_camera_enabled),
+  );
+  const [proctoringScreenEnabled, setProctoringScreenEnabled] = useState<boolean>(
+    Boolean(interviewData.proctoring_screen_enabled),
+  );
   const [numQuestions, setNumQuestions] = useState(
     interviewData.question_count == 0
       ? ""
@@ -363,6 +369,8 @@ function DetailsPopup({
       seniority,
       must_haves: mustHaves.map((s) => s.trim()).filter(Boolean),
       coverage_warnings: warnings,
+      proctoring_camera_enabled: proctoringCameraEnabled,
+      proctoring_screen_enabled: proctoringScreenEnabled,
     } as InterviewBase & { coverage_warnings: string[] };
     setInterviewData(updatedInterviewData as InterviewBase);
   };
@@ -517,6 +525,8 @@ function DetailsPopup({
       job_description: jobDescription.trim(),
       seniority,
       must_haves: mustHaves.map((s) => s.trim()).filter(Boolean),
+      proctoring_camera_enabled: proctoringCameraEnabled,
+      proctoring_screen_enabled: proctoringScreenEnabled,
     };
     setInterviewData(updatedInterviewData);
   };
@@ -527,6 +537,8 @@ function DetailsPopup({
       setSelectedInterviewer(BigInt(0));
       setObjective("");
       setIsAnonymous(false);
+      setProctoringCameraEnabled(false);
+      setProctoringScreenEnabled(false);
       setNumQuestions("");
       setDuration("");
       setIsClicked(false);
@@ -695,6 +707,56 @@ function DetailsPopup({
                     isAnonymous ? "bg-brand-bold" : "bg-[#E6E7EB]"
                   }
                   onCheckedChange={(checked) => setIsAnonymous(checked)}
+                />
+              </div>
+
+              {/* Proctoring toggles — camera + screen recording */}
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="flex-1">
+                  <label
+                    htmlFor="proctoring-camera-create"
+                    className="text-sm font-medium text-[#0a1d08]"
+                  >
+                    Record candidate camera
+                  </label>
+                  <p className="text-[11px] italic text-stone-500 mt-0.5">
+                    Records a camera feed for the duration of the session.
+                    Candidates must consent.
+                  </p>
+                </div>
+                <Switch
+                  id="proctoring-camera-create"
+                  checked={proctoringCameraEnabled}
+                  className={
+                    proctoringCameraEnabled ? "bg-brand-bold" : "bg-[#E6E7EB]"
+                  }
+                  onCheckedChange={(checked) =>
+                    setProctoringCameraEnabled(checked)
+                  }
+                />
+              </div>
+              <div className="flex items-start justify-between gap-3 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2">
+                <div className="flex-1">
+                  <label
+                    htmlFor="proctoring-screen-create"
+                    className="text-sm font-medium text-[#0a1d08]"
+                  >
+                    Record candidate screen
+                  </label>
+                  <p className="text-[11px] italic text-stone-500 mt-0.5">
+                    Records the candidate&apos;s full screen. Only full-screen
+                    shares accepted; candidates must consent.
+                  </p>
+                </div>
+                <Switch
+                  id="proctoring-screen-create"
+                  checked={proctoringScreenEnabled}
+                  className={
+                    proctoringScreenEnabled ? "bg-brand-bold" : "bg-[#E6E7EB]"
+                  }
+                  onCheckedChange={(checked) =>
+                    setProctoringScreenEnabled(checked)
+                  }
                 />
               </div>
             </div>

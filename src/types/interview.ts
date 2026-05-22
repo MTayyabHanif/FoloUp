@@ -56,6 +56,12 @@ export interface InterviewBase {
    * Existing rows have DB default '[]'.
    */
   coverage_warnings?: string[];
+  /**
+   * Proctoring toggles (openspec add-interview-proctoring-camera-screen).
+   * Per-interview booleans. DB defaults to false; existing rows fill via DDL default.
+   */
+  proctoring_camera_enabled: boolean;
+  proctoring_screen_enabled: boolean;
 }
 
 export interface InterviewDetails {

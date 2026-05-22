@@ -1,0 +1,8 @@
+{
+  "changeName": "add-interview-proctoring-camera-screen",
+  "currentPhase": "qa",
+  "agreedOptionalSteps": ["brainstorming", "cgc", "plan_eng_review", "plan_design_review"],
+  "skippedSteps": [],
+  "completedGates": ["brainstorming", "cgc", "propose", "plan_eng_review", "plan_design_review", "apply"],
+  "lastUpdated": "2026-05-22T14:30:00Z"
+}

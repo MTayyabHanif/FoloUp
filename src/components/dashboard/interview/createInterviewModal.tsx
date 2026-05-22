@@ -31,6 +31,10 @@ const CreateEmptyInterviewData = (): InterviewBase => ({
   // v3 rubric-aware (openspec rubric-aware-interviewer-and-questions §6)
   // Populated when operator clicks "Save anyway" on the preflight modal.
   coverage_warnings: [],
+  // openspec add-interview-proctoring-camera-screen — both default false;
+  // recruiter opts in per-interview via DetailsPopup toggles.
+  proctoring_camera_enabled: false,
+  proctoring_screen_enabled: false,
 });
 
 function CreateInterviewModal({ open, setOpen }: Props) {
