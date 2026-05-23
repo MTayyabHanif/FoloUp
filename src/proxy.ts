@@ -26,6 +26,7 @@ const isPublicRoute = createRouteMatcher([
   // recruiter-only and stays Clerk-protected.
   "/api/proctoring/chunk(.*)",
   "/api/proctoring/finalize(.*)",
+  "/api/proctoring/upload-url(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

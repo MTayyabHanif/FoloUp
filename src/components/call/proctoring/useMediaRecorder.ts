@@ -101,27 +101,64 @@ function tryStartRecorder(
   return null;
 }
 
+/**
+ * Upload a single chunk DIRECTLY to R2 via a presigned PUT URL.
+ *
+ * Old flow (deprecated, kept routable for emergency fallback):
+ *   browser → POST multipart to /api/proctoring/chunk → Vercel function
+ *   reads body → AWS SDK PutObject → R2
+ *
+ * New flow (production-grade):
+ *   1. browser → POST tiny JSON to /api/proctoring/upload-url → returns
+ *      a presigned PUT URL (function call ~50ms, no bytes touch Vercel)
+ *   2. browser → PUT chunk bytes directly to R2 (bandwidth-bound only,
+ *      no Vercel middleman, no serverless concurrency limit)
+ *
+ * Why the change: under residential uplink + Vercel Hobby concurrency
+ * limits, the old proxy-through-Vercel pattern stacked all chunks in
+ * "pending" and never drained. The presigned URL pattern eliminates
+ * Vercel from the upload path entirely.
+ *
+ * Retry: up to MAX_RETRIES per chunk with exponential backoff. Both the
+ * URL fetch AND the PUT can be retried — failures on either count as
+ * one attempt because the URL is short-lived (5 min) and the retry path
+ * re-signs anyway.
+ */
 async function postChunk(
   sessionToken: string,
   streamType: ProctoringStreamType,
   chunkIndex: number,
   blob: Blob,
 ): Promise<void> {
-  const form = new FormData();
-  form.append("stream", streamType);
-  form.append("chunk_index", String(chunkIndex));
-  form.append("data", blob, `${chunkIndex}.webm`);
-
   let lastError: unknown = null;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
     try {
-      const res = await fetch("/api/proctoring/chunk", {
+      const urlRes = await fetch("/api/proctoring/upload-url", {
         method: "POST",
-        body: form,
-        headers: { Authorization: `Bearer ${sessionToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          stream: streamType,
+          chunk_index: chunkIndex,
+        }),
       });
-      if (res.ok) return;
-      lastError = new Error(`chunk POST ${res.status}`);
+      if (!urlRes.ok) {
+        lastError = new Error(`upload-url ${urlRes.status}`);
+      } else {
+        const { url } = (await urlRes.json()) as { url: string };
+        // PUT directly to R2. The Content-Type must match what the
+        // server used when signing (video/webm). No Authorization
+        // header — the signature is in the URL query string.
+        const putRes = await fetch(url, {
+          method: "PUT",
+          headers: { "Content-Type": "video/webm" },
+          body: blob,
+        });
+        if (putRes.ok) return;
+        lastError = new Error(`R2 PUT ${putRes.status}`);
+      }
     } catch (err) {
       lastError = err;
     }

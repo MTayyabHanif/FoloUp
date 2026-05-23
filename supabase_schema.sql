@@ -339,10 +339,12 @@ CREATE TABLE feedback (
 --   Note: R2 lifecycle expiration runs daily; objects are deleted within
 --   ~24h of the 90-day mark.
 --
--- ── Step 3.5: Configure CORS so recruiter playback works ──────────────
--- Without this, the recruiter UI fetches manifest/chunk URLs from R2 and
--- the browser blocks the response (no Access-Control-Allow-Origin header).
--- Symptom: "Failed to fetch" on every video element.
+-- ── Step 3.5: Configure CORS so direct uploads + recruiter playback work
+--
+-- This bucket is accessed from candidate browsers (PUT chunks directly
+-- via presigned URLs) AND from recruiter browsers (GET manifest +
+-- chunks for playback). Without CORS, both flows fail with
+-- "Failed to fetch" or net::ERR_FAILED.
 --
 -- In Cloudflare dashboard → R2 → proctoring → Settings → CORS Policy
 --   → Add CORS policy:
@@ -353,7 +355,7 @@ CREATE TABLE feedback (
 --       "http://localhost:3000",
 --       "https://YOUR-PRODUCTION-DOMAIN.com"
 --     ],
---     "AllowedMethods": ["GET", "HEAD"],
+--     "AllowedMethods": ["GET", "HEAD", "PUT"],
 --     "AllowedHeaders": ["*"],
 --     "ExposeHeaders": ["Content-Length", "Content-Type", "ETag"],
 --     "MaxAgeSeconds": 3600
@@ -363,6 +365,11 @@ CREATE TABLE feedback (
 -- Replace YOUR-PRODUCTION-DOMAIN.com with the actual deployed hostname
 -- BEFORE going live. The localhost entry is fine to keep — it only
 -- matters during local dev.
+--
+-- IMPORTANT: AllowedMethods MUST include "PUT" — without it, candidate
+-- chunk uploads fail with CORS errors. GET+HEAD alone is the old
+-- (broken) configuration that worked only when chunks were proxied
+-- through the Vercel function.
 --
 -- CLI alternative (requires wrangler):
 --   wrangler r2 bucket cors put proctoring --rules ./cors-rules.json
