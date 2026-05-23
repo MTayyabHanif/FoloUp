@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       try {
         analytics = await runAnalyticsV2({
           roleTitle: interview?.name || interview?.objective || "the role",
-          companyName: "Foloup",
+          companyName: "Robust Devs",
           seniority: (interview?.seniority as Seniority) ?? "mid",
           jobDescription: interview?.job_description ?? "",
           mustHaves: Array.isArray(interview?.must_haves)

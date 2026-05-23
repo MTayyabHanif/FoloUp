@@ -1,9 +1,9 @@
-# Flow orchestrator config — this repo (foloup).
+# Flow orchestrator config — this repo (robust-devs-hiring).
 # Schema reference: openspec/changes/add-flow-orchestrator/design.md
 # Personal overrides go in .codex/flow.local.yaml (gitignored).
 
 project:
-  name: foloup
+  name: robust-devs-hiring
   type: nextjs
   branch_strategy: trunk
   default_branch: main

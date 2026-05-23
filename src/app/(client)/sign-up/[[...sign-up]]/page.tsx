@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { SignUp } from "@clerk/nextjs";
 
 function SignUpPage() {
@@ -7,9 +8,18 @@ function SignUpPage() {
         <SignUp forceRedirectUrl="/dashboard" />
       </div>
       <div className="block md:hidden px-3 h-[60%] my-auto">
-        <h1 className="text-2xl font-bold text-center text-gray-800">
-          Welcome to Folo<span className="text-indigo-600">Up</span>
-        </h1>
+        <div className="flex flex-col items-center gap-3">
+          <Image
+            src="/logo.svg"
+            alt="Robust Devs"
+            width={64}
+            height={64}
+            priority
+          />
+          <h1 className="text-2xl font-bold text-center text-gray-800">
+            Welcome to Robust Devs
+          </h1>
+        </div>
         <h1 className="text-md my-3 text-center text-gray-800">
           Mobile version is currently under construction. 🚧
         </h1>

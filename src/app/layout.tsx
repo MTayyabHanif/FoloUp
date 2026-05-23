@@ -32,9 +32,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/browser-client-icon.ico" />
-      </head>
       <body className="min-h-screen antialiased">
         <ClerkProvider
           signInFallbackRedirectUrl={"/dashboard"}

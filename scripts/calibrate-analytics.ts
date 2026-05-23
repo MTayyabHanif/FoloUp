@@ -252,7 +252,7 @@ async function main(): Promise<void> {
           (interview.name as string) ||
           (interview.objective as string) ||
           "the role",
-        companyName: "Foloup",
+        companyName: "Robust Devs",
         seniority: ((interview.seniority as string) ?? "mid") as Seniority,
         jobDescription: (interview.job_description as string) ?? "",
         mustHaves: Array.isArray(interview.must_haves)

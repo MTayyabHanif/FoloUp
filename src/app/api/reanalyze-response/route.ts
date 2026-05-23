@@ -105,7 +105,7 @@ export async function POST(req: Request) {
   try {
     const analytics = await runAnalyticsV2({
       roleTitle: interview.name || interview.objective || "the role",
-      companyName: "Foloup",
+      companyName: "Robust Devs",
       seniority: ((interview.seniority as Seniority) ?? "mid") as Seniority,
       jobDescription: interview.job_description ?? "",
       mustHaves: Array.isArray(interview.must_haves) ? interview.must_haves : [],
